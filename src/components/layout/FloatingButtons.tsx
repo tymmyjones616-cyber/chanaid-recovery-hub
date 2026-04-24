@@ -11,16 +11,20 @@ export function FloatingButtons() {
   const waMsg = encodeURIComponent("Hi ChanAidRecovery, I'd like to discuss recovering funds I lost to a scam.");
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-3">
+    <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-4">
       {tg && (
         <a
           href={`https://t.me/${tg}`}
           target="_blank"
           rel="noopener noreferrer"
           aria-label="Chat on Telegram"
-          className="h-14 w-14 rounded-full bg-[#229ED9] text-white flex items-center justify-center shadow-elegant hover:scale-110 transition-transform"
+          className="relative h-14 w-14 flex items-center justify-center group"
         >
-          <Send className="w-6 h-6" />
+          {/* pulsing ring */}
+          <span className="absolute inset-0 rounded-full bg-[#229ED9] animate-ping opacity-30 pointer-events-none" />
+          <span className="relative h-14 w-14 rounded-full bg-[#229ED9] text-white flex items-center justify-center shadow-elegant group-hover:scale-110 transition-transform duration-200">
+            <Send className="w-6 h-6" />
+          </span>
         </a>
       )}
       {wa && (
@@ -29,9 +33,13 @@ export function FloatingButtons() {
           target="_blank"
           rel="noopener noreferrer"
           aria-label="Chat on WhatsApp"
-          className="h-14 w-14 rounded-full bg-[#25D366] text-white flex items-center justify-center shadow-elegant hover:scale-110 transition-transform"
+          className="relative h-14 w-14 flex items-center justify-center group"
         >
-          <MessageCircle className="w-6 h-6" />
+          {/* pulsing ring */}
+          <span className="absolute inset-0 rounded-full bg-[#25D366] animate-ping opacity-30 pointer-events-none" />
+          <span className="relative h-14 w-14 rounded-full bg-[#25D366] text-white flex items-center justify-center shadow-elegant group-hover:scale-110 transition-transform duration-200">
+            <MessageCircle className="w-6 h-6" />
+          </span>
         </a>
       )}
     </div>

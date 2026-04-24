@@ -56,13 +56,14 @@ function Index() {
               Get Your Money Back from <span className="text-gradient">Online Scams</span>
             </h1>
             <p className="mt-5 text-lg text-muted-foreground max-w-xl">
-              ChanAidRecovery helps victims of crypto, forex, binary options and other online financial scams reclaim their funds — fast.
+              ChanAidRecovery helps victims of crypto, forex, binary options and other online financial scams reclaim their funds fast.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link to="/contact" className="group inline-flex items-center gap-2 bg-cta-gradient text-white font-semibold px-6 h-12 rounded-full shadow-elegant hover:scale-[1.03] hover:-translate-y-0.5 transition-all">
                 Free consultation <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition" />
               </Link>
-              <Link to="/loans" className="group inline-flex items-center gap-2 bg-white text-primary font-semibold px-6 h-12 rounded-full border-2 border-primary hover:bg-primary hover:text-white transition-all hover:-translate-y-0.5">
+              <Link to="/loans" className="relative group inline-flex items-center gap-2 bg-white text-primary font-semibold px-6 h-12 rounded-full border-2 border-primary hover:bg-primary hover:text-white transition-all hover:-translate-y-0.5 overflow-visible">
+                <span className="absolute inset-0 rounded-full border-2 border-primary animate-ping opacity-40 pointer-events-none" />
                 Get a loan <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition" />
               </Link>
               <Link to="/success-calculator" className="inline-flex items-center bg-white/90 backdrop-blur text-foreground font-semibold px-6 h-12 rounded-full border border-border hover:border-primary hover:-translate-y-0.5 transition-all">
@@ -90,7 +91,7 @@ function Index() {
         <Reveal direction="up">
           <div className="text-center mb-14">
             <h2 className="text-3xl sm:text-5xl font-bold">Scams we help our clients <span className="text-gradient">recover from</span></h2>
-            <p className="mt-4 text-muted-foreground max-w-2xl mx-auto">Specialized recovery for every type of online financial fraud — handled by experts.</p>
+            <p className="mt-4 text-muted-foreground max-w-2xl mx-auto">Specialized recovery for every type of online financial fraud, handled by experts.</p>
           </div>
         </Reveal>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 perspective-1000">

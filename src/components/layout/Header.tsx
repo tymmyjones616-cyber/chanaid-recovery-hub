@@ -31,8 +31,8 @@ export function Header() {
         scrolled ? "bg-white/85 backdrop-blur-md border-b border-border shadow-soft" : "bg-white/40 backdrop-blur"
       }`}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-        <Logo className={scrolled ? "h-12 w-auto" : "h-14 w-auto"} />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-24 flex items-center justify-between">
+        <Logo className={scrolled ? "h-20 w-auto" : "h-24 w-auto"} />
 
         <nav className="hidden lg:flex items-center gap-7 text-sm font-medium">
           <Link to="/" className="hover:text-primary transition" activeProps={{ className: "text-primary" }} activeOptions={{ exact: true }}>Home</Link>

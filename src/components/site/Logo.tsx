@@ -6,13 +6,13 @@ interface LogoProps {
   withWordmark?: boolean;
 }
 
-export function Logo({ className = "h-16 w-auto", withWordmark: _withWordmark = false }: LogoProps) {
+export function Logo({ className = "h-20 w-auto", withWordmark: _withWordmark = false }: LogoProps) {
   return (
     <Link to="/" className="flex items-center group" aria-label="ChanAidRecovery — Home">
       <img
         src={logoUrl}
         alt="ChanAidRecovery"
-        className={`${className} transition-transform duration-500 group-hover:scale-105 mix-blend-multiply`}
+        className={`${className} transition-transform duration-500 group-hover:scale-105`}
       />
     </Link>
   );
