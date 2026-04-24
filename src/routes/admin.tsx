@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Users, Banknote, MessageSquare, LogOut, RefreshCw,
   ChevronDown, ChevronUp, CheckCircle2, XCircle, Clock,
@@ -211,14 +212,14 @@ function OverviewTab({ setTab }: { setTab: (t: Tab) => void }) {
 
   useEffect(() => {
     Promise.all([
-      fetch("/api/admin/leads").then(r => r.json()),
-      fetch("/api/admin/loans").then(r => r.json()),
-      fetch("/api/admin/testimonials").then(r => r.json()),
+      supabase.from("leads").select("id", { count: "exact", head: true }),
+      supabase.from("loan_applications").select("id", { count: "exact", head: true }),
+      supabase.from("testimonial_submissions").select("id", { count: "exact", head: true }),
     ]).then(([leads, loans, testimonials]) => {
       setCounts({
-        leads: Array.isArray(leads) ? leads.length : 0,
-        loans: Array.isArray(loans) ? loans.length : 0,
-        testimonials: Array.isArray(testimonials) ? testimonials.length : 0,
+        leads: leads.count ?? 0,
+        loans: loans.count ?? 0,
+        testimonials: testimonials.count ?? 0,
       });
     }).catch(() => {}).finally(() => setLoading(false));
   }, []);
@@ -299,9 +300,9 @@ function LeadsTab() {
   const load = useCallback(async () => {
     setLoading(true); setError("");
     try {
-      const res = await fetch("/api/admin/leads");
-      if (!res.ok) throw new Error(await res.text());
-      setRows(await res.json());
+      const { data, error: err } = await supabase.from("leads").select("*").order("created_at", { ascending: false });
+      if (err) throw new Error(err.message);
+      setRows(data ?? []);
     } catch (e: unknown) { setError(String(e)); }
     finally { setLoading(false); }
   }, []);
@@ -349,9 +350,9 @@ function LoansTab() {
   const load = useCallback(async () => {
     setLoading(true); setError("");
     try {
-      const res = await fetch("/api/admin/loans");
-      if (!res.ok) throw new Error(await res.text());
-      setRows(await res.json());
+      const { data, error: err } = await supabase.from("loan_applications").select("*").order("created_at", { ascending: false });
+      if (err) throw new Error(err.message);
+      setRows(data ?? []);
     } catch (e: unknown) { setError(String(e)); }
     finally { setLoading(false); }
   }, []);
@@ -459,9 +460,9 @@ function TestimonialsTab() {
   const load = useCallback(async () => {
     setLoading(true); setError("");
     try {
-      const res = await fetch("/api/admin/testimonials");
-      if (!res.ok) throw new Error(await res.text());
-      setRows(await res.json());
+      const { data, error: err } = await supabase.from("testimonial_submissions").select("*").order("created_at", { ascending: false });
+      if (err) throw new Error(err.message);
+      setRows(data ?? []);
     } catch (e: unknown) { setError(String(e)); }
     finally { setLoading(false); }
   }, []);
@@ -511,9 +512,8 @@ function SiteEditorTab() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch("/api/admin/settings")
-      .then(r => r.json())
-      .then(d => { setCfg(d); setLoading(false); })
+    supabase.from("chanaid_config").select("*").eq("id", 1).single()
+      .then(({ data }) => { if (data) setCfg(data); setLoading(false); })
       .catch(() => setLoading(false));
   }, []);
 
@@ -525,15 +525,11 @@ function SiteEditorTab() {
   async function save() {
     setSaving(true); setError(""); setSaved(false);
     try {
-      const res = await fetch("/api/admin/settings", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(cfg),
-      });
-      if (!res.ok) {
-        const d = await res.json();
-        throw new Error(d.error || "Save failed");
-      }
+      const { error: err } = await supabase
+        .from("chanaid_config")
+        .update({ ...cfg, updated_at: new Date().toISOString() })
+        .eq("id", 1);
+      if (err) throw new Error(err.message);
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (e: unknown) { setError(String(e)); }
