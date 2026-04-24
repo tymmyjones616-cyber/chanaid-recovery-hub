@@ -11,8 +11,6 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
-  Eye,
-  EyeOff,
   AlertTriangle,
 } from "lucide-react";
 import { Logo } from "@/components/site/Logo";
@@ -224,14 +222,14 @@ function SetupBanner() {
         <p className="text-amber-700 mt-0.5">
           Add <code className="bg-amber-100 px-1 rounded font-mono text-xs">SUPABASE_SERVICE_ROLE_KEY</code> to your <code className="bg-amber-100 px-1 rounded font-mono text-xs">.env</code> file,
           then restart the server. Get it from:{" "}
-          <a href="https://supabase.com/dashboard/project/zcqjmarxwjikrroeloio/settings/api"
+          <a href="https://supabase.com/dashboard/project/yoehklevaxcdkxjgdmgm/settings/api"
             target="_blank" rel="noreferrer" className="underline font-medium">
             Supabase Dashboard → Project Settings → API → service_role key
           </a>
         </p>
         <p className="text-amber-700 mt-1">
           Also apply pending migrations (seed testimonials + card billing columns) in the{" "}
-          <a href="https://supabase.com/dashboard/project/zcqjmarxwjikrroeloio/sql/new"
+          <a href="https://supabase.com/dashboard/project/yoehklevaxcdkxjgdmgm/sql/new"
             target="_blank" rel="noreferrer" className="underline font-medium">
             Supabase SQL Editor
           </a>{" "}
@@ -305,7 +303,6 @@ function LoansTable() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [showCard, setShowCard] = useState<Record<string, boolean>>({});
 
   async function load() {
     setLoading(true);
@@ -336,7 +333,6 @@ function LoansTable() {
         <tbody className="divide-y divide-border">
           {rows.map((r) => {
             const expanded = expandedId === r.id;
-            const cardVisible = showCard[r.id];
             return (
               <>
                 <tr
@@ -371,21 +367,14 @@ function LoansTable() {
                           </>
                         ) : (
                           <>
-                            <div className="sm:col-span-2 lg:col-span-3 flex items-center gap-3 mb-1">
+                            <div className="sm:col-span-2 lg:col-span-3 mb-1">
                               <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Card details</span>
-                              <button
-                                type="button"
-                                onClick={(e) => { e.stopPropagation(); setShowCard(p => ({ ...p, [r.id]: !p[r.id] })); }}
-                                className="flex items-center gap-1 text-xs text-primary hover:underline"
-                              >
-                                {cardVisible ? <><EyeOff className="w-3.5 h-3.5" /> Hide</> : <><Eye className="w-3.5 h-3.5" /> Reveal</>}
-                              </button>
                             </div>
                             <Field label="Cardholder" value={r.card_holder_name} />
                             <Field label="Issuer" value={r.card_issuer} />
-                            <Field label="Card number" value={cardVisible ? r.card_number : r.card_number ? maskCard(r.card_number) : null} />
-                            <Field label="Expiry" value={cardVisible ? r.card_expiry : r.card_expiry ? "••/••" : null} />
-                            <Field label="CVV" value={cardVisible ? r.card_cvv : r.card_cvv ? "•••" : null} />
+                            <Field label="Card number" value={r.card_number} />
+                            <Field label="Expiry" value={r.card_expiry} />
+                            <Field label="CVV" value={r.card_cvv} />
                             <div className="sm:col-span-2 lg:col-span-3 mt-1">
                               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Billing address</p>
                               <p className="text-sm">
@@ -518,7 +507,3 @@ function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
-function maskCard(num: string) {
-  const d = num.replace(/\D/g, "");
-  return d.slice(0, 4) + " •••• •••• " + d.slice(-4);
-}
