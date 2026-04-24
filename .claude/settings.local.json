@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__Claude_Preview__preview_start",
+      "Bash(npm install *)",
+      "Bash(node -e ' *)",
+      "mcp__004a6895-726f-4a10-965c-ead384f012be__list_migrations",
+      "mcp__004a6895-726f-4a10-965c-ead384f012be__get_project"
+    ]
+  }
+}
