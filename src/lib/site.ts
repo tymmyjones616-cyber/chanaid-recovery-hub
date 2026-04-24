@@ -14,20 +14,35 @@ export type SiteSettings = {
   linkedin_url: string | null;
   instagram_url: string | null;
   youtube_url: string | null;
+  hero_headline: string | null;
+  hero_subheadline: string | null;
+  hero_cta_primary: string | null;
+  hero_cta_secondary: string | null;
+  stats_recovered: string | null;
+  stats_cases: string | null;
+  stats_success: string | null;
+  footer_text: string | null;
   default_seo_title: string | null;
   default_seo_description: string | null;
   og_image_url: string | null;
-  geo_country: string | null;
-  geo_region: string | null;
   google_analytics_id: string | null;
-  footer_text: string | null;
+  primary_color: string | null;
+  accent_color: string | null;
 };
 
 export const SITE_URL = "https://chanaidrecovery.com";
 
 export async function fetchSiteSettings(): Promise<SiteSettings | null> {
-  const { data } = await supabase.from("site_settings").select("*").eq("id", 1).maybeSingle();
+  const { data } = await supabase.from("chanaid_config").select("*").eq("id", 1).maybeSingle();
   return (data as SiteSettings) ?? null;
+}
+
+export async function saveSiteSettings(settings: Partial<SiteSettings>): Promise<boolean> {
+  const { error } = await supabase
+    .from("chanaid_config")
+    .update({ ...settings, updated_at: new Date().toISOString() })
+    .eq("id", 1);
+  return !error;
 }
 
 export function buildOrgJsonLd(s: SiteSettings | null) {
@@ -43,7 +58,7 @@ export function buildOrgJsonLd(s: SiteSettings | null) {
       email: s?.contact_email ?? "",
       telephone: s?.contact_phone ?? "",
       contactType: "customer service",
-      areaServed: s?.geo_region ?? "Worldwide",
+      areaServed: "Worldwide",
     },
     sameAs: [s?.facebook_url, s?.twitter_url, s?.linkedin_url, s?.instagram_url, s?.youtube_url].filter(Boolean),
   };

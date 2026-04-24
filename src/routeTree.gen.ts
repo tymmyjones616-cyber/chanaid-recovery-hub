@@ -23,6 +23,7 @@ import { Route as ServicesSlugRouteImport } from './routes/services.$slug'
 import { Route as ApiLoanApplicationsRouteImport } from './routes/api/loan-applications'
 import { Route as ApiLeadsRouteImport } from './routes/api/leads'
 import { Route as ApiAdminTestimonialsRouteImport } from './routes/api/admin/testimonials'
+import { Route as ApiAdminSettingsRouteImport } from './routes/api/admin/settings'
 import { Route as ApiAdminLoansRouteImport } from './routes/api/admin/loans'
 import { Route as ApiAdminLeadsRouteImport } from './routes/api/admin/leads'
 
@@ -96,6 +97,11 @@ const ApiAdminTestimonialsRoute = ApiAdminTestimonialsRouteImport.update({
   path: '/api/admin/testimonials',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAdminSettingsRoute = ApiAdminSettingsRouteImport.update({
+  id: '/api/admin/settings',
+  path: '/api/admin/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAdminLoansRoute = ApiAdminLoansRouteImport.update({
   id: '/api/admin/loans',
   path: '/api/admin/loans',
@@ -123,6 +129,7 @@ export interface FileRoutesByFullPath {
   '/services/$slug': typeof ServicesSlugRoute
   '/api/admin/leads': typeof ApiAdminLeadsRoute
   '/api/admin/loans': typeof ApiAdminLoansRoute
+  '/api/admin/settings': typeof ApiAdminSettingsRoute
   '/api/admin/testimonials': typeof ApiAdminTestimonialsRoute
 }
 export interface FileRoutesByTo {
@@ -141,6 +148,7 @@ export interface FileRoutesByTo {
   '/services/$slug': typeof ServicesSlugRoute
   '/api/admin/leads': typeof ApiAdminLeadsRoute
   '/api/admin/loans': typeof ApiAdminLoansRoute
+  '/api/admin/settings': typeof ApiAdminSettingsRoute
   '/api/admin/testimonials': typeof ApiAdminTestimonialsRoute
 }
 export interface FileRoutesById {
@@ -160,6 +168,7 @@ export interface FileRoutesById {
   '/services/$slug': typeof ServicesSlugRoute
   '/api/admin/leads': typeof ApiAdminLeadsRoute
   '/api/admin/loans': typeof ApiAdminLoansRoute
+  '/api/admin/settings': typeof ApiAdminSettingsRoute
   '/api/admin/testimonials': typeof ApiAdminTestimonialsRoute
 }
 export interface FileRouteTypes {
@@ -180,6 +189,7 @@ export interface FileRouteTypes {
     | '/services/$slug'
     | '/api/admin/leads'
     | '/api/admin/loans'
+    | '/api/admin/settings'
     | '/api/admin/testimonials'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -198,6 +208,7 @@ export interface FileRouteTypes {
     | '/services/$slug'
     | '/api/admin/leads'
     | '/api/admin/loans'
+    | '/api/admin/settings'
     | '/api/admin/testimonials'
   id:
     | '__root__'
@@ -216,6 +227,7 @@ export interface FileRouteTypes {
     | '/services/$slug'
     | '/api/admin/leads'
     | '/api/admin/loans'
+    | '/api/admin/settings'
     | '/api/admin/testimonials'
   fileRoutesById: FileRoutesById
 }
@@ -235,6 +247,7 @@ export interface RootRouteChildren {
   ServicesSlugRoute: typeof ServicesSlugRoute
   ApiAdminLeadsRoute: typeof ApiAdminLeadsRoute
   ApiAdminLoansRoute: typeof ApiAdminLoansRoute
+  ApiAdminSettingsRoute: typeof ApiAdminSettingsRoute
   ApiAdminTestimonialsRoute: typeof ApiAdminTestimonialsRoute
 }
 
@@ -338,6 +351,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAdminTestimonialsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/admin/settings': {
+      id: '/api/admin/settings'
+      path: '/api/admin/settings'
+      fullPath: '/api/admin/settings'
+      preLoaderRoute: typeof ApiAdminSettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/admin/loans': {
       id: '/api/admin/loans'
       path: '/api/admin/loans'
@@ -371,6 +391,7 @@ const rootRouteChildren: RootRouteChildren = {
   ServicesSlugRoute: ServicesSlugRoute,
   ApiAdminLeadsRoute: ApiAdminLeadsRoute,
   ApiAdminLoansRoute: ApiAdminLoansRoute,
+  ApiAdminSettingsRoute: ApiAdminSettingsRoute,
   ApiAdminTestimonialsRoute: ApiAdminTestimonialsRoute,
 }
 export const routeTree = rootRouteImport
