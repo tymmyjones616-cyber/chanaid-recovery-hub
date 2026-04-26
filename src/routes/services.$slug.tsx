@@ -1,5 +1,4 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
 import { SiteShell } from "@/components/layout/SiteShell";
 import { LeadForm } from "@/components/site/LeadForm";
 import { fetchService } from "@/lib/queries";
@@ -18,6 +17,13 @@ export const Route = createFileRoute("/services/$slug")({
       { property: "og:description", content: `Recover funds lost to ${titleFromSlug(params.slug)} scams.` },
     ],
   }),
+  loader: async ({ params }) => {
+    const d = await fetchService(params.slug);
+    if (d) return { service: d };
+    // Fallback to local data if DB doesn't have it
+    const fallback = SERVICES_DATA.find(item => item.slug === params.slug);
+    return { service: fallback || null };
+  },
   component: ServicePage,
   notFoundComponent: () => (
     <SiteShell>
@@ -31,25 +37,10 @@ function titleFromSlug(s: string) {
 }
 
 function ServicePage() {
+  const { service: s } = Route.useLoaderData();
   const { slug } = Route.useParams();
-  const [s, setS] = useState<any>(null);
-  const [loaded, setLoaded] = useState(false);
 
-  useEffect(() => { 
-    fetchService(slug).then((d) => { 
-      if (d) {
-        setS(d);
-      } else {
-        // Fallback to local data if DB doesn't have it
-        const fallback = SERVICES_DATA.find(item => item.slug === slug);
-        setS(fallback || null);
-      }
-      setLoaded(true); 
-    }); 
-  }, [slug]);
-
-  if (loaded && !s) throw notFound();
-  if (!s) return <SiteShell><div className="py-24 text-center text-muted-foreground">Loading…</div></SiteShell>;
+  if (!s) throw notFound();
 
   return (
     <SiteShell>
@@ -60,9 +51,14 @@ function ServicePage() {
               <ServiceIcon name={s.icon} />
               <span className="text-xs font-semibold uppercase tracking-widest text-primary">{s.name}</span>
             </div>
-            <h1 className="text-4xl sm:text-5xl font-bold leading-tight">{s.hero_headline}</h1>
-            <p className="mt-4 text-lg text-muted-foreground">{s.hero_subheadline}</p>
-            {s.success_rate && <div className="mt-6 inline-flex items-center gap-2 bg-white px-4 py-2 rounded-full border border-border shadow-soft"><CheckCircle2 className="w-4 h-4 text-primary" /> <span className="text-sm font-semibold">{s.success_rate} average success rate</span></div>}
+            <h1 className="text-4xl sm:text-5xl font-bold leading-tight">{s.heroHeadline || s.hero_headline}</h1>
+            <p className="mt-4 text-lg text-muted-foreground">{s.heroSubheadline || s.hero_subheadline}</p>
+            {(s.successRate || s.success_rate) && (
+              <div className="mt-6 inline-flex items-center gap-2 bg-white px-4 py-2 rounded-full border border-border shadow-soft">
+                <CheckCircle2 className="w-4 h-4 text-primary" /> 
+                <span className="text-sm font-semibold">{s.successRate || s.success_rate} average success rate</span>
+              </div>
+            )}
           </Reveal>
           <Reveal direction="tilt" delay={120}>
             <TiltCard className="rounded-3xl" intensity={6}>
@@ -72,16 +68,16 @@ function ServicePage() {
         </div>
       </section>
       <section className="max-w-4xl mx-auto px-4 py-20 space-y-12">
-        {s.problem_description && (
+        {(s.problemDescription || s.problem_description) && (
           <Reveal direction="up">
             <h2 className="text-2xl sm:text-3xl font-bold mb-3">The problem</h2>
-            <p className="text-muted-foreground leading-relaxed text-lg">{s.problem_description}</p>
+            <p className="text-muted-foreground leading-relaxed text-lg">{s.problemDescription || s.problem_description}</p>
           </Reveal>
         )}
-        {s.recovery_process && (
+        {(s.recoveryProcess || s.recovery_process) && (
           <Reveal direction="up">
             <h2 className="text-2xl sm:text-3xl font-bold mb-3">How we recover your funds</h2>
-            <p className="text-muted-foreground leading-relaxed text-lg">{s.recovery_process}</p>
+            <p className="text-muted-foreground leading-relaxed text-lg">{s.recoveryProcess || s.recovery_process}</p>
           </Reveal>
         )}
         <Reveal direction="zoom">

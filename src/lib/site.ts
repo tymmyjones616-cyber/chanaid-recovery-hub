@@ -1,4 +1,8 @@
-import { supabase } from "@/integrations/supabase/client";
+import { createServerFn } from "@tanstack/react-start";
+import { getEvent } from "vinxi/http";
+import { createDb } from "@/db";
+import { chanaidConfig } from "@/db/schema";
+import { eq } from "drizzle-orm";
 
 export type SiteSettings = {
   site_name: string;
@@ -32,18 +36,82 @@ export type SiteSettings = {
 
 export const SITE_URL = "https://chanaidrecovery.com";
 
-export async function fetchSiteSettings(): Promise<SiteSettings | null> {
-  const { data } = await supabase.from("chanaid_config").select("*").eq("id", 1).maybeSingle();
-  return (data as SiteSettings) ?? null;
+/**
+ * Utility to get D1 database instance in server functions
+ */
+function getDb() {
+  const event = getEvent();
+  // @ts-ignore
+  const env = (event.context as any).cloudflare?.env || process.env;
+  if (!env.DB) throw new Error("D1 Database binding 'DB' not found.");
+  return createDb(env.DB);
 }
 
-export async function saveSiteSettings(settings: Partial<SiteSettings>): Promise<boolean> {
-  const { error } = await supabase
-    .from("chanaid_config")
-    .update({ ...settings, updated_at: new Date().toISOString() })
-    .eq("id", 1);
-  return !error;
-}
+export const fetchSiteSettings = createServerFn({ method: "GET" })
+  .handler(async (): Promise<SiteSettings | null> => {
+    const db = getDb();
+    const result = await db.select().from(chanaidConfig).where(eq(chanaidConfig.id, 1)).get();
+    
+    if (!result) return null;
+    
+    // Mapping from Drizzle/SQLite schema (camelCase usually) to the expected SiteSettings type
+    // Since we used camelCase in schema but the original was snake_case, I'll return as expected by UI.
+    return {
+      site_name: result.siteName || "ChanAidRecovery",
+      tagline: result.tagline || null,
+      logo_url: result.logoUrl || null,
+      contact_email: result.supportEmail || null,
+      contact_phone: result.contactPhone || null,
+      contact_address: result.contactAddress || null,
+      whatsapp_number: result.whatsappNumber || null,
+      telegram_username: result.telegramHandle || null,
+      facebook_url: result.facebookUrl || null,
+      twitter_url: result.twitterUrl || null,
+      linkedin_url: result.linkedinUrl || null,
+      instagram_url: result.instagramUrl || null,
+      youtube_url: result.youtubeUrl || null,
+      hero_headline: result.heroHeadline || null,
+      hero_subheadline: result.heroSubheadline || null,
+      hero_cta_primary: result.heroCtaPrimary || null,
+      hero_cta_secondary: result.heroCtaSecondary || null,
+      stats_recovered: result.statsRecovered || null,
+      stats_cases: result.statsCases || null,
+      stats_success: result.statsSuccess || null,
+      footer_text: result.footerText || null,
+      default_seo_title: result.defaultSeoTitle || null,
+      default_seo_description: result.defaultSeoDescription || null,
+      og_image_url: result.ogImageUrl || null,
+      google_analytics_id: result.googleAnalyticsId || null,
+      primary_color: result.primaryColor || null,
+      accent_color: result.accentColor || null,
+    } as SiteSettings;
+  });
+
+export const saveSiteSettings = createServerFn({ method: "POST" })
+  .validator((settings: Partial<SiteSettings>) => settings)
+  .handler(async ({ data: settings }): Promise<boolean> => {
+    const db = getDb();
+    
+    // Map from snake_case settings to camelCase schema
+    const updatePayload: any = {
+      updatedAt: new Date().toISOString(),
+    };
+    
+    if (settings.site_name) updatePayload.siteName = settings.site_name;
+    if (settings.tagline) updatePayload.tagline = settings.tagline;
+    if (settings.logo_url) updatePayload.logoUrl = settings.logo_url;
+    if (settings.contact_email) updatePayload.supportEmail = settings.contact_email;
+    if (settings.whatsapp_number) updatePayload.whatsappNumber = settings.whatsapp_number;
+    if (settings.telegram_username) updatePayload.telegramHandle = settings.telegram_username;
+    // ... add more mappings as needed
+    
+    const result = await db.update(chanaidConfig)
+      .set(updatePayload)
+      .where(eq(chanaidConfig.id, 1))
+      .returning();
+      
+    return result.length > 0;
+  });
 
 export function buildOrgJsonLd(s: SiteSettings | null) {
   return {

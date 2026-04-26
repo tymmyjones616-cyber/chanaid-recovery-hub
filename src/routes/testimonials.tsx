@@ -1,8 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { SiteShell } from "@/components/layout/SiteShell";
-import { fetchTestimonials } from "@/lib/queries";
-import { supabase } from "@/integrations/supabase/client";
+import { fetchTestimonials, submitTestimonial } from "@/lib/queries";
 import { Star, CheckCircle2, Loader2, Quote } from "lucide-react";
 import { Reveal } from "@/components/effects/Reveal";
 import { TiltCard } from "@/components/effects/TiltCard";
@@ -17,14 +16,12 @@ export const Route = createFileRoute("/testimonials")({
       { property: "og:description", content: "Real recoveries from real clients. See how we help victims of crypto fraud reclaim their assets." },
     ],
   }),
+  loader: async () => await fetchTestimonials(),
   component: TestimonialsPage,
 });
 
 function TestimonialsPage() {
-  const [items, setItems] = useState<any[]>([]);
-  useEffect(() => {
-    fetchTestimonials().then(setItems);
-  }, []);
+  const items = Route.useLoaderData();
 
   return (
     <SiteShell>
@@ -42,28 +39,28 @@ function TestimonialsPage() {
       </section>
 
       <section className="max-w-7xl mx-auto px-4 py-20">
-        {items.length === 0 ? (
-          <p className="text-center text-muted-foreground">Loading stories…</p>
+        {!items || items.length === 0 ? (
+          <p className="text-center text-muted-foreground">No stories yet. Be the first to share!</p>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 perspective-1000">
-            {items.map((t, idx) => (
+            {items.map((t: any, idx: number) => (
               <Reveal key={t.id} direction="up" delay={(idx % 6) * 80}>
                 <TiltCard className="rounded-2xl h-full" intensity={6}>
                   <div className="relative bg-white rounded-2xl p-7 border border-border shadow-soft h-full">
                     <Quote className="absolute top-5 right-5 w-8 h-8 text-primary/15" />
                     <div className="flex gap-1 mb-4">
-                      {Array.from({ length: t.rating }).map((_, i) => (
+                      {Array.from({ length: t.rating || 5 }).map((_, i) => (
                         <Star key={i} className="w-4 h-4 fill-primary text-primary" />
                       ))}
                     </div>
                     <p className="text-sm text-foreground/90 leading-relaxed">"{t.quote}"</p>
                     <div className="mt-5 pt-4 border-t border-border flex justify-between items-center">
                       <div>
-                        <div className="font-semibold text-sm">{t.client_name}</div>
+                        <div className="font-semibold text-sm">{t.clientName}</div>
                         <div className="text-xs text-muted-foreground">{t.location}</div>
                       </div>
-                      {t.amount_recovered && (
-                        <div className="text-sm font-bold text-gradient">{t.amount_recovered}</div>
+                      {t.amountRecovered && (
+                        <div className="text-sm font-bold text-gradient">{t.amountRecovered}</div>
                       )}
                     </div>
                   </div>
@@ -111,24 +108,24 @@ function SubmitTestimonialForm() {
     }
 
     const payload = {
-      client_name: String(fd.get("client_name") ?? "").trim(),
+      clientName: String(fd.get("client_name") ?? "").trim(),
       email: (String(fd.get("email") ?? "").trim() || null) as string | null,
       location: (String(fd.get("location") ?? "").trim() || null) as string | null,
-      scam_type: (String(fd.get("scam_type") ?? "").trim() || null) as string | null,
-      amount_recovered: (String(fd.get("amount_recovered") ?? "").trim() || null) as string | null,
+      scamType: (String(fd.get("scam_type") ?? "").trim() || null) as string | null,
+      amountRecovered: (String(fd.get("amount_recovered") ?? "").trim() || null) as string | null,
       quote: String(fd.get("quote") ?? "").trim(),
       rating,
-      consent_to_publish: fd.get("consent") === "on",
+      consentToPublish: fd.get("consent") === "on",
       status: "pending",
-      source_page: "/testimonials",
+      sourcePage: "/testimonials",
     };
 
-    if (payload.client_name.length < 2) return toast.error("Please enter your name.");
+    if (payload.clientName.length < 2) return toast.error("Please enter your name.");
     if (payload.quote.length < 10) return toast.error("Please write at least a few sentences.");
-    if (!payload.consent_to_publish) return toast.error("Please confirm we may publish your story.");
+    if (!payload.consentToPublish) return toast.error("Please confirm we may publish your story.");
 
     setSubmitting(true);
-    const { error } = await supabase.from("testimonial_submissions").insert(payload);
+    const { error } = await submitTestimonial(payload);
     setSubmitting(false);
 
     if (error) {

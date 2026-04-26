@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TestimonialsRouteImport } from './routes/testimonials'
+import { Route as TestApiRouteImport } from './routes/test-api'
 import { Route as SuccessCalculatorRouteImport } from './routes/success-calculator'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
@@ -22,16 +23,15 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as BlogIndexRouteImport } from './routes/blog.index'
 import { Route as ServicesSlugRouteImport } from './routes/services.$slug'
 import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
-import { Route as ApiLoanApplicationsRouteImport } from './routes/api/loan-applications'
-import { Route as ApiLeadsRouteImport } from './routes/api/leads'
-import { Route as ApiAdminTestimonialsRouteImport } from './routes/api/admin/testimonials'
-import { Route as ApiAdminSettingsRouteImport } from './routes/api/admin/settings'
-import { Route as ApiAdminLoansRouteImport } from './routes/api/admin/loans'
-import { Route as ApiAdminLeadsRouteImport } from './routes/api/admin/leads'
 
 const TestimonialsRoute = TestimonialsRouteImport.update({
   id: '/testimonials',
   path: '/testimonials',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TestApiRoute = TestApiRouteImport.update({
+  id: '/test-api',
+  path: '/test-api',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SuccessCalculatorRoute = SuccessCalculatorRouteImport.update({
@@ -94,36 +94,6 @@ const BlogSlugRoute = BlogSlugRouteImport.update({
   path: '/blog/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiLoanApplicationsRoute = ApiLoanApplicationsRouteImport.update({
-  id: '/api/loan-applications',
-  path: '/api/loan-applications',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiLeadsRoute = ApiLeadsRouteImport.update({
-  id: '/api/leads',
-  path: '/api/leads',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiAdminTestimonialsRoute = ApiAdminTestimonialsRouteImport.update({
-  id: '/api/admin/testimonials',
-  path: '/api/admin/testimonials',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiAdminSettingsRoute = ApiAdminSettingsRouteImport.update({
-  id: '/api/admin/settings',
-  path: '/api/admin/settings',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiAdminLoansRoute = ApiAdminLoansRouteImport.update({
-  id: '/api/admin/loans',
-  path: '/api/admin/loans',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiAdminLeadsRoute = ApiAdminLeadsRouteImport.update({
-  id: '/api/admin/leads',
-  path: '/api/admin/leads',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -135,16 +105,11 @@ export interface FileRoutesByFullPath {
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/success-calculator': typeof SuccessCalculatorRoute
+  '/test-api': typeof TestApiRoute
   '/testimonials': typeof TestimonialsRoute
-  '/api/leads': typeof ApiLeadsRoute
-  '/api/loan-applications': typeof ApiLoanApplicationsRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/services/$slug': typeof ServicesSlugRoute
   '/blog/': typeof BlogIndexRoute
-  '/api/admin/leads': typeof ApiAdminLeadsRoute
-  '/api/admin/loans': typeof ApiAdminLoansRoute
-  '/api/admin/settings': typeof ApiAdminSettingsRoute
-  '/api/admin/testimonials': typeof ApiAdminTestimonialsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -156,16 +121,11 @@ export interface FileRoutesByTo {
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/success-calculator': typeof SuccessCalculatorRoute
+  '/test-api': typeof TestApiRoute
   '/testimonials': typeof TestimonialsRoute
-  '/api/leads': typeof ApiLeadsRoute
-  '/api/loan-applications': typeof ApiLoanApplicationsRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/services/$slug': typeof ServicesSlugRoute
   '/blog': typeof BlogIndexRoute
-  '/api/admin/leads': typeof ApiAdminLeadsRoute
-  '/api/admin/loans': typeof ApiAdminLoansRoute
-  '/api/admin/settings': typeof ApiAdminSettingsRoute
-  '/api/admin/testimonials': typeof ApiAdminTestimonialsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -178,16 +138,11 @@ export interface FileRoutesById {
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/success-calculator': typeof SuccessCalculatorRoute
+  '/test-api': typeof TestApiRoute
   '/testimonials': typeof TestimonialsRoute
-  '/api/leads': typeof ApiLeadsRoute
-  '/api/loan-applications': typeof ApiLoanApplicationsRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/services/$slug': typeof ServicesSlugRoute
   '/blog/': typeof BlogIndexRoute
-  '/api/admin/leads': typeof ApiAdminLeadsRoute
-  '/api/admin/loans': typeof ApiAdminLoansRoute
-  '/api/admin/settings': typeof ApiAdminSettingsRoute
-  '/api/admin/testimonials': typeof ApiAdminTestimonialsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -201,16 +156,11 @@ export interface FileRouteTypes {
     | '/robots.txt'
     | '/sitemap.xml'
     | '/success-calculator'
+    | '/test-api'
     | '/testimonials'
-    | '/api/leads'
-    | '/api/loan-applications'
     | '/blog/$slug'
     | '/services/$slug'
     | '/blog/'
-    | '/api/admin/leads'
-    | '/api/admin/loans'
-    | '/api/admin/settings'
-    | '/api/admin/testimonials'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -222,16 +172,11 @@ export interface FileRouteTypes {
     | '/robots.txt'
     | '/sitemap.xml'
     | '/success-calculator'
+    | '/test-api'
     | '/testimonials'
-    | '/api/leads'
-    | '/api/loan-applications'
     | '/blog/$slug'
     | '/services/$slug'
     | '/blog'
-    | '/api/admin/leads'
-    | '/api/admin/loans'
-    | '/api/admin/settings'
-    | '/api/admin/testimonials'
   id:
     | '__root__'
     | '/'
@@ -243,16 +188,11 @@ export interface FileRouteTypes {
     | '/robots.txt'
     | '/sitemap.xml'
     | '/success-calculator'
+    | '/test-api'
     | '/testimonials'
-    | '/api/leads'
-    | '/api/loan-applications'
     | '/blog/$slug'
     | '/services/$slug'
     | '/blog/'
-    | '/api/admin/leads'
-    | '/api/admin/loans'
-    | '/api/admin/settings'
-    | '/api/admin/testimonials'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -265,16 +205,11 @@ export interface RootRouteChildren {
   RobotsDottxtRoute: typeof RobotsDottxtRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   SuccessCalculatorRoute: typeof SuccessCalculatorRoute
+  TestApiRoute: typeof TestApiRoute
   TestimonialsRoute: typeof TestimonialsRoute
-  ApiLeadsRoute: typeof ApiLeadsRoute
-  ApiLoanApplicationsRoute: typeof ApiLoanApplicationsRoute
   BlogSlugRoute: typeof BlogSlugRoute
   ServicesSlugRoute: typeof ServicesSlugRoute
   BlogIndexRoute: typeof BlogIndexRoute
-  ApiAdminLeadsRoute: typeof ApiAdminLeadsRoute
-  ApiAdminLoansRoute: typeof ApiAdminLoansRoute
-  ApiAdminSettingsRoute: typeof ApiAdminSettingsRoute
-  ApiAdminTestimonialsRoute: typeof ApiAdminTestimonialsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -284,6 +219,13 @@ declare module '@tanstack/react-router' {
       path: '/testimonials'
       fullPath: '/testimonials'
       preLoaderRoute: typeof TestimonialsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/test-api': {
+      id: '/test-api'
+      path: '/test-api'
+      fullPath: '/test-api'
+      preLoaderRoute: typeof TestApiRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/success-calculator': {
@@ -370,48 +312,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BlogSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/loan-applications': {
-      id: '/api/loan-applications'
-      path: '/api/loan-applications'
-      fullPath: '/api/loan-applications'
-      preLoaderRoute: typeof ApiLoanApplicationsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/leads': {
-      id: '/api/leads'
-      path: '/api/leads'
-      fullPath: '/api/leads'
-      preLoaderRoute: typeof ApiLeadsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/admin/testimonials': {
-      id: '/api/admin/testimonials'
-      path: '/api/admin/testimonials'
-      fullPath: '/api/admin/testimonials'
-      preLoaderRoute: typeof ApiAdminTestimonialsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/admin/settings': {
-      id: '/api/admin/settings'
-      path: '/api/admin/settings'
-      fullPath: '/api/admin/settings'
-      preLoaderRoute: typeof ApiAdminSettingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/admin/loans': {
-      id: '/api/admin/loans'
-      path: '/api/admin/loans'
-      fullPath: '/api/admin/loans'
-      preLoaderRoute: typeof ApiAdminLoansRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/admin/leads': {
-      id: '/api/admin/leads'
-      path: '/api/admin/leads'
-      fullPath: '/api/admin/leads'
-      preLoaderRoute: typeof ApiAdminLeadsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
@@ -425,16 +325,11 @@ const rootRouteChildren: RootRouteChildren = {
   RobotsDottxtRoute: RobotsDottxtRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   SuccessCalculatorRoute: SuccessCalculatorRoute,
+  TestApiRoute: TestApiRoute,
   TestimonialsRoute: TestimonialsRoute,
-  ApiLeadsRoute: ApiLeadsRoute,
-  ApiLoanApplicationsRoute: ApiLoanApplicationsRoute,
   BlogSlugRoute: BlogSlugRoute,
   ServicesSlugRoute: ServicesSlugRoute,
   BlogIndexRoute: BlogIndexRoute,
-  ApiAdminLeadsRoute: ApiAdminLeadsRoute,
-  ApiAdminLoansRoute: ApiAdminLoansRoute,
-  ApiAdminSettingsRoute: ApiAdminSettingsRoute,
-  ApiAdminTestimonialsRoute: ApiAdminTestimonialsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

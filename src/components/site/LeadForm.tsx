@@ -2,18 +2,20 @@ import { useState } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
 import { Loader2, CheckCircle2, MessageCircle, Send } from "lucide-react";
+import { submitLead } from "@/lib/queries";
 
 const WHATSAPP_LINK = "https://wa.me/19403779359";
 const TELEGRAM_LINK = "https://t.me/ChanAidRecovery";
 
 const schema = z.object({
-  first_name: z.string().trim().min(1, "Required").max(100),
-  last_name: z.string().trim().max(100).optional().or(z.literal("")),
+  firstName: z.string().trim().min(1, "Required").max(100),
+  lastName: z.string().trim().max(100).optional().or(z.literal("")),
   email: z.string().trim().email("Invalid email").max(255),
   phone: z.string().trim().max(50).optional().or(z.literal("")),
-  amount_lost: z.string().trim().max(50).optional().or(z.literal("")),
-  scam_type: z.string().trim().max(100).optional().or(z.literal("")),
+  amountLost: z.string().trim().max(50).optional().or(z.literal("")),
+  scamType: z.string().trim().max(100).optional().or(z.literal("")),
   message: z.string().trim().max(5000).optional().or(z.literal("")),
+  sourcePage: z.string().trim().max(200).optional().or(z.literal("")),
 });
 
 type Props = {
@@ -35,16 +37,18 @@ export function LeadForm({ variant = "card", defaultScamType, sourcePage, title 
     const fd = new FormData(e.currentTarget);
     // Honeypot
     if ((fd.get("website") as string)?.length) { setDone(true); return; }
+    
     const payload = {
-      first_name: fd.get("first_name") as string,
-      last_name: (fd.get("last_name") as string) || "",
+      firstName: fd.get("first_name") as string,
+      lastName: (fd.get("last_name") as string) || "",
       email: fd.get("email") as string,
       phone: (fd.get("phone") as string) || "",
-      amount_lost: (fd.get("amount_lost") as string) || "",
-      scam_type: (fd.get("scam_type") as string) || defaultScamType || "",
+      amountLost: (fd.get("amount_lost") as string) || "",
+      scamType: (fd.get("scam_type") as string) || defaultScamType || "",
       message: (fd.get("message") as string) || "",
-      source_page: sourcePage ?? (typeof window !== "undefined" ? window.location.pathname : ""),
+      sourcePage: sourcePage ?? (typeof window !== "undefined" ? window.location.pathname : ""),
     };
+    
     const parsed = schema.safeParse(payload);
     if (!parsed.success) {
       const errs: Record<string, string> = {};
@@ -52,26 +56,24 @@ export function LeadForm({ variant = "card", defaultScamType, sourcePage, title 
       setErrors(errs);
       return;
     }
+    
     setLoading(true);
     try {
-      const res = await fetch("/api/leads", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) throw new Error("Submission failed");
+      const { error } = await submitLead(payload);
+      if (error) throw new Error("Submission failed");
+      
       // Construct highly structured message
       const text = `🚨 *NEW RECOVERY CASE INQUIRY* 🚨
 
 👤 *CLIENT DETAILS*
-*Name:* ${payload.first_name} ${payload.last_name}
+*Name:* ${payload.firstName} ${payload.lastName}
 *Email:* ${payload.email}
 *Phone:* ${payload.phone || 'N/A'}
 
 💰 *CASE DETAILS*
-*Scam Type:* ${payload.scam_type}
-*Amount Lost:* ${payload.amount_lost}
-*Source Page:* ${payload.source_page}
+*Scam Type:* ${payload.scamType}
+*Amount Lost:* ${payload.amountLost}
+*Source Page:* ${payload.sourcePage}
 
 📝 *CLIENT MESSAGE*
 ${payload.message || 'No additional message provided.'}
@@ -132,11 +134,11 @@ _Sent via ChanAid Recovery Hub_`;
       {subtitle && <p className="text-sm text-muted-foreground mb-5">{subtitle}</p>}
       <input type="text" name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden />
       <div className="grid sm:grid-cols-2 gap-3">
-        <Field name="first_name" placeholder="First name *" error={errors.first_name} required autoComplete="given-name" />
-        <Field name="last_name" placeholder="Last name" error={errors.last_name} autoComplete="family-name" />
+        <Field name="first_name" placeholder="First name *" error={errors.firstName} required autoComplete="given-name" />
+        <Field name="last_name" placeholder="Last name" error={errors.lastName} autoComplete="family-name" />
         <Field name="email" type="email" placeholder="Email *" error={errors.email} required autoComplete="email" />
         <Field name="phone" placeholder="Phone" error={errors.phone} autoComplete="tel" />
-        <Field name="amount_lost" placeholder="Amount lost (e.g. $5,000)" error={errors.amount_lost} />
+        <Field name="amount_lost" placeholder="Amount lost (e.g. $5,000)" error={errors.amountLost} />
         <select name="scam_type" defaultValue={defaultScamType ?? ""} className="h-11 rounded-lg border border-input bg-white px-3 text-sm">
           <option value="">Type of scam</option>
           <option>Cryptocurrency</option>
@@ -163,7 +165,7 @@ _Sent via ChanAid Recovery Hub_`;
         className="mt-4 w-full inline-flex items-center justify-center gap-2 bg-cta-gradient text-white font-semibold h-12 rounded-full shadow-soft hover:shadow-elegant transition disabled:opacity-60"
       >
         {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-        Get my free consultation
+        {loading ? "Submitting…" : "Get my free consultation"}
       </button>
       <p className="text-[11px] text-muted-foreground mt-3 text-center">
         By submitting you agree to our privacy policy. No recovery, no fee.
@@ -177,7 +179,7 @@ function Field({ error, className = "", ...props }: { error?: string; className?
     <div className={className}>
       <input
         {...props}
-        className="h-11 w-full rounded-lg border border-input bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+        className={`h-11 w-full rounded-lg border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring ${error ? "border-destructive bg-destructive/5" : "border-input bg-white"}`}
       />
       {error && <p className="text-xs text-destructive mt-1">{error}</p>}
     </div>

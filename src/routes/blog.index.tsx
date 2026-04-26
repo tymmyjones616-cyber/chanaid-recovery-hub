@@ -1,5 +1,4 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
 import { fetchBlogPosts } from "@/lib/queries";
 import { SiteShell } from "@/components/layout/SiteShell";
 import { Calendar, User, ArrowRight } from "lucide-react";
@@ -14,14 +13,12 @@ export const Route = createFileRoute("/blog/")({
       { property: "og:description", content: "Expert advice on blockchain forensics, legal recovery paths, and scam prevention across the globe." },
     ],
   }),
+  loader: async () => await fetchBlogPosts(),
   component: BlogIndex,
 });
 
 function BlogIndex() {
-  const { data: posts, isLoading } = useQuery({
-    queryKey: ["blog-posts"],
-    queryFn: fetchBlogPosts,
-  });
+  const posts = Route.useLoaderData();
 
   return (
     <SiteShell>
@@ -40,15 +37,13 @@ function BlogIndex() {
 
       <div className="bg-white py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <div key={i} className="animate-pulse bg-slate-100 h-96 rounded-2xl"></div>
-              ))}
+          {!posts || posts.length === 0 ? (
+            <div className="text-center py-24 text-slate-500">
+              No articles found. Check back soon!
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {posts?.map((post) => (
+              {posts.map((post: any) => (
                 <Link
                   key={post.id}
                   to="/blog/$slug"
@@ -56,10 +51,10 @@ function BlogIndex() {
                   className="flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white transition-all hover:shadow-xl hover:-translate-y-1 group"
                 >
                   <div className="flex-shrink-0 h-48 bg-slate-900 flex items-center justify-center overflow-hidden">
-                    {post.featured_image ? (
+                    {(post.featuredImage || post.featured_image) ? (
                       <img
                         className="h-full w-full object-cover transition-transform group-hover:scale-105"
-                        src={post.featured_image}
+                        src={post.featuredImage || post.featured_image}
                         alt={post.title}
                       />
                     ) : (
@@ -73,7 +68,7 @@ function BlogIndex() {
                       <div className="flex items-center text-sm text-slate-500 mb-3 space-x-4">
                         <div className="flex items-center">
                           <Calendar className="h-4 w-4 mr-1" />
-                          {format(new Date(post.created_at), "MMM d, yyyy")}
+                          {format(new Date(post.createdAt || post.created_at), "MMM d, yyyy")}
                         </div>
                         <div className="flex items-center">
                           <User className="h-4 w-4 mr-1" />

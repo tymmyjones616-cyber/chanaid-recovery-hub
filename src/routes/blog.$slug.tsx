@@ -1,5 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { fetchBlogPost } from "@/lib/queries";
 import { SiteShell } from "@/components/layout/SiteShell";
 import { Calendar, User, ChevronLeft, ShieldCheck, Share2 } from "lucide-react";
@@ -7,7 +6,7 @@ import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/blog/$slug")({
-  head: () => ({
+  head: ({ params }) => ({
     meta: [
       { title: "Recovery Guide | ChanAidRecovery Blog" },
       { name: "description", content: "In-depth recovery guide from ChanAidRecovery experts. Learn how to trace, freeze, and reclaim lost funds." },
@@ -15,40 +14,15 @@ export const Route = createFileRoute("/blog/$slug")({
       { property: "og:description", content: "Detailed analysis and recovery strategies for victims of financial fraud and crypto scams." },
     ],
   }),
+  loader: async ({ params }) => await fetchBlogPost(params.slug),
   component: BlogPost,
 });
 
 function BlogPost() {
-  const { slug } = Route.useParams();
-  const { data: post, isLoading } = useQuery({
-    queryKey: ["blog-post", slug],
-    queryFn: () => fetchBlogPost(slug),
-  });
-
-  if (isLoading) {
-    return (
-      <SiteShell>
-        <div className="pt-32 pb-20 animate-pulse">
-          <div className="max-w-3xl mx-auto px-4">
-            <div className="h-4 w-24 bg-slate-200 rounded mb-8"></div>
-            <div className="h-12 w-full bg-slate-200 rounded mb-4"></div>
-            <div className="h-6 w-2/3 bg-slate-200 rounded mb-12"></div>
-            <div className="h-96 w-full bg-slate-200 rounded-2xl"></div>
-          </div>
-        </div>
-      </SiteShell>
-    );
-  }
+  const post = Route.useLoaderData();
 
   if (!post) {
-    return (
-      <SiteShell>
-        <div className="pt-32 pb-20 text-center">
-          <h1 className="text-2xl font-bold">Post not found</h1>
-          <Link to="/blog" className="text-blue-600 mt-4 inline-block">Back to blog</Link>
-        </div>
-      </SiteShell>
-    );
+    throw notFound();
   }
 
   return (
@@ -80,7 +54,7 @@ function BlogPost() {
                   <div className="text-sm font-bold text-slate-900">{post.author}</div>
                   <div className="text-xs text-slate-500 flex items-center mt-1">
                     <Calendar className="mr-1 h-3 w-3" />
-                    {format(new Date(post.created_at), "MMMM d, yyyy")}
+                    {format(new Date(post.createdAt || post.created_at), "MMMM d, yyyy")}
                   </div>
                 </div>
               </div>
@@ -91,10 +65,10 @@ function BlogPost() {
             </div>
           </header>
 
-          {post.featured_image && (
+          {(post.featuredImage || post.featured_image) && (
             <div className="aspect-w-16 aspect-h-9 rounded-2xl overflow-hidden mb-12 shadow-2xl">
               <img 
-                src={post.featured_image} 
+                src={post.featuredImage || post.featured_image} 
                 alt={post.title} 
                 className="object-cover w-full h-full"
               />

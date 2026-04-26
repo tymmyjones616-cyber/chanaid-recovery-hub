@@ -9,11 +9,13 @@
     "binding": "ASSETS"
   },
   "vars": {
-    "SUPABASE_URL": "https://taprwweemxfbrrkwajnc.supabase.co",
-    "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_DkGPo8pQd8OYfVxg9MMifQ_dx4y523q",
-    "VITE_SUPABASE_URL": "https://taprwweemxfbrrkwajnc.supabase.co",
-    "VITE_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_DkGPo8pQd8OYfVxg9MMifQ_dx4y523q",
-    "SUPABASE_SERVICE_ROLE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRhcHJ3d2VlbXhmYnJya3dham5jIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NzA2NzMyNCwiZXhwIjoyMDkyNjQzMzI0fQ.qo9CPDxFb9Ht5BP-x3imn-_jb0aoXV-yue_Do8l3WcU",
     "VITE_LOAN_REDIRECT_URL": "https://wiscewallet.com"
-  }
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "tanstack-start-db",
+      "database_id": "577d2666-b983-448b-b770-e444bc591703"
+    }
+  ]
 }

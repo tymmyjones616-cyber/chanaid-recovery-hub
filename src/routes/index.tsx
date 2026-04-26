@@ -1,11 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
 import { SiteShell } from "@/components/layout/SiteShell";
 import { LeadForm } from "@/components/site/LeadForm";
 import { fetchServices, fetchTestimonials, fetchFaqs } from "@/lib/queries";
 import { SERVICES_DATA } from "@/lib/services-data";
-import { ShieldCheck, Search, FileCheck2, Banknote, Star, ArrowRight, Sparkles, Bitcoin, TrendingDown, HeartCrack, Landmark, BarChart3, Globe, CreditCard, Smartphone } from "lucide-react";
+import { ArrowRight, Sparkles } from "lucide-react";
 import { Reveal } from "@/components/effects/Reveal";
 import { TiltCard } from "@/components/effects/TiltCard";
 import { ServiceIcon } from "@/components/site/ServiceIcon";
@@ -25,21 +24,24 @@ export const Route = createFileRoute("/")({
       { property: "og:description", content: "Reclaim stolen crypto and assets with our expert forensic investigators. $500M+ recovered for victims worldwide." },
     ],
   }),
+  loader: async () => {
+    const [services, testimonials, faqs] = await Promise.all([
+      fetchServices(),
+      fetchTestimonials({ featuredOnly: true, limit: 3 }),
+      fetchFaqs(5),
+    ]);
+    return { 
+      services: services && services.length > 0 ? services : FALLBACK_SERVICES, 
+      testimonials, 
+      faqs 
+    };
+  },
   component: Index,
 });
 
 function Index() {
-  const [services, setServices] = useState<any[]>([]);
-  const [testimonials, setTestimonials] = useState<any[]>([]);
-  const [faqs, setFaqs] = useState<any[]>([]);
+  const { services, testimonials, faqs } = Route.useLoaderData();
   const scrollY = useScrollY();
-  useEffect(() => {
-    fetchServices().then((data) => {
-      setServices(data && data.length > 0 ? data : FALLBACK_SERVICES);
-    });
-    fetchTestimonials({ featuredOnly: true, limit: 3 }).then(setTestimonials);
-    fetchFaqs(5).then(setFaqs);
-  }, []);
 
   return (
     <SiteShell>
@@ -186,7 +188,7 @@ function Index() {
           </div>
         </Reveal>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 perspective-1000">
-          {services.map((s, idx) => (
+          {services.map((s: any, idx: number) => (
             <Reveal key={s.id} direction="up" delay={idx * 70}>
               <TiltCard className="rounded-2xl h-full" intensity={9}>
                 <Link
@@ -196,7 +198,7 @@ function Index() {
                 >
                   <ServiceIcon name={s.icon} className="mb-5" />
                   <h3 className="font-semibold text-lg group-hover:text-primary transition-colors">{s.name}</h3>
-                  <p className="mt-2 text-sm text-muted-foreground line-clamp-2">{s.short_description}</p>
+                  <p className="mt-2 text-sm text-muted-foreground line-clamp-2">{s.shortDescription || s.short_description}</p>
                   <span className="mt-4 inline-flex items-center gap-1 text-sm text-primary font-medium">
                     Learn more
                     <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
@@ -266,7 +268,7 @@ function Index() {
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl sm:text-4xl font-bold text-center mb-10">Frequently asked questions</h2>
           <div className="space-y-3">
-            {faqs.map((f) => (
+            {faqs.map((f: any) => (
               <details key={f.id} className="group bg-white rounded-xl border border-border p-5">
                 <summary className="font-semibold cursor-pointer list-none flex justify-between items-center">
                   {f.question}
@@ -296,3 +298,6 @@ function Index() {
     </SiteShell>
   );
 }
+
+// ─── Manual Imports for Icons ────────────────────────────────────────────────
+import { ShieldCheck, Search, FileCheck2, Banknote } from "lucide-react";
