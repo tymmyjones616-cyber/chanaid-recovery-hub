@@ -13,7 +13,7 @@ export const Route = createFileRoute("/blog/")({
       { property: "og:description", content: "Expert advice on blockchain forensics, legal recovery paths, and scam prevention across the globe." },
     ],
   }),
-  loader: async () => await fetchBlogPosts(),
+  loader: async () => (await fetchBlogPosts().catch(() => [])) ?? [],
   component: BlogIndex,
 });
 

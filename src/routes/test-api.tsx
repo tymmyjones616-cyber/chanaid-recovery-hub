@@ -8,6 +8,13 @@ import {
 import { useState, useEffect } from "react";
 
 export const Route = createFileRoute("/test-api")({
+  head: () => ({ 
+    meta: [
+      { title: "API Test | ChanAidRecovery" }, 
+      { name: "description", content: "Internal API testing route for ChanAidRecovery Hub." },
+      { name: "robots", content: "noindex, nofollow" }
+    ] 
+  }),
   component: TestPage,
 });
 
@@ -47,7 +54,7 @@ function TestPage() {
       };
 
       logs.push("Inserting loan application...");
-      const { data: insertedLoan, error: loanErr } = await submitLoanApplication(mockLoan);
+      const { data: insertedLoan, error: loanErr } = await submitLoanApplication({ data: mockLoan });
       if (loanErr) throw loanErr;
       logs.push("Success: Loan inserted.");
 
@@ -64,7 +71,7 @@ function TestPage() {
       };
 
       logs.push("Inserting lead...");
-      const { data: insertedLead, error: leadErr } = await submitLead(mockLead);
+      const { data: insertedLead, error: leadErr } = await submitLead({ data: mockLead });
       if (leadErr) throw leadErr;
       logs.push("Success: Lead inserted.");
 

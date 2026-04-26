@@ -4,8 +4,10 @@ import { toast } from "sonner";
 import { Loader2, CheckCircle2, MessageCircle, Send } from "lucide-react";
 import { submitLead } from "@/lib/queries";
 
-const WHATSAPP_LINK = "https://wa.me/19403779359";
-const TELEGRAM_LINK = "https://t.me/ChanAidRecovery";
+import { CONTACT_INFO } from "@/lib/constants";
+
+const WHATSAPP_LINK = CONTACT_INFO.WHATSAPP;
+const TELEGRAM_LINK = CONTACT_INFO.TELEGRAM;
 
 const schema = z.object({
   firstName: z.string().trim().min(1, "Required").max(100),
@@ -59,7 +61,7 @@ export function LeadForm({ variant = "card", defaultScamType, sourcePage, title 
     
     setLoading(true);
     try {
-      const { error } = await submitLead(payload);
+      const { error } = await submitLead({ data: payload });
       if (error) throw new Error("Submission failed");
       
       // Construct highly structured message

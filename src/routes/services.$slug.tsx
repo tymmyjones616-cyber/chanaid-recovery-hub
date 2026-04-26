@@ -9,16 +9,21 @@ import { TiltCard } from "@/components/effects/TiltCard";
 import { ServiceIcon } from "@/components/site/ServiceIcon";
 
 export const Route = createFileRoute("/services/$slug")({
-  head: ({ params }) => ({
-    meta: [
-      { title: `${titleFromSlug(params.slug)} Recovery | ChanAidRecovery` },
-      { name: "description", content: `Recover funds lost to ${titleFromSlug(params.slug)} scams with ChanAidRecovery.` },
-      { property: "og:title", content: `${titleFromSlug(params.slug)} Recovery` },
-      { property: "og:description", content: `Recover funds lost to ${titleFromSlug(params.slug)} scams.` },
-    ],
-  }),
+  head: ({ params }) => {
+    const title = `${titleFromSlug(params.slug)} Recovery | ChanAidRecovery`;
+    const description = `Professional funds recovery services for victims of ${titleFromSlug(params.slug)} scams. Start your recovery process with ChanAidRecovery Hub.`;
+    return {
+      meta: [
+        { title: title },
+        { name: "description", content: description },
+        { property: "og:title", content: title },
+        { property: "og:description", content: description },
+        { property: "og:type", content: "article" },
+      ],
+    };
+  },
   loader: async ({ params }) => {
-    const d = await fetchService(params.slug);
+    const d = await fetchService({ data: params.slug }).catch(() => null);
     if (d) return { service: d };
     // Fallback to local data if DB doesn't have it
     const fallback = SERVICES_DATA.find(item => item.slug === params.slug);

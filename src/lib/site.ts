@@ -1,5 +1,4 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getEvent } from "vinxi/http";
 import { createDb } from "@/db";
 import { chanaidConfig } from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -36,19 +35,39 @@ export type SiteSettings = {
 
 export const SITE_URL = "https://chanaidrecovery.com";
 
-/**
- * Utility to get D1 database instance in server functions
- */
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+
+let localDb: any = null;
+
 function getDb() {
-  const event = getEvent();
-  if (!event) throw new Error("No H3 event found");
-  const context = event.context as any;
-  const d1 = context.cloudflare?.env?.DB || context.env?.DB || (globalThis as any).DB;
-  if (!d1) throw new Error("D1 Database binding 'DB' not found.");
-  return createDb(d1);
+  const d1 = (globalThis as any).DB;
+
+  if (d1) {
+    return createDb(d1);
+  }
+
+  // Local fallback
+  if (process.env.NODE_ENV === "development") {
+    if (!localDb) {
+      console.log("getDb: D1 not found, falling back to local SQLite (local.db)");
+      try {
+        const Database = require("better-sqlite3");
+        const sqlite = new Database("local.db");
+        localDb = createDb(undefined, sqlite);
+      } catch (err) {
+        console.error("getDb: Failed to initialize local SQLite:", err);
+        throw new Error("D1 Database binding 'DB' not found and local fallback failed.");
+      }
+    }
+    return localDb;
+  }
+  
+  console.error("getDb: D1 Database binding 'DB' not found.");
+  throw new Error("D1 Database binding 'DB' not found.");
 }
 
-export const fetchSiteSettings = createServerFn({ method: "GET" })
+export const fetchSiteSettings = createServerFn()
   .handler(async (): Promise<SiteSettings | null> => {
     const db = getDb();
     const result = await db.select().from(chanaidConfig).where(eq(chanaidConfig.id, 1)).get();
@@ -88,8 +107,8 @@ export const fetchSiteSettings = createServerFn({ method: "GET" })
     } as SiteSettings;
   });
 
-export const saveSiteSettings = createServerFn({ method: "POST" })
-  .validator((settings: Partial<SiteSettings>) => settings)
+export const saveSiteSettings = createServerFn()
+  .inputValidator((settings: Partial<SiteSettings>) => settings)
   .handler(async ({ data: settings }): Promise<boolean> => {
     const db = getDb();
     

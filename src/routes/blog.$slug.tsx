@@ -14,7 +14,7 @@ export const Route = createFileRoute("/blog/$slug")({
       { property: "og:description", content: "Detailed analysis and recovery strategies for victims of financial fraud and crypto scams." },
     ],
   }),
-  loader: async ({ params }) => await fetchBlogPost(params.slug),
+  loader: async ({ params }) => await fetchBlogPost({ data: params.slug }).catch(() => null),
   component: BlogPost,
 });
 

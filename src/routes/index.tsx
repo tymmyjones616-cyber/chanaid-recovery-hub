@@ -11,6 +11,7 @@ import { ServiceIcon } from "@/components/site/ServiceIcon";
 import { useScrollY } from "@/hooks/use-reveal";
 import { ForbesLogo, BloombergLogo, ReutersLogo, CnbcLogo, FtLogo, BbcLogo } from "@/components/site/MediaLogos";
 import { TestimonialCarousel } from "@/components/site/TestimonialCarousel";
+import { SITE_STATS, ASSETS } from "@/lib/constants";
 
 // ─── Fallback services when database is empty ────────────────────────────────
 const FALLBACK_SERVICES = SERVICES_DATA;
@@ -26,14 +27,14 @@ export const Route = createFileRoute("/")({
   }),
   loader: async () => {
     const [services, testimonials, faqs] = await Promise.all([
-      fetchServices(),
-      fetchTestimonials({ featuredOnly: true, limit: 3 }),
-      fetchFaqs(5),
+      fetchServices().catch(() => []),
+      fetchTestimonials({ data: { featuredOnly: true, limit: 3 } }).catch(() => []),
+      fetchFaqs({ data: 5 }).catch(() => []),
     ]);
-    return { 
-      services: services && services.length > 0 ? services : FALLBACK_SERVICES, 
-      testimonials, 
-      faqs 
+    return {
+      services: Array.isArray(services) && services.length > 0 ? services : FALLBACK_SERVICES,
+      testimonials: Array.isArray(testimonials) ? testimonials : [],
+      faqs: Array.isArray(faqs) ? faqs : [],
     };
   },
   component: Index,
@@ -67,7 +68,7 @@ function Index() {
                 Reclaim What's Rightfully Yours | <span className="text-gradient">Before It's Gone Forever</span>
               </h1>
               <p className="mt-5 text-lg text-muted-foreground max-w-xl">
-                Every hour you wait, scammers move your money further out of reach. Our specialists have recovered over $5.2M for victims just like you - with zero upfront cost.
+                Every hour you wait, scammers move your money further out of reach. Our specialists have recovered over {SITE_STATS.TOTAL_RECOVERED_HERO} for victims just like you - with zero upfront cost.
               </p>
             </Reveal>
 
@@ -85,9 +86,9 @@ function Index() {
 
             <Reveal direction="up" delay={200}>
               <div className="mt-8 flex items-center gap-8 text-sm text-muted-foreground">
-                <div><span className="block text-2xl font-bold text-gradient">$500M+</span>recovered</div>
-                <div><span className="block text-2xl font-bold text-gradient">10,400+</span>cases</div>
-                <div><span className="block text-2xl font-bold text-gradient">9/10</span>clients recommend us</div>
+                <div><span className="block text-2xl font-bold text-gradient">{SITE_STATS.TOTAL_RECOVERED}</span>recovered</div>
+                <div><span className="block text-2xl font-bold text-gradient">{SITE_STATS.CASES_HANDLED_HERO}</span>cases</div>
+                <div><span className="block text-2xl font-bold text-gradient">{SITE_STATS.SUCCESS_RATE}</span>clients recommend us</div>
               </div>
             </Reveal>
           </div>
@@ -120,7 +121,7 @@ function Index() {
                 </div>
                 <div className="mt-10 flex flex-wrap gap-8">
                   <div>
-                    <div className="text-3xl font-bold text-primary mb-1">$500M+</div>
+                    <div className="text-3xl font-bold text-primary mb-1">{SITE_STATS.TOTAL_RECOVERED}</div>
                     <div className="text-sm text-muted-foreground uppercase tracking-widest">Recovered</div>
                   </div>
                   <div className="w-px h-12 bg-border hidden sm:block" />
@@ -135,7 +136,7 @@ function Index() {
               <Reveal direction="left" delay={200}>
                 <div className="relative z-10 rounded-[2.5rem] overflow-hidden shadow-2xl border-4 border-white/50">
                   <img 
-                    src="https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=2070&auto=format&fit=crop" 
+                    src={ASSETS.HERO_IMAGE} 
                     alt="Cyber Security Forensic Analysis" 
                     className="w-full h-auto"
                   />
