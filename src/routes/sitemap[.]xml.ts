@@ -12,8 +12,11 @@ export const Route = createFileRoute("/sitemap.xml")({
         const base = `${url.protocol}//${url.host}`;
         const staticUrls = ["", "/about", "/contact", "/testimonials", "/success-calculator", "/privacy-policy", "/blog", "/loans"];
         
-        const env = (getEvent() as any).context.cloudflare.env;
-        const db = drizzle(env.DB, { schema });
+        const event = getEvent() as any;
+        const d1 = event.context.cloudflare?.env?.DB || event.context.env?.DB || (globalThis as any).DB;
+        
+        if (!d1) throw new Error("D1 Database binding 'DB' not found.");
+        const db = drizzle(d1, { schema });
 
         const services = await db.query.services.findMany({
           where: eq(schema.services.isPublished, true),

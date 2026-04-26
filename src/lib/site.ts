@@ -41,10 +41,11 @@ export const SITE_URL = "https://chanaidrecovery.com";
  */
 function getDb() {
   const event = getEvent();
-  // @ts-ignore
-  const env = (event.context as any).cloudflare?.env || process.env;
-  if (!env.DB) throw new Error("D1 Database binding 'DB' not found.");
-  return createDb(env.DB);
+  if (!event) throw new Error("No H3 event found");
+  const context = event.context as any;
+  const d1 = context.cloudflare?.env?.DB || context.env?.DB || (globalThis as any).DB;
+  if (!d1) throw new Error("D1 Database binding 'DB' not found.");
+  return createDb(d1);
 }
 
 export const fetchSiteSettings = createServerFn({ method: "GET" })

@@ -19,14 +19,19 @@ import { eq, and, asc, desc } from "drizzle-orm";
  */
 function getDb() {
   const event = getEvent();
-  // @ts-ignore - cloudflare env is on context in production
-  const env = (event.context as any).cloudflare?.env || process.env;
+  if (!event) throw new Error("No H3 event found");
+  const context = event.context as any;
   
-  if (!env.DB) {
-    throw new Error("D1 Database binding 'DB' not found in environment.");
+  console.log("getDb: globalThis keys:", Object.keys(globalThis).filter(k => !k.startsWith('__')));
+  
+  const d1 = context.cloudflare?.env?.DB || context.env?.DB || (globalThis as any).DB;
+  
+  if (!d1) {
+    console.error("getDb: D1 Database binding 'DB' not found.");
+    throw new Error("D1 Database binding 'DB' not found.");
   }
   
-  return createDb(env.DB);
+  return createDb(d1);
 }
 
 // ─── Public Queries ───────────────────────────────────────────────────────────
