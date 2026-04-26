@@ -15,7 +15,8 @@
     {
       "binding": "DB",
       "database_name": "tanstack-start-db",
-      "database_id": "577d2666-b983-448b-b770-e444bc591703"
+      "database_id": "577d2666-b983-448b-b770-e444bc591703",
+      "migrations_dir": "./drizzle"
     }
   ]
 }
