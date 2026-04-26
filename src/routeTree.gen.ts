@@ -19,7 +19,9 @@ import { Route as ContactRouteImport } from './routes/contact'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as BlogIndexRouteImport } from './routes/blog.index'
 import { Route as ServicesSlugRouteImport } from './routes/services.$slug'
+import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
 import { Route as ApiLoanApplicationsRouteImport } from './routes/api/loan-applications'
 import { Route as ApiLeadsRouteImport } from './routes/api/leads'
 import { Route as ApiAdminTestimonialsRouteImport } from './routes/api/admin/testimonials'
@@ -77,9 +79,19 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BlogIndexRoute = BlogIndexRouteImport.update({
+  id: '/blog/',
+  path: '/blog/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ServicesSlugRoute = ServicesSlugRouteImport.update({
   id: '/services/$slug',
   path: '/services/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BlogSlugRoute = BlogSlugRouteImport.update({
+  id: '/blog/$slug',
+  path: '/blog/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiLoanApplicationsRoute = ApiLoanApplicationsRouteImport.update({
@@ -126,7 +138,9 @@ export interface FileRoutesByFullPath {
   '/testimonials': typeof TestimonialsRoute
   '/api/leads': typeof ApiLeadsRoute
   '/api/loan-applications': typeof ApiLoanApplicationsRoute
+  '/blog/$slug': typeof BlogSlugRoute
   '/services/$slug': typeof ServicesSlugRoute
+  '/blog/': typeof BlogIndexRoute
   '/api/admin/leads': typeof ApiAdminLeadsRoute
   '/api/admin/loans': typeof ApiAdminLoansRoute
   '/api/admin/settings': typeof ApiAdminSettingsRoute
@@ -145,7 +159,9 @@ export interface FileRoutesByTo {
   '/testimonials': typeof TestimonialsRoute
   '/api/leads': typeof ApiLeadsRoute
   '/api/loan-applications': typeof ApiLoanApplicationsRoute
+  '/blog/$slug': typeof BlogSlugRoute
   '/services/$slug': typeof ServicesSlugRoute
+  '/blog': typeof BlogIndexRoute
   '/api/admin/leads': typeof ApiAdminLeadsRoute
   '/api/admin/loans': typeof ApiAdminLoansRoute
   '/api/admin/settings': typeof ApiAdminSettingsRoute
@@ -165,7 +181,9 @@ export interface FileRoutesById {
   '/testimonials': typeof TestimonialsRoute
   '/api/leads': typeof ApiLeadsRoute
   '/api/loan-applications': typeof ApiLoanApplicationsRoute
+  '/blog/$slug': typeof BlogSlugRoute
   '/services/$slug': typeof ServicesSlugRoute
+  '/blog/': typeof BlogIndexRoute
   '/api/admin/leads': typeof ApiAdminLeadsRoute
   '/api/admin/loans': typeof ApiAdminLoansRoute
   '/api/admin/settings': typeof ApiAdminSettingsRoute
@@ -186,7 +204,9 @@ export interface FileRouteTypes {
     | '/testimonials'
     | '/api/leads'
     | '/api/loan-applications'
+    | '/blog/$slug'
     | '/services/$slug'
+    | '/blog/'
     | '/api/admin/leads'
     | '/api/admin/loans'
     | '/api/admin/settings'
@@ -205,7 +225,9 @@ export interface FileRouteTypes {
     | '/testimonials'
     | '/api/leads'
     | '/api/loan-applications'
+    | '/blog/$slug'
     | '/services/$slug'
+    | '/blog'
     | '/api/admin/leads'
     | '/api/admin/loans'
     | '/api/admin/settings'
@@ -224,7 +246,9 @@ export interface FileRouteTypes {
     | '/testimonials'
     | '/api/leads'
     | '/api/loan-applications'
+    | '/blog/$slug'
     | '/services/$slug'
+    | '/blog/'
     | '/api/admin/leads'
     | '/api/admin/loans'
     | '/api/admin/settings'
@@ -244,7 +268,9 @@ export interface RootRouteChildren {
   TestimonialsRoute: typeof TestimonialsRoute
   ApiLeadsRoute: typeof ApiLeadsRoute
   ApiLoanApplicationsRoute: typeof ApiLoanApplicationsRoute
+  BlogSlugRoute: typeof BlogSlugRoute
   ServicesSlugRoute: typeof ServicesSlugRoute
+  BlogIndexRoute: typeof BlogIndexRoute
   ApiAdminLeadsRoute: typeof ApiAdminLeadsRoute
   ApiAdminLoansRoute: typeof ApiAdminLoansRoute
   ApiAdminSettingsRoute: typeof ApiAdminSettingsRoute
@@ -323,11 +349,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/blog/': {
+      id: '/blog/'
+      path: '/blog'
+      fullPath: '/blog/'
+      preLoaderRoute: typeof BlogIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/services/$slug': {
       id: '/services/$slug'
       path: '/services/$slug'
       fullPath: '/services/$slug'
       preLoaderRoute: typeof ServicesSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/blog/$slug': {
+      id: '/blog/$slug'
+      path: '/blog/$slug'
+      fullPath: '/blog/$slug'
+      preLoaderRoute: typeof BlogSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/loan-applications': {
@@ -388,7 +428,9 @@ const rootRouteChildren: RootRouteChildren = {
   TestimonialsRoute: TestimonialsRoute,
   ApiLeadsRoute: ApiLeadsRoute,
   ApiLoanApplicationsRoute: ApiLoanApplicationsRoute,
+  BlogSlugRoute: BlogSlugRoute,
   ServicesSlugRoute: ServicesSlugRoute,
+  BlogIndexRoute: BlogIndexRoute,
   ApiAdminLeadsRoute: ApiAdminLeadsRoute,
   ApiAdminLoansRoute: ApiAdminLoansRoute,
   ApiAdminSettingsRoute: ApiAdminSettingsRoute,

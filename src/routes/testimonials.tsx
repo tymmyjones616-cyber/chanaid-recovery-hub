@@ -11,10 +11,10 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/testimonials")({
   head: () => ({
     meta: [
-      { title: "Testimonials — ChanAidRecovery Client Stories" },
-      { name: "description", content: "Real testimonials from clients who recovered funds with ChanAidRecovery." },
-      { property: "og:title", content: "ChanAidRecovery Testimonials" },
-      { property: "og:description", content: "Real recoveries from real clients worldwide." },
+      { title: "Client Testimonials | ChanAidRecovery Hub Success Stories" },
+      { name: "description", content: "Real success stories from clients who recovered their stolen crypto and funds with ChanAidRecovery Hub. $500M+ recovered worldwide." },
+      { property: "og:title", content: "ChanAidRecovery Hub Client Success Stories" },
+      { property: "og:description", content: "Real recoveries from real clients. See how we help victims of crypto fraud reclaim their assets." },
     ],
   }),
   component: TestimonialsPage,
@@ -35,7 +35,7 @@ function TestimonialsPage() {
               Real people. <span className="text-gradient">Real recoveries.</span>
             </h1>
             <p className="mt-5 text-lg text-muted-foreground">
-              Read how our clients reclaimed their money from online scammers — then share your own story below.
+              Read how our clients reclaimed their money from online scammers - then share your own story below.
             </p>
           </Reveal>
         </div>
@@ -104,7 +104,7 @@ function SubmitTestimonialForm() {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
 
-    // Honeypot — if filled, silently succeed (it's a bot)
+    // Honeypot - if filled, silently succeed (it's a bot)
     if (fd.get("website")) {
       setSubmitted(true);
       return;
@@ -136,7 +136,7 @@ function SubmitTestimonialForm() {
       return;
     }
     setSubmitted(true);
-    toast.success("Thank you — your story has been received!");
+    toast.success("Thank you! Your story has been received.");
   }
 
   if (submitted) {
@@ -191,7 +191,7 @@ function SubmitTestimonialForm() {
           minLength={10}
           maxLength={2000}
           rows={5}
-          placeholder="Tell us how ChanAidRecovery helped you…"
+          placeholder="Tell us how ChanAidRecovery Hub helped you…"
           className="w-full rounded-xl border border-input bg-white px-4 py-3 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none"
         />
       </div>
@@ -199,7 +199,7 @@ function SubmitTestimonialForm() {
       <label className="flex items-start gap-3 text-sm text-muted-foreground">
         <input type="checkbox" name="consent" required className="mt-1 accent-primary" />
         <span>
-          I confirm this is my own honest experience and I agree that ChanAidRecovery may publish my name, location and story on this site.
+          I confirm this is my own honest experience and I agree that ChanAidRecovery Hub may publish my name, location and story on this site.
         </span>
       </label>
 

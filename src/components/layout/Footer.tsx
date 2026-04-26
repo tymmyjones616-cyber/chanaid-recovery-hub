@@ -13,7 +13,7 @@ export function Footer() {
         <div className="md:col-span-1">
           <Logo className="h-14 w-auto mb-4" />
           <p className="text-sm text-muted-foreground mt-3">
-            {s?.tagline ?? "Helping victims of online financial scams reclaim their funds — worldwide."}
+            {s?.tagline ?? "Helping victims of online financial scams reclaim their funds worldwide."}
           </p>
           <div className="flex gap-3 mt-4">
             {s?.facebook_url && <a href={s.facebook_url} aria-label="Facebook" className="text-muted-foreground hover:text-primary"><Facebook className="w-5 h-5" /></a>}
@@ -28,10 +28,15 @@ export function Footer() {
           <h4 className="font-semibold mb-3">Recovery Services</h4>
           <ul className="space-y-2 text-sm text-muted-foreground">
             <li><Link to="/services/$slug" params={{ slug: "cryptocurrency" }} className="hover:text-primary">Cryptocurrency</Link></li>
-            <li><Link to="/services/$slug" params={{ slug: "binary-options" }} className="hover:text-primary">Binary Options</Link></li>
-            <li><Link to="/services/$slug" params={{ slug: "forex" }} className="hover:text-primary">Forex</Link></li>
-            <li><Link to="/services/$slug" params={{ slug: "stock-trading" }} className="hover:text-primary">Stock Trading</Link></li>
+            <li><Link to="/services/$slug" params={{ slug: "pig-butchering" }} className="hover:text-primary">Pig Butchering</Link></li>
             <li><Link to="/services/$slug" params={{ slug: "romance-scams" }} className="hover:text-primary">Romance Scams</Link></li>
+            <li><Link to="/services/$slug" params={{ slug: "forex" }} className="hover:text-primary">Forex & Trading</Link></li>
+            <li><Link to="/services/$slug" params={{ slug: "binary-options" }} className="hover:text-primary">Binary Options</Link></li>
+            <li><Link to="/services/$slug" params={{ slug: "investment-fraud" }} className="hover:text-primary">Investment Fraud</Link></li>
+            <li><Link to="/services/$slug" params={{ slug: "phishing" }} className="hover:text-primary">Phishing & ID Theft</Link></li>
+            <li><Link to="/services/$slug" params={{ slug: "tax-fraud" }} className="hover:text-primary">Tax Fraud Recovery</Link></li>
+            <li><Link to="/services/$slug" params={{ slug: "credit-card-fraud" }} className="hover:text-primary">Credit Card Fraud</Link></li>
+            <li><Link to="/services/$slug" params={{ slug: "tech-support" }} className="hover:text-primary">Tech Support Scams</Link></li>
           </ul>
         </div>
 
@@ -57,7 +62,7 @@ export function Footer() {
         </div>
       </div>
       <div className="border-t border-border py-6 text-center text-xs text-muted-foreground">
-        {s?.footer_text ?? `© ${new Date().getFullYear()} ChanAidRecovery. All rights reserved.`}
+        {s?.footer_text ?? `© ${new Date().getFullYear()} ChanAidRecovery Hub. All rights reserved.`}
       </div>
     </footer>
   );

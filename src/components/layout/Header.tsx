@@ -1,17 +1,23 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Menu, X, ChevronDown } from "lucide-react";
+import { Menu, X, ChevronDown, MessageCircle, Send } from "lucide-react";
 import { Logo } from "@/components/site/Logo";
+import { Button } from "@/components/ui/button";
+
+const WHATSAPP_LINK = "https://wa.me/19403779359";
+const TELEGRAM_LINK = "https://t.me/ChanAidRecovery";
 
 const services = [
-  { slug: "binary-options", name: "Binary Options" },
   { slug: "cryptocurrency", name: "Cryptocurrency" },
-  { slug: "forex", name: "Forex" },
-  { slug: "stock-trading", name: "Stock Trading" },
-  { slug: "credit-card-phishing", name: "Credit Card Phishing" },
-  { slug: "property-scams", name: "Property Scams" },
+  { slug: "pig-butchering", name: "Pig Butchering" },
   { slug: "romance-scams", name: "Romance Scams" },
-  { slug: "other-scams", name: "Other Scams" },
+  { slug: "forex", name: "Forex & Trading" },
+  { slug: "binary-options", name: "Binary Options" },
+  { slug: "investment-fraud", name: "Investment Fraud" },
+  { slug: "phishing", name: "Phishing & ID Theft" },
+  { slug: "tax-fraud", name: "Tax Fraud Recovery" },
+  { slug: "credit-card-fraud", name: "Credit Card Fraud" },
+  { slug: "tech-support", name: "Tech Support Scams" },
 ];
 
 export function Header() {
@@ -56,25 +62,29 @@ export function Header() {
             </div>
           </div>
           <Link to="/testimonials" className="hover:text-primary transition" activeProps={{ className: "text-primary" }}>Testimonials</Link>
+          <Link to="/blog" className="hover:text-primary transition" activeProps={{ className: "text-primary" }}>Blog</Link>
           <Link to="/about" className="hover:text-primary transition" activeProps={{ className: "text-primary" }}>About</Link>
           <Link to="/success-calculator" className="hover:text-primary transition" activeProps={{ className: "text-primary" }}>Calculator</Link>
-          <Link to="/loans" className="hover:text-primary transition" activeProps={{ className: "text-primary" }}>Loans</Link>
-          <Link to="/contact" className="hover:text-primary transition" activeProps={{ className: "text-primary" }}>Contact</Link>
+          <Link to="/loans" className="bg-primary/10 text-primary px-4 py-1.5 rounded-full hover:bg-primary hover:text-white transition-all font-semibold">Get Loan</Link>
         </nav>
 
         <div className="hidden lg:flex items-center gap-3">
-          <Link
-            to="/loans"
-            className="inline-flex items-center justify-center bg-white border border-primary text-primary font-semibold px-4 py-2.5 rounded-full hover:bg-primary hover:text-white transition-all"
+          <a
+            href={TELEGRAM_LINK}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center bg-[#0088cc] text-white font-semibold px-4 py-2.5 rounded-full hover:bg-[#0077b5] transition-all gap-2"
           >
-            Get a Loan
-          </Link>
-          <Link
-            to="/contact"
-            className="inline-flex items-center justify-center bg-cta-gradient text-white font-semibold px-5 py-2.5 rounded-full shadow-soft hover:shadow-elegant transition-all"
+            <Send className="w-4 h-4" /> Telegram
+          </a>
+          <a
+            href={WHATSAPP_LINK}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center bg-[#25D366] text-white font-semibold px-5 py-2.5 rounded-full shadow-soft hover:shadow-elegant transition-all gap-2"
           >
-            Free Consultation
-          </Link>
+            <MessageCircle className="w-4 h-4" /> WhatsApp
+          </a>
         </div>
 
         <button
@@ -101,16 +111,16 @@ export function Header() {
               </div>
             </details>
             <Link to="/testimonials" onClick={() => setOpen(false)} className="block py-2">Testimonials</Link>
+            <Link to="/blog" onClick={() => setOpen(false)} className="block py-2">Blog</Link>
             <Link to="/about" onClick={() => setOpen(false)} className="block py-2">About</Link>
             <Link to="/success-calculator" onClick={() => setOpen(false)} className="block py-2">Calculator</Link>
-            <Link to="/loans" onClick={() => setOpen(false)} className="block py-2">Loans</Link>
-            <Link to="/contact" onClick={() => setOpen(false)} className="block py-2">Contact</Link>
-            <Link to="/loans" onClick={() => setOpen(false)} className="block mt-3 text-center border border-primary text-primary font-semibold px-5 py-2.5 rounded-full">
-              Get a Loan
-            </Link>
-            <Link to="/contact" onClick={() => setOpen(false)} className="block mt-2 text-center bg-cta-gradient text-white font-semibold px-5 py-2.5 rounded-full">
-              Free Consultation
-            </Link>
+            <Link to="/loans" onClick={() => setOpen(false)} className="block py-2 font-bold text-primary">Get Loan</Link>
+            <a href={TELEGRAM_LINK} target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)} className="block mt-3 text-center bg-[#0088cc] text-white font-semibold px-5 py-2.5 rounded-full">
+              Join Telegram
+            </a>
+            <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)} className="block mt-2 text-center bg-[#25D366] text-white font-semibold px-5 py-2.5 rounded-full">
+              Chat on WhatsApp
+            </a>
           </div>
         </div>
       )}

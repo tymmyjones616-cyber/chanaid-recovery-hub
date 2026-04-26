@@ -4,17 +4,38 @@ import type { Database } from './types';
 
 function createSupabaseClient() {
   // Use import.meta.env for client-side (Vite build-time replacement)
-  // Fall back to process.env for SSR (server-side rendering)
-  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-  const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY;
+  // Fall back to process.env or globalThis.env for SSR (server-side rendering)
+  // @ts-ignore - env might be on globalThis in Cloudflare
+  const env = typeof process !== 'undefined' ? process.env : (typeof globalThis !== 'undefined' ? (globalThis as any).env : {});
 
-  if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
+  const VITE_SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || env?.VITE_SUPABASE_URL;
+  const SUPABASE_URL = env?.SUPABASE_URL;
+  const VITE_SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || env?.VITE_SUPABASE_PUBLISHABLE_KEY;
+  const SUPABASE_PUBLISHABLE_KEY = env?.SUPABASE_PUBLISHABLE_KEY;
+
+  const finalUrl = VITE_SUPABASE_URL || SUPABASE_URL;
+  const finalKey = VITE_SUPABASE_PUBLISHABLE_KEY || SUPABASE_PUBLISHABLE_KEY;
+
+  if (!finalUrl || !finalKey) {
+    if (typeof window === 'undefined') {
+      console.warn('Supabase env vars missing during SSR, using mock.');
+      const mockChain: any = () => new Proxy({}, {
+        get: (target, prop) => {
+          if (prop === 'then') return (cb: any) => Promise.resolve(cb({ data: null, error: null }));
+          return mockChain;
+        }
+      });
+      return new Proxy({} as any, {
+        get: () => mockChain
+      });
+    }
+
     throw new Error(
       'Missing Supabase environment variables. Ensure SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY (or VITE_ prefixed versions) are set in your .env file.'
     );
   }
 
-  return createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+  return createClient<Database>(finalUrl, finalKey, {
     auth: {
       storage: typeof window !== 'undefined' ? localStorage : undefined,
       persistSession: true,

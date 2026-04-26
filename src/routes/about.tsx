@@ -5,10 +5,10 @@ import { ShieldCheck, Users, Award, Globe } from "lucide-react";
 export const Route = createFileRoute("/about")({
   head: () => ({
     meta: [
-      { title: "About ChanAidRecovery — Funds Recovery Specialists" },
-      { name: "description", content: "ChanAidRecovery's investigators, chargeback specialists and legal experts have helped thousands of scam victims worldwide." },
-      { property: "og:title", content: "About ChanAidRecovery" },
-      { property: "og:description", content: "Investigators, chargeback specialists and legal experts dedicated to recovering victims' funds." },
+      { title: "About ChanAidRecovery Hub | Global Funds Recovery Specialists" },
+      { name: "description", content: "Learn about ChanAidRecovery Hub's team of investigators, blockchain forensic experts, and legal specialists helping scam victims worldwide." },
+      { property: "og:title", content: "About ChanAidRecovery Hub | Expert Recovery Team" },
+      { property: "og:description", content: "Our investigators and legal experts are dedicated to reclaiming stolen assets from crypto and financial fraud." },
     ],
   }),
   component: () => (

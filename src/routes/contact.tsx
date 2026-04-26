@@ -5,10 +5,10 @@ import { LeadForm } from "@/components/site/LeadForm";
 export const Route = createFileRoute("/contact")({
   head: () => ({
     meta: [
-      { title: "Contact ChanAidRecovery — Free Consultation" },
-      { name: "description", content: "Talk to a recovery specialist. Free, confidential consultation. We respond within 24 hours." },
-      { property: "og:title", content: "Contact ChanAidRecovery" },
-      { property: "og:description", content: "Free, confidential consultation with a recovery specialist." },
+      { title: "Contact ChanAidRecovery Hub | Free Forensic Consultation" },
+      { name: "description", content: "Talk to a crypto recovery specialist today. Free, confidential consultation for scam victims. We respond within 24 hours." },
+      { property: "og:title", content: "Contact ChanAidRecovery Hub | Asset Recovery Experts" },
+      { property: "og:description", content: "Free, confidential consultation with a forensic recovery specialist. Reclaim your stolen funds." },
     ],
   }),
   component: () => (

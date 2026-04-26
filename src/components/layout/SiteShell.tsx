@@ -6,7 +6,7 @@ import { FloatingButtons } from "./FloatingButtons";
 export function SiteShell({ children }: { children: ReactNode }) {
   return (
     <div className="relative min-h-screen flex flex-col bg-background overflow-x-hidden">
-      {/* Ambient gradient orbs — drift slowly behind everything for a premium feel */}
+      {/* Ambient gradient orbs - drift slowly behind everything for a premium feel */}
       <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
         <div
           className="absolute -top-32 -left-32 h-[42rem] w-[42rem] rounded-full opacity-40 blur-3xl animate-orb-drift"

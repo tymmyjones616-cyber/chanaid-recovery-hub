@@ -4,10 +4,10 @@ import { SiteShell } from "@/components/layout/SiteShell";
 export const Route = createFileRoute("/privacy-policy")({
   head: () => ({
     meta: [
-      { title: "Privacy Policy | ChanAidRecovery" },
-      { name: "description", content: "How ChanAidRecovery collects, uses and protects your personal information." },
-      { property: "og:title", content: "Privacy Policy" },
-      { property: "og:description", content: "Our privacy practices." },
+      { title: "Privacy Policy | ChanAidRecovery Hub" },
+      { name: "description", content: "Learn how ChanAidRecovery Hub collects, uses, and protects your personal information." },
+      { property: "og:title", content: "Privacy Policy | ChanAidRecovery Hub" },
+      { property: "og:description", content: "Our privacy practices and commitment to your data security." },
     ],
   }),
   component: () => (

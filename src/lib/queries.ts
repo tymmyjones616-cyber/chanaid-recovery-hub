@@ -34,3 +34,13 @@ export async function fetchAsSeenIn() {
   const { data } = await supabase.from("as_seen_in").select("*").eq("is_published", true).order("sort_order");
   return data ?? [];
 }
+
+export async function fetchBlogPosts() {
+  const { data } = await supabase.from("blog_posts").select("*").eq("is_published", true).order("created_at", { ascending: false });
+  return data ?? [];
+}
+
+export async function fetchBlogPost(slug: string) {
+  const { data } = await supabase.from("blog_posts").select("*").eq("slug", slug).maybeSingle();
+  return data;
+}

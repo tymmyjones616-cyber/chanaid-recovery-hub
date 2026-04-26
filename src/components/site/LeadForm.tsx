@@ -1,7 +1,10 @@
 import { useState } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Loader2, CheckCircle2 } from "lucide-react";
+import { Loader2, CheckCircle2, MessageCircle, Send } from "lucide-react";
+
+const WHATSAPP_LINK = "https://wa.me/19403779359";
+const TELEGRAM_LINK = "https://t.me/ChanAidRecovery";
 
 const schema = z.object({
   first_name: z.string().trim().min(1, "Required").max(100),
@@ -57,8 +60,34 @@ export function LeadForm({ variant = "card", defaultScamType, sourcePage, title 
         body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error("Submission failed");
+      // Construct highly structured message
+      const text = `🚨 *NEW RECOVERY CASE INQUIRY* 🚨
+
+👤 *CLIENT DETAILS*
+*Name:* ${payload.first_name} ${payload.last_name}
+*Email:* ${payload.email}
+*Phone:* ${payload.phone || 'N/A'}
+
+💰 *CASE DETAILS*
+*Scam Type:* ${payload.scam_type}
+*Amount Lost:* ${payload.amount_lost}
+*Source Page:* ${payload.source_page}
+
+📝 *CLIENT MESSAGE*
+${payload.message || 'No additional message provided.'}
+
+--------------------------------
+_Sent via ChanAid Recovery Hub_`;
+      
+      const whatsappUrl = `${WHATSAPP_LINK}?text=${encodeURIComponent(text)}`;
+      
       setDone(true);
-      toast.success("Thank you — we'll be in touch shortly.");
+      toast.success("Details saved! Redirecting to WhatsApp for immediate chat...");
+      
+      // Small delay then redirect
+      setTimeout(() => {
+        window.open(whatsappUrl, "_blank");
+      }, 1500);
     } catch {
       toast.error("Something went wrong. Please try again.");
     } finally {
@@ -70,8 +99,26 @@ export function LeadForm({ variant = "card", defaultScamType, sourcePage, title 
     return (
       <div className={`rounded-2xl ${variant === "card" ? "bg-white shadow-elegant p-8" : "p-6"} text-center`}>
         <CheckCircle2 className="w-12 h-12 text-primary mx-auto mb-3" />
-        <h3 className="text-xl font-bold mb-2">Thanks — we got your message</h3>
-        <p className="text-muted-foreground text-sm">A recovery specialist will contact you within 24 hours.</p>
+        <h3 className="text-xl font-bold mb-2">Details Saved & Submitted</h3>
+        <p className="text-muted-foreground text-sm mb-6">Your case has been logged in our system. For faster response, click below to chat with a recovery specialist.</p>
+        <div className="flex flex-col gap-3">
+          <a
+            href={WHATSAPP_LINK}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center gap-2 bg-[#25D366] text-white font-semibold h-12 rounded-full shadow-soft hover:shadow-elegant transition"
+          >
+            <MessageCircle className="w-5 h-5" /> Chat on WhatsApp
+          </a>
+          <a
+            href={TELEGRAM_LINK}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center gap-2 bg-[#0088cc] text-white font-semibold h-12 rounded-full shadow-soft hover:shadow-elegant transition"
+          >
+            <Send className="w-5 h-5" /> Chat on Telegram
+          </a>
+        </div>
       </div>
     );
   }
@@ -85,20 +132,21 @@ export function LeadForm({ variant = "card", defaultScamType, sourcePage, title 
       {subtitle && <p className="text-sm text-muted-foreground mb-5">{subtitle}</p>}
       <input type="text" name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden />
       <div className="grid sm:grid-cols-2 gap-3">
-        <Field name="first_name" placeholder="First name *" error={errors.first_name} required />
-        <Field name="last_name" placeholder="Last name" error={errors.last_name} />
-        <Field name="email" type="email" placeholder="Email *" error={errors.email} required />
-        <Field name="phone" placeholder="Phone" error={errors.phone} />
+        <Field name="first_name" placeholder="First name *" error={errors.first_name} required autoComplete="given-name" />
+        <Field name="last_name" placeholder="Last name" error={errors.last_name} autoComplete="family-name" />
+        <Field name="email" type="email" placeholder="Email *" error={errors.email} required autoComplete="email" />
+        <Field name="phone" placeholder="Phone" error={errors.phone} autoComplete="tel" />
         <Field name="amount_lost" placeholder="Amount lost (e.g. $5,000)" error={errors.amount_lost} />
         <select name="scam_type" defaultValue={defaultScamType ?? ""} className="h-11 rounded-lg border border-input bg-white px-3 text-sm">
           <option value="">Type of scam</option>
           <option>Cryptocurrency</option>
-          <option>Binary Options</option>
-          <option>Forex</option>
-          <option>Stock Trading</option>
-          <option>Credit Card Phishing</option>
-          <option>Property Scams</option>
+          <option>Pig Butchering</option>
           <option>Romance Scams</option>
+          <option>Forex & Trading</option>
+          <option>Binary Options</option>
+          <option>Investment Fraud</option>
+          <option>Phishing & ID Theft</option>
+          <option>Tax Fraud Recovery</option>
           <option>Other</option>
         </select>
       </div>
@@ -124,14 +172,11 @@ export function LeadForm({ variant = "card", defaultScamType, sourcePage, title 
   );
 }
 
-function Field({ name, placeholder, type = "text", error, required }: { name: string; placeholder: string; type?: string; error?: string; required?: boolean }) {
+function Field({ error, className = "", ...props }: { error?: string; className?: string } & React.InputHTMLAttributes<HTMLInputElement>) {
   return (
-    <div>
+    <div className={className}>
       <input
-        name={name}
-        type={type}
-        required={required}
-        placeholder={placeholder}
+        {...props}
         className="h-11 w-full rounded-lg border border-input bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
       />
       {error && <p className="text-xs text-destructive mt-1">{error}</p>}

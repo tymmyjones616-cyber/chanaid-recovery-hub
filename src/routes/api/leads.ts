@@ -43,40 +43,7 @@ export const Route = createFileRoute("/api/leads")({
             return Response.json({ error: "Failed to save" }, { status: 500 });
           }
 
-          // Best-effort email notification (will be wired up once email domain is configured)
-          try {
-            const { data: settings } = await supabaseAdmin
-              .from("site_settings")
-              .select("notification_email, site_name")
-              .eq("id", 1)
-              .maybeSingle();
-            const notifyTo = settings?.notification_email;
-            if (notifyTo) {
-              // Try sending via Lovable transactional email if configured (no-op otherwise)
-              await fetch(new URL("/lovable/email/transactional/send", request.url).toString(), {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  templateName: "new-lead-notification",
-                  recipientEmail: notifyTo,
-                  idempotencyKey: `lead-${lead.id}`,
-                  templateData: {
-                    firstName: d.first_name,
-                    lastName: d.last_name || "",
-                    email: d.email,
-                    phone: d.phone || "",
-                    amountLost: d.amount_lost || "",
-                    scamType: d.scam_type || "",
-                    message: d.message || "",
-                    sourcePage: d.source_page || "",
-                  },
-                }),
-              }).catch(() => null);
-            }
-          } catch (e) {
-            console.warn("Notification email skipped", e);
-          }
-
+          // Email notification skipped (Lovable detached)
           return Response.json({ ok: true, id: lead.id });
         } catch (e) {
           console.error(e);

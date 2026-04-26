@@ -6,10 +6,25 @@ import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
 function createSupabaseAdminClient() {
-  const SUPABASE_URL = process.env.SUPABASE_URL;
-  const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  // @ts-ignore
+  const env = typeof process !== 'undefined' ? process.env : (typeof globalThis !== 'undefined' ? (globalThis as any).env : {});
+  const SUPABASE_URL = env?.SUPABASE_URL;
+  const SUPABASE_SERVICE_ROLE_KEY = env?.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    if (typeof window === 'undefined') {
+      console.warn('Supabase admin env vars missing during SSR, using mock.');
+      const mockChain: any = () => new Proxy({}, {
+        get: (target, prop) => {
+          if (prop === 'then') return (cb: any) => Promise.resolve(cb({ data: null, error: null }));
+          return mockChain;
+        }
+      });
+      return new Proxy({} as any, {
+        get: () => mockChain
+      });
+    }
+
     throw new Error(
       'Missing Supabase server environment variables. Ensure SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set.'
     );
@@ -34,4 +49,9 @@ export const supabaseAdmin = new Proxy({} as ReturnType<typeof createSupabaseAdm
     if (!_supabaseAdmin) _supabaseAdmin = createSupabaseAdminClient();
     return Reflect.get(_supabaseAdmin, prop, receiver);
   },
+});
+get(_, prop, receiver) {
+  if (!_supabaseAdmin) _supabaseAdmin = createSupabaseAdminClient();
+  return Reflect.get(_supabaseAdmin, prop, receiver);
+},
 });

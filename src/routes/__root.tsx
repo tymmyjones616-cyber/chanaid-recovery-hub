@@ -2,6 +2,7 @@ import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/r
 
 import appCss from "../styles.css?url";
 import { Toaster } from "@/components/ui/sonner";
+import { FloatingSocials } from "@/components/site/FloatingSocials";
 
 function NotFoundComponent() {
   return (
@@ -30,13 +31,33 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "ChanAidRecovery" },
+      { title: "ChanAidRecovery Hub | Professional Blockchain Forensics & Asset Recovery" },
+      {
+        name: "description",
+        content: "Legitimate funds recovery through advanced blockchain forensics and legal asset tracing. Specialized in crypto theft, investment fraud, and pig butchering scams. Professional investigation for serious victims."
+      },
+      {
+        name: "keywords",
+        content: "blockchain forensics, professional crypto recovery, asset tracing services, legal crypto recovery, recover stolen USDT, crypto fraud investigation, ChanAidRecovery Hub, legitimate crypto recovery services, IC3 reporting support"
+      },
+      { name: "author", content: "ChanAidRecovery Hub" },
       { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
+      { property: "og:site_name", content: "ChanAidRecovery Hub" },
+      { property: "og:url", content: "https://chanaidrecovery.com" },
+      { property: "og:title", content: "ChanAidRecovery | Professional Funds Recovery Experts" },
+      { property: "og:description", content: "Reclaim your lost assets with the world's leading recovery experts. Specialized in crypto, forex, and investment fraud recovery." },
+      { property: "og:image", content: "https://chanaidrecovery.com/og-image.png" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "ChanAidRecovery | Professional Funds Recovery Experts" },
+      { name: "twitter:description", content: "Reclaim your lost assets with the world's leading recovery experts." },
+      { name: "twitter:image", content: "https://chanaidrecovery.com/og-image.png" },
     ],
     links: [
+      { rel: "canonical", href: "https://chanaidrecovery.com" },
+      {
+        rel: "icon",
+        href: "/favicon.png",
+      },
       {
         rel: "stylesheet",
         href: appCss,
@@ -45,6 +66,28 @@ export const Route = createRootRoute({
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "" },
       { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@600;700;800&display=swap" },
     ],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          "name": "ChanAidRecovery Hub",
+          "url": "https://chanaidrecovery.com",
+          "logo": "https://chanaidrecovery.com/favicon.png",
+          "description": "Professional funds recovery for victims of crypto scams, forex fraud, and binary options.",
+          "contactPoint": {
+            "@type": "ContactPoint",
+            "contactType": "customer support",
+            "email": "contact@chanaidrecovery.com"
+          },
+          "sameAs": [
+            "https://twitter.com/chanaidrecovery",
+            "https://www.linkedin.com/company/chanaidrecovery"
+          ]
+        })
+      }
+    ]
   }),
   shellComponent: RootShell,
   component: RootComponent,
@@ -65,11 +108,16 @@ function RootShell({ children }: { children: React.ReactNode }) {
   );
 }
 
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
+const queryClient = new QueryClient();
+
 function RootComponent() {
   return (
-    <>
+    <QueryClientProvider client={queryClient}>
       <Outlet />
       <Toaster />
-    </>
+      <FloatingSocials />
+    </QueryClientProvider>
   );
 }

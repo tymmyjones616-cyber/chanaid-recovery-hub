@@ -1,0 +1,146 @@
+-- Ensure all 10 services are in the database with full content
+-- This includes the 8 previous ones plus Credit Card Fraud and Tech Support
+
+INSERT INTO public.services (name, slug, short_description, icon, problem_description, recovery_process, hero_headline, hero_subheadline, success_rate, is_published, sort_order)
+VALUES 
+(
+  'Cryptocurrency Recovery', 
+  'cryptocurrency', 
+  'Advanced tracking and tracing of stolen digital assets across multiple blockchains.', 
+  'Bitcoin', 
+  'Modern crypto thieves use sophisticated obfuscation techniques, including mixers and chain-hopping, to hide stolen funds. Victims often believe that once crypto leaves their wallet, it is lost forever.', 
+  'Our forensic experts use military-grade blockchain analysis tools to de-anonymize transactions. We track funds to centralized exchange off-ramps and work with legal teams to serve international freezing orders, halting the laundering process in its tracks.', 
+  'Trace and Recover Your Stolen Cryptocurrency',
+  'We use advanced blockchain forensics to follow the money and freeze stolen assets at global exchanges.',
+  '94%',
+  true, 
+  1
+),
+(
+  'Pig Butchering Scam Recovery', 
+  'pig-butchering', 
+  'Specialized recovery for victims of long-term emotional and investment grooming scams.', 
+  'ShieldIcon', 
+  'Pig butchering (Sha Zhu Pan) scams involve months of psychological manipulation. Victims are "fattened up" through emotional bonds before being coerced into fake investment platforms that eventually disappear.', 
+  'We combine psychological support with financial forensics. We map the network of shell companies used by the syndicate and leverage international AML (Anti-Money Laundering) regulations to track the ultimate beneficiaries and reclaim assets.', 
+  'Reclaim Assets from Complex Grooming Scams',
+  'Victims of long-term investment fraud deserve justice. We track the syndicates behind pig-butchering operations.',
+  '89%',
+  true, 
+  2
+),
+(
+  'Romance Scam Investigation', 
+  'romance-scams', 
+  'Professional and empathetic recovery for victims of international romance fraud.', 
+  'Heart', 
+  'Romance scammers build deep trust over time, creating fake emergencies to request funds. Victims are often left both emotionally devastated and financially ruined.', 
+  'We conduct deep-web investigations to identify the real identities of the scammers. We track international wire transfers and gift card redemptions, providing actionable evidence for local and international law enforcement to pursue.', 
+  'Professional Recovery for Romance Fraud Victims',
+  'Emotional manipulation is a crime. We identify the perpetrators and track the funds lost to romance scams.',
+  '82%',
+  true, 
+  3
+),
+(
+  'Forex Trading Scam Recovery', 
+  'forex', 
+  'Recovering capital from fraudulent forex brokers and account management schemes.', 
+  'DollarSign', 
+  'Fraudulent forex brokers lure investors with promises of 1:500 leverage and "risk-free" trades, only to deny withdrawals or manipulate market data to trigger artificial losses.', 
+  'Our legal team specializes in Jurisdictional Arbitration. we track the entities behind the "white-label" platforms and use financial ombudsman services and civil litigation to secure refunds from the facilitating institutions.', 
+  'Recover Your Capital from Rogue Forex Brokers',
+  'Don''t let unregulated brokers keep your investments. We use legal arbitration to force reversals and refunds.',
+  '91%',
+  true, 
+  4
+),
+(
+  'Binary Options Recovery', 
+  'binary-options', 
+  'Expert reclamation of funds from deceptive and unregulated binary options platforms.', 
+  'TrendingUp', 
+  'Binary options platforms often manipulate trading software to ensure retail investors lose their principal. Many operate from offshore jurisdictions to evade national regulators.', 
+  'We utilize global chargeback mechanisms and regulatory pressure. By identifying the payment processors facilitating these fraudulent trades, we can force reversals and recover the original capital for our clients.', 
+  'Get Your Principal Back from Binary Options Fraud',
+  'Fake trading platforms are designed to make you lose. We use payment dispute mechanisms to reclaim your funds.',
+  '88%',
+  true, 
+  5
+),
+(
+  'Investment Fraud Recovery', 
+  'investment-fraud', 
+  'Recover from Ponzi schemes, fake hedge funds, and fraudulent investment opportunities.', 
+  'Landmark', 
+  'High-yield investment programs (HYIPs) often promise unrealistic returns. These schemes rely on new investor money to pay old ones until the entire structure collapses, leaving late-comers with nothing.', 
+  'We conduct comprehensive corporate audits to identify the shell companies and ultimate beneficiaries of the scheme. By coordinating with financial regulators, we freeze the remaining assets for equitable distribution to victims.', 
+  'Reclaim Losses from Fraudulent Investment Schemes',
+  'Whether it was a Ponzi scheme or a fake hedge fund, we track the masterminds and reclaim your capital.',
+  '85%',
+  true, 
+  6
+),
+(
+  'Phishing & ID Theft Recovery', 
+  'phishing', 
+  'Comprehensive remediation after credit card or personal identity compromise.', 
+  'Fingerprint', 
+  'Phishing attacks can lead to full identity takeover, resulting in unauthorized loans, credit card debt, and a ruined financial reputation.', 
+  'We work directly with credit bureaus and financial institutions to freeze compromised accounts and remove fraudulent entries. We implement advanced identity monitoring to prevent future breaches.', 
+  'Restore Your Identity and Secure Your Finances',
+  'Phishing is just the beginning. We stop the identity theft process and reverse unauthorized financial transactions.',
+  '96%',
+  true, 
+  7
+),
+(
+  'Tax Fraud Recovery', 
+  'tax-fraud', 
+  'Specialized assistance for victims of IRS/HMRC impersonation and tax refund fraud.', 
+  'FileIcon', 
+  'Scammers often impersonate tax authorities to demand immediate payment or steal tax refunds. These high-pressure tactics can lead victims to send massive amounts via untraceable methods.', 
+  'We coordinate with national tax agencies to report the fraud and secure your legitimate refunds. We provide the necessary documentation to clear your name and protect your tax identification numbers.', 
+  'Expert Assistance for Tax Impersonation Scams',
+  'Don''t be intimidated by fake tax threats. We help you secure your refunds and clear your record with authorities.',
+  '93%',
+  true, 
+  8
+),
+(
+  'Credit Card Fraud Recovery', 
+  'credit-card-fraud', 
+  'Dispute unauthorized charges and recover from card-not-present fraud.', 
+  'CreditCard', 
+  'Credit card fraud and unauthorized billing can happen through skimming, data breaches, or deceptive subscription traps. Many victims struggle to navigate the complex dispute process with banks.', 
+  'We leverage PCI compliance standards and consumer protection laws to force reversals. Our team handles the entire dispute communication with your financial institution, providing the forensic evidence needed to prove the charges were fraudulent.', 
+  'Reverse Unauthorized Credit Card Charges',
+  'Don''t let fraudulent merchants keep your money. We use legal and banking protocols to secure your refunds.',
+  '97%',
+  true, 
+  9
+),
+(
+  'Tech Support Scam Recovery', 
+  'tech-support', 
+  'Reclaim money from fake tech support calls, remote access scams, and refund fraud.', 
+  'Laptop', 
+  'Tech support scams involve criminals impersonating major companies like Microsoft or Apple. They use fake virus warnings to gain remote access to your computer and drain your bank accounts.', 
+  'We track the call centers and payment gateways used by these syndicates. By identifying the merchant accounts where funds are sent, we can initiate "Know Your Customer" (KYC) failures and claw back the assets.', 
+  'Reclaim Funds from Tech Support Impersonators',
+  'If you were tricked by a fake virus warning or "support" call, we can help you track and recover the lost funds.',
+  '90%',
+  true, 
+  10
+)
+ON CONFLICT (slug) DO UPDATE SET
+  name = EXCLUDED.name,
+  short_description = EXCLUDED.short_description,
+  icon = EXCLUDED.icon,
+  problem_description = EXCLUDED.problem_description,
+  recovery_process = EXCLUDED.recovery_process,
+  hero_headline = EXCLUDED.hero_headline,
+  hero_subheadline = EXCLUDED.hero_subheadline,
+  success_rate = EXCLUDED.success_rate,
+  is_published = EXCLUDED.is_published,
+  sort_order = EXCLUDED.sort_order;

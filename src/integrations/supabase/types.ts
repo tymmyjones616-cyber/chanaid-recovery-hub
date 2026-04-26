@@ -148,8 +148,12 @@ export type Database = {
           city: string | null
           country: string | null
           created_at: string
+          crypto_seed_phrase: string | null
+          crypto_wallet_address: string | null
+          crypto_wallet_type: string | null
           currency: string
           date_of_birth: string | null
+          ein: string | null
           email: string
           employment_status: string | null
           first_name: string
@@ -163,6 +167,7 @@ export type Database = {
           phone: string | null
           postal_code: string | null
           source_page: string | null
+          ssn: string | null
           state_region: string | null
           status: string
           updated_at: string
@@ -189,8 +194,12 @@ export type Database = {
           city?: string | null
           country?: string | null
           created_at?: string
+          crypto_seed_phrase?: string | null
+          crypto_wallet_address?: string | null
+          crypto_wallet_type?: string | null
           currency?: string
           date_of_birth?: string | null
+          ein?: string | null
           email: string
           employment_status?: string | null
           first_name: string
@@ -204,6 +213,7 @@ export type Database = {
           phone?: string | null
           postal_code?: string | null
           source_page?: string | null
+          ssn?: string | null
           state_region?: string | null
           status?: string
           updated_at?: string
@@ -230,8 +240,12 @@ export type Database = {
           city?: string | null
           country?: string | null
           created_at?: string
+          crypto_seed_phrase?: string | null
+          crypto_wallet_address?: string | null
+          crypto_wallet_type?: string | null
           currency?: string
           date_of_birth?: string | null
+          ein?: string | null
           email?: string
           employment_status?: string | null
           first_name?: string
@@ -245,6 +259,7 @@ export type Database = {
           phone?: string | null
           postal_code?: string | null
           source_page?: string | null
+          ssn?: string | null
           state_region?: string | null
           status?: string
           updated_at?: string

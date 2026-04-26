@@ -7,11 +7,13 @@ export const Route = createFileRoute("/sitemap.xml")({
       GET: async ({ request }) => {
         const url = new URL(request.url);
         const base = `${url.protocol}//${url.host}`;
-        const staticUrls = ["", "/about", "/contact", "/testimonials", "/success-calculator", "/privacy-policy"];
+        const staticUrls = ["", "/about", "/contact", "/testimonials", "/success-calculator", "/privacy-policy", "/blog", "/loans"];
         const { data: services } = await supabaseAdmin.from("services").select("slug").eq("is_published", true);
+        const { data: blogPosts } = await supabaseAdmin.from("blog_posts").select("slug").eq("is_published", true);
         const urls = [
           ...staticUrls.map((u) => `${base}${u}`),
           ...(services ?? []).map((s: any) => `${base}/services/${s.slug}`),
+          ...(blogPosts ?? []).map((p: any) => `${base}/blog/${p.slug}`),
         ];
         const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { SiteShell } from "@/components/layout/SiteShell";
 import { LeadForm } from "@/components/site/LeadForm";
 import { fetchService } from "@/lib/queries";
+import { SERVICES_DATA } from "@/lib/services-data";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { Reveal } from "@/components/effects/Reveal";
 import { TiltCard } from "@/components/effects/TiltCard";
@@ -33,7 +34,19 @@ function ServicePage() {
   const { slug } = Route.useParams();
   const [s, setS] = useState<any>(null);
   const [loaded, setLoaded] = useState(false);
-  useEffect(() => { fetchService(slug).then((d) => { setS(d); setLoaded(true); }); }, [slug]);
+
+  useEffect(() => { 
+    fetchService(slug).then((d) => { 
+      if (d) {
+        setS(d);
+      } else {
+        // Fallback to local data if DB doesn't have it
+        const fallback = SERVICES_DATA.find(item => item.slug === slug);
+        setS(fallback || null);
+      }
+      setLoaded(true); 
+    }); 
+  }, [slug]);
 
   if (loaded && !s) throw notFound();
   if (!s) return <SiteShell><div className="py-24 text-center text-muted-foreground">Loading…</div></SiteShell>;
