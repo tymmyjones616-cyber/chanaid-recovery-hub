@@ -28,9 +28,18 @@ export function TestimonialCarousel({ testimonials }: { testimonials: Testimonia
   }, [emblaApi]);
 
   useEffect(() => {
-    const intervalId = setInterval(scrollNext, 3000);
+    if (!emblaApi) return;
+    
+    const intervalId = setInterval(() => {
+      if (emblaApi.canScrollNext()) {
+        emblaApi.scrollNext();
+      } else {
+        emblaApi.scrollTo(0);
+      }
+    }, 4000);
+    
     return () => clearInterval(intervalId);
-  }, [scrollNext]);
+  }, [emblaApi]);
 
   return (
     <div className="embla overflow-hidden" ref={emblaRef}>

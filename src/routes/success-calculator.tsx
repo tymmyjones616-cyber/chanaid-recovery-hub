@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Reveal } from "@/components/effects/Reveal";
+import { CONTACT_INFO } from "@/lib/constants";
 
 const SCAM_TYPES = [
   "Cryptocurrency",
@@ -97,7 +98,7 @@ function Calc() {
 --------------------------------
 _Sent via ChanAid Recovery Hub_`;
     
-    window.open(`https://wa.me/19403779359?text=${encodeURIComponent(text)}`, "_blank");
+    window.open(`${CONTACT_INFO.WHATSAPP}?text=${encodeURIComponent(text)}`, "_blank");
   };
 
   return (

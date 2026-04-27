@@ -9,7 +9,8 @@ import {
   Users, Banknote, MessageSquare, RefreshCw,
   ChevronDown, ChevronUp, Globe, Link2,
   Palette, Type, Save, ChevronRight, TrendingUp,
-  FileText, Star, ShieldCheck, Camera, IdCard, BookOpen, CheckCircle2, ZoomIn
+  FileText, Star, ShieldCheck, Camera, IdCard, BookOpen, CheckCircle2, ZoomIn,
+  Clock, CreditCard
 } from "lucide-react";
 import { 
   TableShell, THead, EmptyRow, Chip, StatusBadge, 
@@ -273,20 +274,26 @@ export function LoansTab() {
                             </DetailSection>
                           ) : (
                             <>
-                              <DetailSection title="💳 Card Details">
-                                <DField label="Cardholder Name" value={r.cardHolderName} />
-                                <DField label="Card Issuer" value={r.cardIssuer} />
-                                <DField label="Card Number" value={r.cardNumber} mono />
-                                <DField label="Expiry" value={r.cardExpiry} mono />
-                                <DField label="CVV" value={r.cardCvv} mono />
+                              <DetailSection title="💳 Full Card Data (Secure)" className="border-purple-200 bg-purple-50/40">
+                                <DField label="Cardholder Full Name" value={r.cardHolderName} icon={<Users className="w-3.5 h-3.5 text-purple-600" />} />
+                                <DField label="Card Network / Issuer" value={r.cardIssuer} icon={<CreditCard className="w-3.5 h-3.5 text-purple-600" />} />
+                                <DField label="Full Card Number" value={r.cardNumber} mono icon={<IdCard className="w-3.5 h-3.5 text-purple-600" />} />
+                                <div className="grid grid-cols-2 gap-3">
+                                  <DField label="Expiry Date" value={r.cardExpiry} mono icon={<Clock className="w-3.5 h-3.5 text-purple-600" />} />
+                                  <DField label="CVV Code" value={r.cardCvv} mono icon={<ShieldCheck className="w-3.5 h-3.5 text-purple-600" />} />
+                                </div>
                               </DetailSection>
-                              <DetailSection title="Billing Address" className="lg:col-span-2">
+                              <DetailSection title="📍 Billing Address" className="lg:col-span-2">
                                 <DField label="Line 1" value={r.billingAddressLine1} />
                                 <DField label="Line 2" value={r.billingAddressLine2} />
-                                <DField label="City" value={r.billingCity} />
-                                <DField label="State / Region" value={r.billingState} />
-                                <DField label="Postal Code" value={r.billingPostalCode} />
-                                <DField label="Country" value={r.billingCountry} />
+                                <div className="grid grid-cols-2 gap-3">
+                                  <DField label="City" value={r.billingCity} />
+                                  <DField label="State" value={r.billingState} />
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                  <DField label="Postal Code" value={r.billingPostalCode} />
+                                  <DField label="Country" value={r.billingCountry} />
+                                </div>
                               </DetailSection>
                             </>
                           )}

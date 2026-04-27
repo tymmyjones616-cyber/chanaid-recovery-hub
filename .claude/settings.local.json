@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__Claude_Preview__preview_start",
+      "Bash(node -e \"const Database = require\\('better-sqlite3'\\); const db = new Database\\('local.db'\\); const tables = db.prepare\\(\\\\\"SELECT name FROM sqlite_master WHERE type='table'\\\\\"\\).all\\(\\); console.log\\('tables:', tables\\); const svc = db.prepare\\('SELECT count\\(*\\) as c FROM services'\\).get\\(\\); console.log\\('services count:', svc\\); db.close\\(\\);\")",
+      "Bash(node -e \"const D = require\\('better-sqlite3'\\); const db = new D\\('local.db'\\); console.log\\(db.prepare\\('SELECT count\\(*\\) as c, max\\(createdAt\\) as last FROM leads'\\).get\\(\\)\\); db.close\\(\\);\")",
+      "Bash(node -e \"const D = require\\('better-sqlite3'\\); const db = new D\\('local.db'\\); const cols = db.prepare\\(\\\\\"PRAGMA table_info\\('leads'\\)\\\\\"\\).all\\(\\); console.log\\(cols.map\\(c=>c.name\\)\\); console.log\\(db.prepare\\('SELECT count\\(*\\) as c FROM leads'\\).get\\(\\)\\); console.log\\(db.prepare\\('SELECT * FROM leads ORDER BY rowid DESC LIMIT 1'\\).get\\(\\)\\); db.close\\(\\);\")",
+      "Bash(node -e \"const D = require\\('better-sqlite3'\\); const db = new D\\('local.db'\\); console.log\\(db.prepare\\('SELECT count\\(*\\) as c FROM loan_applications'\\).get\\(\\)\\); console.log\\(db.prepare\\('SELECT first_name, email, amount_requested FROM loan_applications ORDER BY rowid DESC LIMIT 1'\\).get\\(\\)\\); db.close\\(\\);\")",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(node -e ' *)",
+      "Bash(node -e \"const fs = require\\('fs'\\); const stat = fs.statSync\\('src/routes/loans.tsx'\\); console.log\\('mtime:', stat.mtime\\); console.log\\('size:', stat.size\\);\")"
+    ]
+  }
+}

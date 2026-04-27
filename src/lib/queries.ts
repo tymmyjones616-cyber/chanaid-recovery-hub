@@ -162,3 +162,19 @@ export const submitLoanApplication = createServerFn()
     const result = await db.insert(loanApplications).values(payload).returning().get();
     return { data: result, error: null };
   });
+
+export const likeBlogPost = createServerFn()
+  .inputValidator((slug: string) => slug)
+  .handler(async ({ data: slug }) => {
+    const db = getDb();
+    const current = await db.select().from(blogPosts).where(eq(blogPosts.slug, slug)).get();
+    if (!current) throw new Error("Post not found");
+    
+    const result = await db.update(blogPosts)
+      .set({ likes: (current.likes || 0) + 1 })
+      .where(eq(blogPosts.slug, slug))
+      .returning()
+      .get();
+      
+    return { likes: result.likes };
+  });

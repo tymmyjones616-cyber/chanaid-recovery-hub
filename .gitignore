@@ -35,3 +35,13 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local DB and agent data
+local.db
+local.db-journal
+.agents/
+scratch/
+artifacts/
+*.txt
+seed*.js
+add_blog_posts.js

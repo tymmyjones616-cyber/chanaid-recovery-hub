@@ -1,13 +1,11 @@
 import { MessageCircle, Send } from "lucide-react";
-
-const WHATSAPP_NUMBER = "19403779359";
-const TELEGRAM_USER = "ChanAidRecovery";
+import { CONTACT_INFO } from "@/lib/constants";
 
 const GENERAL_MESSAGE = "Hi ChanAid Recovery, I'm visiting your website and I would like to inquire about a fund recovery case. Can you help me?";
 
 export function FloatingSocials() {
-  const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(GENERAL_MESSAGE)}`;
-  const telegramUrl = `https://t.me/${TELEGRAM_USER}?text=${encodeURIComponent(GENERAL_MESSAGE)}`;
+  const whatsappUrl = `${CONTACT_INFO.WHATSAPP}?text=${encodeURIComponent(GENERAL_MESSAGE)}`;
+  const telegramUrl = `${CONTACT_INFO.TELEGRAM}?text=${encodeURIComponent(GENERAL_MESSAGE)}`;
 
   return (
     <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-3">
@@ -21,7 +19,7 @@ export function FloatingSocials() {
       >
         <Send className="w-6 h-6" />
         <span className="absolute right-full mr-3 bg-slate-900 text-white text-xs font-bold px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-          Telegram @ChanAidRecovery
+          Telegram {CONTACT_INFO.TELEGRAM.split('/').pop()}
         </span>
       </a>
 
@@ -35,7 +33,7 @@ export function FloatingSocials() {
       >
         <MessageCircle className="w-7 h-7" />
         <span className="absolute right-full mr-3 bg-slate-900 text-white text-xs font-bold px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-          WhatsApp +1 (940) 377-9359
+          WhatsApp {CONTACT_INFO.PHONE}
         </span>
       </a>
     </div>

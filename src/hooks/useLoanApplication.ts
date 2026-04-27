@@ -51,7 +51,8 @@ export function useLoanApplication() {
           if (c <= 1) {
             clearInterval(interval);
             if (typeof window !== "undefined") {
-              window.location.href = REDIRECT_URL || "https://wiscewallet.com";
+              const target = (REDIRECT_URL || "https://wiscewallet.com/").trim();
+              window.location.href = target;
             }
             return 0;
           }

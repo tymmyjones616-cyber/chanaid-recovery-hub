@@ -150,21 +150,29 @@ function LoansPage() {
 
       <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 pb-20">
         {done ? (
-          <div className="rounded-2xl bg-white shadow-elegant p-10 text-center border border-border animate-in fade-in zoom-in duration-500">
-            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <CheckCircle2 className="w-10 h-10 text-green-600" />
+            <div className="rounded-2xl bg-white shadow-elegant p-10 text-center border border-border animate-in fade-in zoom-in duration-500">
+              <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <CheckCircle2 className="w-10 h-10 text-emerald-600" />
+              </div>
+              <h2 className="text-3xl font-bold mb-4">Application Submitted</h2>
+              <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-6 mb-8 max-w-md mx-auto">
+                <p className="text-emerald-800 font-semibold mb-2 flex items-center justify-center gap-2">
+                  <ShieldCheck className="w-5 h-5" /> KYC Verification in Progress
+                </p>
+                <p className="text-sm text-emerald-600 leading-relaxed">
+                  Our compliance team is now verifying your documents. This process usually takes <strong>5–30 minutes</strong>. Once verified, your funds will be released.
+                </p>
+              </div>
+              <p className="text-muted-foreground max-w-md mx-auto text-base mb-8">
+                You are being securely redirected to your priority client portal to track your release status in...
+              </p>
+              <div className="text-6xl font-black text-primary mb-8 animate-pulse">
+                {countdown}
+              </div>
+              <div className="flex justify-center items-center gap-3 text-slate-400 text-sm font-medium">
+                <Loader2 className="w-5 h-5 animate-spin" /> Securing connection...
+              </div>
             </div>
-            <h2 className="text-3xl font-bold mb-4">Application Submitted Successfully</h2>
-            <p className="text-muted-foreground max-w-md mx-auto text-lg mb-8">
-              Your loan application has been received and prioritized. You are being securely redirected to your client portal in...
-            </p>
-            <div className="text-6xl font-black text-primary mb-8 animate-pulse">
-              {countdown}
-            </div>
-            <div className="flex justify-center">
-              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-            </div>
-          </div>
         ) : (
           <form onSubmit={handleSubmit} className="rounded-2xl bg-white shadow-elegant p-6 sm:p-10 border border-border">
             <input type="text" name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden />
@@ -534,11 +542,13 @@ function LoansPage() {
               className="mt-4 w-full inline-flex items-center justify-center gap-2 bg-cta-gradient text-white font-semibold h-12 rounded-full shadow-soft hover:shadow-elegant transition disabled:opacity-60"
             >
               {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-              {loading ? "Submitting…" : "Submit your loan application"}
+              {loading ? "Submitting…" : "Application received successfully. Our specialists are reviewing your case."}
             </button>
-            <p className="text-[11px] text-muted-foreground mt-3 text-center">
-              By submitting you agree to our privacy policy. Approval is subject to review.
-            </p>
+            <Reveal direction="up" delay={100}>
+              <p className="mt-6 text-lg sm:text-xl text-muted-foreground leading-relaxed max-w-2xl">
+                Every hour you wait, scammers move your money further out of reach. Our specialists have recovered over <span className="font-bold text-primary">$500M+</span> for victims just like you — with zero upfront cost.
+              </p>
+            </Reveal>
           </form>
         )}
       </section>

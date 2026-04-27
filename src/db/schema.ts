@@ -248,6 +248,7 @@ export const blogPosts = sqliteTable("blog_posts", {
   featuredImage: text("featured_image"),
   author: text("author").default("ChanAidRecovery Team"),
   isPublished: integer("is_published", { mode: "boolean" }).notNull().default(true),
+  likes: integer("likes").default(0),
   seoTitle: text("seo_title"),
   seoDescription: text("seo_description"),
   createdAt,

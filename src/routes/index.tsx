@@ -76,11 +76,11 @@ function Index() {
               <Link to="/contact" className="group inline-flex items-center gap-2 bg-cta-gradient text-white font-semibold px-6 h-12 rounded-full shadow-elegant">
                 Free consultation <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition" />
               </Link>
+              <a href="https://t.me/+M5J9C5mngShjODcx" target="_blank" rel="noopener noreferrer" className="group inline-flex items-center gap-2 bg-[#229ED9] text-white font-semibold px-6 h-12 rounded-full shadow-soft hover:brightness-110 transition-all">
+                <Send className="w-4 h-4" /> Join Telegram
+              </a>
               <Link to="/loans" className="group inline-flex items-center gap-2 bg-white text-primary font-semibold px-6 h-12 rounded-full border-2 border-primary hover:bg-primary hover:text-white transition-all">
                 Apply for a loan <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition" />
-              </Link>
-              <Link to="/success-calculator" className="inline-flex items-center bg-white/90 backdrop-blur text-foreground font-semibold px-6 h-12 rounded-full border border-border hover:border-primary transition-all">
-                Estimate my recovery
               </Link>
             </div>
 
@@ -301,4 +301,4 @@ function Index() {
 }
 
 // ─── Manual Imports for Icons ────────────────────────────────────────────────
-import { ShieldCheck, Search, FileCheck2, Banknote } from "lucide-react";
+import { ShieldCheck, Search, FileCheck2, Banknote, Send } from "lucide-react";
