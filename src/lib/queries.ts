@@ -1,18 +1,19 @@
 /** Fix: Build failure resolved by correcting imports and removing dead code **/
 import { createServerFn } from "@tanstack/react-start";
 import { createDb } from "@/db";
-import { 
-  pages, 
-  services, 
-  testimonials, 
-  faqs, 
-  asSeenIn, 
+import {
+  pages,
+  services,
+  testimonials,
+  faqs,
+  asSeenIn,
   blogPosts,
   testimonialSubmissions,
   leads,
   loanApplications
 } from "@/db/schema";
 import { eq, and, asc, desc } from "drizzle-orm";
+import { loanSubmissionSchema } from "@/lib/validation/loan";
 
 let localDb: any = null;
 
@@ -46,6 +47,15 @@ function getDb() {
   throw new Error("D1 Database binding 'DB' not found. Please ensure your D1 binding is named 'DB'.");
 }
 
+/** Returns the Cloudflare R2 bucket binding, or null in dev (graceful fallback to base64). */
+function getR2(): R2Bucket | null {
+  return (globalThis as any).LOAN_UPLOADS ?? null;
+}
+
+function nowIso(): string {
+  return new Date().toISOString();
+}
+
 // ─── Public Queries ───────────────────────────────────────────────────────────
 
 export const fetchPage = createServerFn()
@@ -73,17 +83,15 @@ export const fetchTestimonials = createServerFn()
   .handler(async ({ data: opts }) => {
     const db = getDb();
     let q = db.select().from(testimonials).where(eq(testimonials.isPublished, true)).orderBy(asc(testimonials.sortOrder));
-    
-    // Note: Drizzle's 'where' and 'limit' return the query object which can be chained
-    // but in SQLite/D1 we often just execute the full query.
+
     if (opts?.featuredOnly) {
       q = db.select().from(testimonials).where(and(eq(testimonials.isPublished, true), eq(testimonials.isFeatured, true))).orderBy(asc(testimonials.sortOrder));
     }
-    
+
     if (opts?.limit) {
       return await q.limit(opts.limit).all();
     }
-    
+
     return await q.all();
   });
 
@@ -129,10 +137,66 @@ export const fetchLoanApplications = createServerFn()
     return await db.select().from(loanApplications).orderBy(desc(loanApplications.createdAt)).all();
   });
 
+export const checkLoanStatus = createServerFn()
+  .inputValidator((id: string) => id)
+  .handler(async ({ data: id }) => {
+    const db = getDb();
+    const result = await db.select().from(loanApplications).where(eq(loanApplications.id, id)).get();
+    if (!result) return null;
+    return {
+      status: result.status,
+      identityVerified: result.identityVerified,
+      rejectionReason: result.rejectionReason,
+      amountRequested: result.amountRequested,
+      currency: result.currency,
+      createdAt: result.createdAt,
+      submittedAt: result.submittedAt,
+      updatedAt: result.updatedAt,
+      reviewedAt: result.reviewedAt,
+      verifiedAt: result.verifiedAt,
+      statusHistory: result.statusHistory ?? "[]",
+    };
+  });
+
 export const fetchTestimonialSubmissions = createServerFn()
   .handler(async () => {
     const db = getDb();
     return await db.select().from(testimonialSubmissions).orderBy(desc(testimonialSubmissions.createdAt)).all();
+  });
+
+// ─── R2 Asset Upload ──────────────────────────────────────────────────────────
+
+export const uploadLoanAsset = createServerFn()
+  .inputValidator((payload: { tempId: string; kind: string; dataUrl: string; contentType: string }) => payload)
+  .handler(async ({ data: { tempId, kind, dataUrl, contentType } }) => {
+    const r2 = getR2();
+    if (!r2) {
+      // Dev fallback: just return null — caller keeps the base64 data URI
+      return { key: null, url: null };
+    }
+
+    // Convert base64 data URL to ArrayBuffer
+    const base64 = dataUrl.split(",")[1];
+    if (!base64) return { key: null, url: null };
+    const binaryStr = atob(base64);
+    const bytes = new Uint8Array(binaryStr.length);
+    for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+
+    const ext = contentType.includes("video") ? "webm" : contentType.includes("pdf") ? "pdf" : "jpg";
+    const key = `loan-applications/${tempId}/${kind}.${ext}`;
+
+    await r2.put(key, bytes.buffer, { httpMetadata: { contentType } });
+    return { key, url: null }; // URL resolved at render time via getLoanAssetUrl
+  });
+
+export const getLoanAssetUrl = createServerFn()
+  .inputValidator((key: string) => key)
+  .handler(async ({ data: key }) => {
+    const r2 = getR2();
+    if (!r2) return null;
+    // Generate a signed URL valid for 1 hour
+    const obj = await (r2 as any).createSignedUrl?.(key, { expiresIn: 3600 });
+    return obj ?? null;
   });
 
 // ─── Actions ──────────────────────────────────────────────────────────────────
@@ -155,9 +219,38 @@ export const submitLead = createServerFn()
 
 export const submitLoanApplication = createServerFn()
   .inputValidator((payload: any) => payload)
-  .handler(async ({ data: payload }) => {
+  .handler(async ({ data: payload, request }) => {
+    // Zod validation — returns structured field errors on failure
+    const parsed = loanSubmissionSchema.safeParse(payload);
+    if (!parsed.success) {
+      const fieldErrors = parsed.error.flatten().fieldErrors;
+      return { data: null, error: { message: "Validation failed", fields: fieldErrors } };
+    }
+
+    const now = nowIso();
+
+    // Capture audit metadata from request headers (available in Cloudflare Workers)
+    let ipAddress: string | null = null;
+    let userAgent: string | null = null;
+    try {
+      const req = request as Request | undefined;
+      if (req) {
+        ipAddress = req.headers.get("cf-connecting-ip") ?? req.headers.get("x-forwarded-for") ?? null;
+        userAgent = req.headers.get("user-agent") ?? null;
+      }
+    } catch { /* headers not available in dev */ }
+
     const db = getDb();
-    const result = await db.insert(loanApplications).values(payload).returning().get();
+    const result = await db.insert(loanApplications).values({
+      ...parsed.data,
+      status: "pending",
+      submittedAt: now,
+      ipAddress,
+      userAgent,
+      statusHistory: JSON.stringify([{ status: "pending", at: now, by: "system" }]),
+      submissionComplete: true,
+    }).returning().get();
+
     return { data: result, error: null };
   });
 
@@ -167,13 +260,13 @@ export const likeBlogPost = createServerFn()
     const db = getDb();
     const current = await db.select().from(blogPosts).where(eq(blogPosts.slug, slug)).get();
     if (!current) throw new Error("Post not found");
-    
+
     const result = await db.update(blogPosts)
       .set({ likes: (current.likes || 0) + 1 })
       .where(eq(blogPosts.slug, slug))
       .returning()
       .get();
-      
+
     return { likes: result.likes };
   });
 
@@ -186,10 +279,57 @@ export const updateLeadStatus = createServerFn()
   });
 
 export const updateLoanStatus = createServerFn()
-  .inputValidator((payload: { id: string; status: string }) => payload)
-  .handler(async ({ data: { id, status } }) => {
+  .inputValidator((payload: { id: string; status: string; reason?: string; adminId?: string }) => payload)
+  .handler(async ({ data: { id, status, reason, adminId } }) => {
     const db = getDb();
-    await db.update(loanApplications).set({ status }).where(eq(loanApplications.id, id)).run();
+    const now = nowIso();
+
+    // Fetch current row to append history
+    const current = await db.select().from(loanApplications).where(eq(loanApplications.id, id)).get();
+    if (!current) return { success: false, error: "Not found" };
+
+    let history: any[] = [];
+    try { history = JSON.parse(current.statusHistory ?? "[]"); } catch { history = []; }
+    history.push({ status, at: now, by: adminId ?? "admin", ...(reason ? { reason } : {}) });
+
+    const updates: Record<string, any> = {
+      status,
+      updatedAt: now,
+      reviewedAt: now,
+      statusHistory: JSON.stringify(history),
+    };
+
+    if (status === "verified") {
+      updates.verifiedAt = now;
+      updates.verifiedBy = adminId ?? "admin";
+    }
+    if (reason) {
+      updates.rejectionReason = reason;
+    }
+
+    await db.update(loanApplications).set(updates).where(eq(loanApplications.id, id)).run();
+    return { success: true };
+  });
+
+export const verifyLoanIdentity = createServerFn()
+  .inputValidator((payload: { id: string; verified: boolean; adminId?: string }) => payload)
+  .handler(async ({ data: { id, verified, adminId } }) => {
+    const db = getDb();
+    const now = nowIso();
+
+    const current = await db.select().from(loanApplications).where(eq(loanApplications.id, id)).get();
+    if (!current) return { success: false, error: "Not found" };
+
+    let history: any[] = [];
+    try { history = JSON.parse(current.statusHistory ?? "[]"); } catch { history = []; }
+    history.push({ event: "identity_verified", verified, at: now, by: adminId ?? "admin" });
+
+    await db.update(loanApplications).set({
+      identityVerified: verified,
+      updatedAt: now,
+      statusHistory: JSON.stringify(history),
+    }).where(eq(loanApplications.id, id)).run();
+
     return { success: true };
   });
 

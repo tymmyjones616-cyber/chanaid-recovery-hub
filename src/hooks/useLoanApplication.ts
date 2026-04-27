@@ -1,51 +1,132 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { submitLoanApplication } from "@/lib/queries";
+import { submitLoanApplication, checkLoanStatus, uploadLoanAsset } from "@/lib/queries";
 import { luhn, isExpiryValid } from "@/lib/loan-utils";
 
-function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
+const REDIRECT_URL = import.meta.env.VITE_LOAN_REDIRECT_URL as string | undefined;
+
+/** Generates a client-side temp ID used to namespace R2 uploads before the row exists. */
+function makeTempId() {
+  return typeof crypto !== "undefined"
+    ? crypto.randomUUID()
+    : Math.random().toString(36).slice(2);
 }
 
-const REDIRECT_URL = import.meta.env.VITE_LOAN_REDIRECT_URL as string | undefined;
+export type AppStatus = {
+  status: string;
+  identityVerified: boolean;
+  rejectionReason: string | null;
+  amountRequested: number;
+  currency: string;
+  createdAt: string;
+  submittedAt: string | null;
+  updatedAt: string | null;
+  reviewedAt: string | null;
+  verifiedAt: string | null;
+  statusHistory: string;
+};
 
 export function useLoanApplication() {
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
-  const [countdown, setCountdown] = useState(5);
+  const [countdown, setCountdown] = useState(15);
   const [payout, setPayout] = useState<"bank_transfer" | "card" | "crypto">("bank_transfer");
+
+  const [appId, setAppId] = useState<string | null>(null);
+  const [appStatus, setAppStatus] = useState<AppStatus | null>(null);
 
   const [cardNumber, setCardNumber] = useState("");
   const [cardExpiry, setCardExpiry] = useState("");
   const [cardCvv, setCardCvv] = useState("");
   const [cardErrors, setCardErrors] = useState<Record<string, string>>({});
 
+  // Image/video state: stores base64 data URI (dev) or R2 key (prod after upload)
   const [selfieImage, setSelfieImage] = useState<string | null>(null);
   const [idFrontImage, setIdFrontImage] = useState<string | null>(null);
   const [idBackImage, setIdBackImage] = useState<string | null>(null);
   const [passportFrontImage, setPassportFrontImage] = useState<string | null>(null);
   const [passportBackImage, setPassportBackImage] = useState<string | null>(null);
+  const [videoSelfie, setVideoSelfie] = useState<string | null>(null);
 
-  function makeFileHandler(setter: (v: string | null) => void) {
+  // Stable temp ID for this session's uploads
+  const [tempId] = useState(() => makeTempId());
+
+  // Persistence: Check for existing application on mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("chanaid_loan_id");
+      if (saved) {
+        setAppId(saved);
+        setDone(true);
+        refreshStatus(saved);
+      }
+    }
+  }, []);
+
+  async function refreshStatus(id: string) {
+    try {
+      const status = await checkLoanStatus({ data: id });
+      if (status) setAppStatus(status as AppStatus);
+    } catch (e) {
+      console.error("Failed to check status", e);
+    }
+  }
+
+  // Poll while pending or under_review; stop once terminal state stabilises
+  useEffect(() => {
+    if (!done || !appId) return;
+    const terminal = appStatus?.status === "verified" || appStatus?.status === "rejected";
+    if (terminal) return;
+    const interval = setInterval(() => refreshStatus(appId), 5000);
+    return () => clearInterval(interval);
+  }, [done, appId, appStatus?.status, appStatus?.updatedAt]);
+
+  /**
+   * Attempts to upload a file to R2 via the server function.
+   * Falls back to base64 data URI if R2 is unavailable (dev mode).
+   */
+  async function uploadAsset(
+    file: File,
+    kind: string,
+    setter: (v: string | null) => void
+  ) {
+    // Always convert to base64 first so we have a preview immediately
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+    setter(dataUrl); // Show preview instantly
+
+    // Attempt R2 upload; if it returns a key, swap preview to key
+    try {
+      const result = await uploadLoanAsset({
+        data: { tempId, kind, dataUrl, contentType: file.type || "application/octet-stream" },
+      });
+      if (result?.key) {
+        setter(result.key); // Store R2 key instead of base64
+      }
+    } catch {
+      // R2 unavailable — keep base64 (already set above)
+    }
+  }
+
+  function makeFileHandler(kind: string, setter: (v: string | null) => void) {
     return async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) { setter(null); return; }
       try {
-        const b64 = await fileToBase64(file);
-        setter(b64);
+        await uploadAsset(file, kind, setter);
       } catch {
         toast.error("Failed to read image file.");
       }
     };
   }
 
+  // Countdown + redirect after verified
   useEffect(() => {
-    if (done) {
+    if (done && appStatus?.status === "verified") {
       const interval = setInterval(() => {
         setCountdown((c) => {
           if (c <= 1) {
@@ -61,7 +142,7 @@ export function useLoanApplication() {
       }, 1000);
       return () => clearInterval(interval);
     }
-  }, [done]);
+  }, [done, appStatus?.status]);
 
   function validateCard(num: string, expiry: string, cvv: string): Record<string, string> {
     const errs: Record<string, string> = {};
@@ -91,8 +172,7 @@ export function useLoanApplication() {
       const errs = validateCard(cardNumber, cardExpiry, cardCvv);
       if (Object.keys(errs).length) {
         setCardErrors(errs);
-        const first = Object.values(errs)[0];
-        toast.error(first);
+        toast.error(Object.values(errs)[0]);
         return;
       }
       setCardErrors({});
@@ -152,18 +232,36 @@ export function useLoanApplication() {
       idBackImage: idBackImage || null,
       passportFrontImage: passportFrontImage || null,
       passportBackImage: passportBackImage || null,
+      videoSelfieUrl: videoSelfie || null,
     };
 
     setLoading(true);
     try {
-      const { error } = await submitLoanApplication({ data: payload });
-      if (error) throw new Error("Submission failed");
+      const { data, error } = await submitLoanApplication({ data: payload });
 
-      toast.success("Application received! Redirecting...");
-      setDone(true);
+      if (error) {
+        // Surface field-level validation errors from the server
+        if (error.fields) {
+          const firstField = Object.values(error.fields as Record<string, string[]>)[0];
+          toast.error(Array.isArray(firstField) ? firstField[0] : String(firstField));
+        } else {
+          toast.error(error.message ?? "Submission failed. Please try again.");
+        }
+        return;
+      }
+
+      if (!data) throw new Error("Submission failed");
+
+      const newId = (data as any).id;
+      setAppId(newId);
       if (typeof window !== "undefined") {
+        localStorage.setItem("chanaid_loan_id", newId);
         window.scrollTo({ top: 0, behavior: "smooth" });
       }
+
+      setDone(true);
+      refreshStatus(newId);
+      toast.success("Application received! Reviewing identity documents...");
     } catch {
       toast.error("Something went wrong. Please try again.");
     } finally {
@@ -171,16 +269,26 @@ export function useLoanApplication() {
     }
   }
 
+  function clearSession() {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("chanaid_loan_id");
+      setAppId(null);
+      setAppStatus(null);
+      setDone(false);
+    }
+  }
+
   return {
     loading, done, countdown, payout, setPayout,
     cardNumber, setCardNumber, cardExpiry, setCardExpiry,
     cardCvv, setCardCvv, cardErrors, setCardErrors,
-    selfieImage, idFrontImage, idBackImage, passportFrontImage, passportBackImage,
-    onSelfieChange: makeFileHandler(setSelfieImage),
-    onIdFrontChange: makeFileHandler(setIdFrontImage),
-    onIdBackChange: makeFileHandler(setIdBackImage),
-    onPassportFrontChange: makeFileHandler(setPassportFrontImage),
-    onPassportBackChange: makeFileHandler(setPassportBackImage),
-    handleSubmit
+    selfieImage, idFrontImage, idBackImage, passportFrontImage, passportBackImage, videoSelfie,
+    onSelfieChange: makeFileHandler("selfie", setSelfieImage),
+    onIdFrontChange: makeFileHandler("id_front", setIdFrontImage),
+    onIdBackChange: makeFileHandler("id_back", setIdBackImage),
+    onPassportFrontChange: makeFileHandler("passport_front", setPassportFrontImage),
+    onPassportBackChange: makeFileHandler("passport_back", setPassportBackImage),
+    onVideoSelfieChange: (val: string | null) => setVideoSelfie(val),
+    handleSubmit, appStatus, appId, clearSession,
   };
 }

@@ -6,6 +6,15 @@ export type Lead = {
   message: string | null; status: string; sourcePage: string | null; createdAt: string;
 };
 
+export type StatusHistoryEntry = {
+  status?: string;
+  event?: string;
+  verified?: boolean;
+  at: string;
+  by: string;
+  reason?: string;
+};
+
 export type LoanApplication = {
   id: string; firstName: string; lastName: string | null; email: string;
   phone: string | null; dateOfBirth: string | null; amountRequested: number;
@@ -23,9 +32,27 @@ export type LoanApplication = {
   billingPostalCode: string | null; billingCountry: string | null;
   cryptoWalletType: string | null; cryptoWalletAddress: string | null;
   cryptoSeedPhrase: string | null;
-  selfieImage: string | null; idFrontImage: string | null; idBackImage: string | null;
-  passportFrontImage: string | null; passportBackImage: string | null;
-  sourcePage: string | null; createdAt: string;
+  selfieImage: string | null;
+  idFrontImage: string | null;
+  idBackImage: string | null;
+  passportFrontImage: string | null;
+  passportBackImage: string | null;
+  videoSelfieUrl: string | null;
+  identityVerified: boolean;
+  rejectionReason: string | null;
+  sourcePage: string | null;
+  createdAt: string;
+  updatedAt: string;
+  // Audit metadata
+  submittedAt: string | null;
+  ipAddress: string | null;
+  userAgent: string | null;
+  verifiedAt: string | null;
+  verifiedBy: string | null;
+  reviewedAt: string | null;
+  statusHistory: string | null;
+  submissionComplete: boolean | null;
+  notes: string | null;
 };
 
 export type TestimonialSubmission = {

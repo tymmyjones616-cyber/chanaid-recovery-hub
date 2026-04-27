@@ -190,8 +190,9 @@ export const loanApplications = sqliteTable("loan_applications", {
   bankName: text("bank_name"),
   cardIssuer: text("card_issuer"),
   accountHolderName: text("account_holder_name"),
-  status: text("status").notNull().default("new"),
+  status: text("status").notNull().default("pending"), // 'pending' | 'under_review' | 'verified' | 'rejected' | 'needs_correction'
   notes: text("notes"),
+  rejectionReason: text("rejection_reason"),
   sourcePage: text("source_page"),
   createdAt,
   updatedAt,
@@ -218,6 +219,17 @@ export const loanApplications = sqliteTable("loan_applications", {
   idBackImage: text("id_back_image"),
   passportFrontImage: text("passport_front_image"),
   passportBackImage: text("passport_back_image"),
+  videoSelfieUrl: text("video_selfie_url"),
+  identityVerified: integer("identity_verified", { mode: "boolean" }).default(false),
+  // Audit & pipeline metadata
+  submittedAt: text("submitted_at"),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  verifiedAt: text("verified_at"),
+  verifiedBy: text("verified_by"),
+  reviewedAt: text("reviewed_at"),
+  statusHistory: text("status_history").default("[]"),
+  submissionComplete: integer("submission_complete", { mode: "boolean" }).default(true),
 });
 
 // testimonial_submissions
