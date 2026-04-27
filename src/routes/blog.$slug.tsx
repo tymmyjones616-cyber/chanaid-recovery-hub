@@ -26,6 +26,24 @@ export const Route = createFileRoute("/blog/$slug")({
   },
   loader: async ({ params }) => await fetchBlogPost({ data: params.slug }).catch(() => null),
   component: BlogPost,
+  errorComponent: ({ error }) => (
+    <SiteShell>
+      <div className="max-w-2xl mx-auto py-24 text-center">
+        <h1 className="text-3xl font-bold text-slate-900">Unable to load blog post</h1>
+        <p className="mt-4 text-slate-600">The recovery guide you are looking for might be temporarily unavailable. Please check back in a few minutes.</p>
+        <Link to="/blog" className="mt-8 inline-block text-blue-600 font-semibold hover:underline">Back to Blog</Link>
+      </div>
+    </SiteShell>
+  ),
+  notFoundComponent: () => (
+    <SiteShell>
+      <div className="max-w-2xl mx-auto py-24 text-center">
+        <h1 className="text-3xl font-bold text-slate-900">Guide not found</h1>
+        <p className="mt-4 text-slate-600">We couldn't find the specific recovery guide you requested.</p>
+        <Link to="/blog" className="mt-8 inline-block text-blue-600 font-semibold hover:underline">Browse all guides</Link>
+      </div>
+    </SiteShell>
+  ),
 });
 
 function BlogPost() {

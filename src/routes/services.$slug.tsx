@@ -33,9 +33,22 @@ export const Route = createFileRoute("/services/$slug")({
     return { service: fallback || null };
   },
   component: ServicePage,
+  errorComponent: ({ error }) => (
+    <SiteShell>
+      <div className="max-w-2xl mx-auto py-24 text-center">
+        <h1 className="text-3xl font-bold text-slate-900">Service data unavailable</h1>
+        <p className="mt-4 text-slate-600">We're having trouble retrieving the details for this recovery service. Please try refreshing or contact us directly.</p>
+        <Link to="/" className="mt-8 inline-block text-blue-600 font-semibold hover:underline">Back to Home</Link>
+      </div>
+    </SiteShell>
+  ),
   notFoundComponent: () => (
     <SiteShell>
-      <div className="max-w-2xl mx-auto py-24 text-center"><h1 className="text-3xl font-bold">Service not found</h1></div>
+      <div className="max-w-2xl mx-auto py-24 text-center">
+        <h1 className="text-3xl font-bold text-slate-900">Service not found</h1>
+        <p className="mt-4 text-slate-600">The specific recovery service you are looking for does not exist in our registry.</p>
+        <Link to="/" className="mt-8 inline-block text-blue-600 font-semibold hover:underline">View all services</Link>
+      </div>
     </SiteShell>
   ),
 });
