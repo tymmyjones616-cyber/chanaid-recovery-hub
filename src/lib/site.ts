@@ -35,8 +35,7 @@ export type SiteSettings = {
 
 export const SITE_URL = "https://chanaidrecovery.com";
 
-import { createRequire } from "module";
-const require = createRequire(import.meta.url);
+
 
 let localDb: any = null;
 
@@ -52,7 +51,7 @@ function getDb() {
     if (!localDb) {
       console.log("getDb: D1 not found, falling back to local SQLite (local.db)");
       try {
-        const Database = require("better-sqlite3");
+        const Database = (0, eval)('require')("better-sqlite3");
         const sqlite = new Database("local.db");
         localDb = createDb(undefined, sqlite);
       } catch (err) {
