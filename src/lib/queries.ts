@@ -12,9 +12,6 @@ import {
   loanApplications
 } from "@/db/schema";
 import { eq, and, asc, desc } from "drizzle-orm";
-import { createRequire } from "module";
-
-const require = createRequire(import.meta.url);
 
 let localDb: any = null;
 
@@ -43,7 +40,7 @@ function getDb() {
       try {
         // Use a dynamic import to avoid bundling better-sqlite3 in production
         // and to avoid issues during build-time pre-rendering
-        const Database = require("better-sqlite3");
+        const Database = (0, eval)('require')("better-sqlite3");
         const sqlite = new Database("local.db");
         localDb = createDb(undefined, sqlite);
       } catch (err) {
