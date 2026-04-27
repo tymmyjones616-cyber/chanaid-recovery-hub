@@ -3,6 +3,7 @@ import { SiteShell } from "@/components/layout/SiteShell";
 import { Loader2, CheckCircle2, ShieldCheck, Banknote, CreditCard, Lock, Wallet, Camera, IdCard, BookOpen, AlertTriangle, BadgeCheck, FileCheck2 } from "lucide-react";
 import { useLoanApplication } from "@/hooks/useLoanApplication";
 import { formatCardNumber, formatExpiry } from "@/lib/loan-utils";
+import { Reveal } from "@/components/effects/Reveal";
 
 // ─── Identity Verification sub-components (defined before LoansPage so TanStack
 //     code-splitting includes them in the component chunk) ──────────────────────
