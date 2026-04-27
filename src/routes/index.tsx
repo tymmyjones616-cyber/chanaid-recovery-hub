@@ -268,21 +268,44 @@ function Index() {
         </div>
       </section>
 
-      {/* FAQ */}
-      <section className="py-20 bg-soft-gradient">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl sm:text-4xl font-bold text-center mb-10">Frequently asked questions</h2>
-          <div className="space-y-3">
+      {/* FAQ - SEO & GEO Optimized */}
+      <section className="py-24 bg-soft-gradient" id="faq">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight mb-4">
+              Expert <span className="text-primary">Crypto Recovery</span> FAQ
+            </h2>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              Common questions about recovering scammed funds in the USA, UK, Australia, Canada, and the UAE.
+            </p>
+          </div>
+          
+          <div className="space-y-4">
             {faqs.map((f: any) => (
-              <details key={f.id} className="group bg-white rounded-xl border border-border p-5">
-                <summary className="font-semibold cursor-pointer list-none flex justify-between items-center">
-                  {f.question}
-                  <span className="ml-4 text-primary group-open:rotate-180 transition">▾</span>
-                </summary>
-                <p className="mt-3 text-sm text-muted-foreground">{f.answer}</p>
-              </details>
+              <div key={f.id} className="bg-white/80 backdrop-blur-sm rounded-2xl border border-border overflow-hidden hover:border-primary/30 transition-all shadow-sm">
+                <details className="group">
+                  <summary className="flex justify-between items-center p-6 cursor-pointer list-none font-bold text-lg">
+                    {f.question}
+                    <div className="w-8 h-8 rounded-full bg-primary/5 flex items-center justify-center group-open:bg-primary group-open:text-white transition-colors">
+                      <span className="text-xl group-open:rotate-180 transition-transform duration-300">▾</span>
+                    </div>
+                  </summary>
+                  <div className="px-6 pb-6 text-muted-foreground leading-relaxed">
+                    {f.answer}
+                  </div>
+                </details>
+              </div>
             ))}
           </div>
+          
+          <div className="mt-12 text-center">
+            <p className="text-muted-foreground mb-6">Didn't find your answer? Our global recovery specialists are available 24/7.</p>
+            <a href="/contact" className="inline-flex items-center justify-center px-8 py-4 rounded-full bg-primary text-white font-bold hover:bg-primary/90 transition-all shadow-lg hover:shadow-primary/20">
+              Speak to a Specialist
+            </a>
+          </div>
+        </div>
+      </section>
         </div>
       </section>
 

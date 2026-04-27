@@ -41,15 +41,16 @@ function getDb() {
     if (!localDb) {
       console.log("getDb: D1 not found, falling back to local SQLite (local.db)");
       try {
+        // Use a dynamic import to avoid bundling better-sqlite3 in production
+        // and to avoid issues during build-time pre-rendering
         const Database = require("better-sqlite3");
         const sqlite = new Database("local.db");
         localDb = createDb(undefined, sqlite);
       } catch (err) {
         console.error("getDb: Failed to initialize local SQLite:", err);
-        throw new Error("D1 Database binding 'DB' not found and local fallback failed.");
       }
     }
-    return localDb;
+    if (localDb) return localDb;
   }
 
   console.error("getDb: D1 Database binding 'DB' not found in event context or globalThis.");

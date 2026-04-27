@@ -1,5 +1,6 @@
-import { useEffect, useCallback } from "react";
+import { useCallback } from "react";
 import useEmblaCarousel from "embla-carousel-react";
+import Autoplay from "embla-carousel-autoplay";
 import { Star } from "lucide-react";
 import { TiltCard } from "@/components/effects/TiltCard";
 
@@ -13,33 +14,18 @@ interface Testimonial {
 }
 
 export function TestimonialCarousel({ testimonials }: { testimonials: Testimonial[] }) {
-  const [emblaRef, emblaApi] = useEmblaCarousel({
-    loop: true,
-    align: "start",
-    slidesToScroll: 1,
-    breakpoints: {
-      "(min-width: 768px)": { slidesToScroll: 2 },
-      "(min-width: 1024px)": { slidesToScroll: 3 },
+  const [emblaRef] = useEmblaCarousel(
+    {
+      loop: true,
+      align: "start",
+      slidesToScroll: 1,
+      breakpoints: {
+        "(min-width: 768px)": { slidesToScroll: 2 },
+        "(min-width: 1024px)": { slidesToScroll: 3 },
+      },
     },
-  });
-
-  const scrollNext = useCallback(() => {
-    if (emblaApi) emblaApi.scrollNext();
-  }, [emblaApi]);
-
-  useEffect(() => {
-    if (!emblaApi) return;
-    
-    const intervalId = setInterval(() => {
-      if (emblaApi.canScrollNext()) {
-        emblaApi.scrollNext();
-      } else {
-        emblaApi.scrollTo(0);
-      }
-    }, 4000);
-    
-    return () => clearInterval(intervalId);
-  }, [emblaApi]);
+    [Autoplay({ delay: 3000, stopOnInteraction: false, playOnInit: true })]
+  );
 
   return (
     <div className="embla overflow-hidden" ref={emblaRef}>
