@@ -17,23 +17,72 @@ import { SITE_STATS, ASSETS } from "@/lib/constants";
 const FALLBACK_SERVICES = SERVICES_DATA;
 
 export const Route = createFileRoute("/")({
-  head: () => ({
-    meta: [
-      { title: "ChanAidRecovery Hub | Professional Crypto Recovery Services | Reclaim Stolen Bitcoin & USDT" },
-      { name: "description", content: "ChanAidRecovery Hub provides expert crypto recovery services for victims of scams worldwide. Reclaim stolen Bitcoin, Ethereum, and USDT with our forensic specialists. $500M+ recovered. No upfront fees." },
-      { property: "og:title", content: "ChanAidRecovery Hub | Professional Asset & Funds Recovery Services" },
-      { property: "og:description", content: "Reclaim stolen crypto assets with our expert forensic investigators. Global leader in blockchain tracing and legal recovery services." },
-      { name: "keywords", content: "crypto recovery services, stolen bitcoin recovery, crypto scam refund, financial aid for crypto victims, blockchain forensics, USDT recovery" },
-    ],
-    links: [
-      { rel: "canonical", href: "https://chanaidrecovery.com/" }
-    ]
-  }),
+  head: ({ loaderData }) => {
+    const faqs = (loaderData as any)?.faqs ?? [];
+    const testimonials = (loaderData as any)?.testimonials ?? [];
+    const ratingCount = testimonials.length;
+    const avgRating = ratingCount > 0
+      ? Math.round(
+          (testimonials.reduce((s: number, t: any) => s + (t.rating || 5), 0) / ratingCount) * 10
+        ) / 10
+      : 5;
+    const scripts: any[] = [];
+    if (faqs.length > 0) {
+      scripts.push({
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: faqs.map((f: any) => ({
+            "@type": "Question",
+            name: f.question,
+            acceptedAnswer: { "@type": "Answer", text: f.answer },
+          })),
+        }),
+      });
+    }
+    if (ratingCount > 0) {
+      scripts.push({
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Service",
+          serviceType: "Crypto & Funds Recovery",
+          provider: {
+            "@type": "Organization",
+            name: "ChanAidRecovery Hub",
+            url: "https://chanaidrecovery.com",
+          },
+          areaServed: ["United States", "United Kingdom", "Australia", "Canada", "United Arab Emirates", "Worldwide"],
+          aggregateRating: {
+            "@type": "AggregateRating",
+            ratingValue: avgRating,
+            reviewCount: ratingCount,
+            bestRating: 5,
+            worstRating: 1,
+          },
+        }),
+      });
+    }
+    return {
+      meta: [
+        { title: "ChanAidRecovery Hub | Professional Crypto Recovery Services | Reclaim Stolen Bitcoin & USDT" },
+        { name: "description", content: "ChanAidRecovery Hub provides expert crypto recovery services for victims of scams worldwide. Reclaim stolen Bitcoin, Ethereum, and USDT with our forensic specialists. $500M+ recovered. No upfront fees." },
+        { property: "og:title", content: "ChanAidRecovery Hub | Professional Asset & Funds Recovery Services" },
+        { property: "og:description", content: "Reclaim stolen crypto assets with our expert forensic investigators. Global leader in blockchain tracing and legal recovery services." },
+        { name: "keywords", content: "crypto recovery services USA, stolen bitcoin recovery UK, USDT recovery Australia, crypto scam refund Canada, pig butchering recovery UAE, blockchain forensics, FCA broker chargeback, IC3 cryptocurrency complaint, Action Fraud crypto, Scamwatch recovery, AFCA crypto dispute, romance scam recovery, forex fraud refund, ChatGPT crypto recovery 2026, AI Overview crypto recovery" },
+      ],
+      links: [
+        { rel: "canonical", href: "https://chanaidrecovery.com/" }
+      ],
+      scripts,
+    };
+  },
   loader: async () => {
     const [services, testimonials, faqs] = await Promise.all([
       fetchServices().catch(() => []),
-      fetchTestimonials({ data: { featuredOnly: true, limit: 50 } }).catch(() => []),
-      fetchFaqs({ data: 5 }).catch(() => []),
+      fetchTestimonials({ data: {} }).catch(() => []),
+      fetchFaqs({ data: undefined }).catch(() => []),
     ]);
     return {
       services: Array.isArray(services) && services.length > 0 ? services : FALLBACK_SERVICES,
@@ -280,18 +329,29 @@ function Index() {
             </p>
           </div>
           
-          <div className="space-y-4">
+          <div className="space-y-4" itemScope itemType="https://schema.org/FAQPage">
             {faqs.map((f: any) => (
-              <div key={f.id} className="bg-white/80 backdrop-blur-sm rounded-2xl border border-border overflow-hidden hover:border-primary/30 transition-all shadow-sm">
+              <div
+                key={f.id}
+                className="bg-white/80 backdrop-blur-sm rounded-2xl border border-border overflow-hidden hover:border-primary/30 transition-all shadow-sm"
+                itemScope
+                itemProp="mainEntity"
+                itemType="https://schema.org/Question"
+              >
                 <details className="group">
                   <summary className="flex justify-between items-center p-6 cursor-pointer list-none font-bold text-lg">
-                    {f.question}
+                    <span itemProp="name">{f.question}</span>
                     <div className="w-8 h-8 rounded-full bg-primary/5 flex items-center justify-center group-open:bg-primary group-open:text-white transition-colors">
                       <span className="text-xl group-open:rotate-180 transition-transform duration-300">▾</span>
                     </div>
                   </summary>
-                  <div className="px-6 pb-6 text-muted-foreground leading-relaxed">
-                    {f.answer}
+                  <div
+                    className="px-6 pb-6 text-muted-foreground leading-relaxed"
+                    itemScope
+                    itemProp="acceptedAnswer"
+                    itemType="https://schema.org/Answer"
+                  >
+                    <span itemProp="text">{f.answer}</span>
                   </div>
                 </details>
               </div>
@@ -304,8 +364,6 @@ function Index() {
               Speak to a Specialist
             </a>
           </div>
-        </div>
-      </section>
         </div>
       </section>
 
