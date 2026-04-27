@@ -1,5 +1,7 @@
-import { createServerFn, getEvent } from "@tanstack/react-start/server";
+import { createServerFn } from "@tanstack/react-start";
 import { createDb } from "@/db";
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
 import { 
   pages, 
   services, 
@@ -20,27 +22,17 @@ let localDb: any = null;
  * Falls back to better-sqlite3 + local.db in development when no D1 binding is present.
  */
 function getDb() {
-  // 1. Try to get D1 from Nitro event context (preferred in production)
-  try {
-    const event = getEvent();
-    const d1 = event?.context?.cloudflare?.env?.DB || event?.context?.env?.DB;
-    if (d1) return createDb(d1);
-  } catch (e) {
-    // getEvent might fail if called outside of a request context
-  }
+  // 1. Try to get D1 from globalThis (set by Cloudflare/Nitro)
+  const d1 = (globalThis as any).DB;
+  if (d1) return createDb(d1);
 
-  // 2. Fallback to globalThis (set by worker.js)
-  const gD1 = (globalThis as any).DB;
-  if (gD1) return createDb(gD1);
-
-  // 3. Development Fallback
+  // 2. Development Fallback
   if (process.env.NODE_ENV === "development") {
     if (!localDb) {
       console.log("getDb: D1 not found, falling back to local SQLite (local.db)");
       try {
-        // Use a dynamic import to avoid bundling better-sqlite3 in production
-        // and to avoid issues during build-time pre-rendering
-        const Database = (0, eval)('require')("better-sqlite3");
+        // Use createRequire approach to avoid bundling issues
+        const Database = require("better-sqlite3");
         const sqlite = new Database("local.db");
         localDb = createDb(undefined, sqlite);
       } catch (err) {
@@ -50,7 +42,7 @@ function getDb() {
     if (localDb) return localDb;
   }
 
-  console.error("getDb: D1 Database binding 'DB' not found in event context or globalThis.");
+  console.error("getDb: D1 Database binding 'DB' not found in globalThis.");
   throw new Error("D1 Database binding 'DB' not found. Please ensure your D1 binding is named 'DB'.");
 }
 
