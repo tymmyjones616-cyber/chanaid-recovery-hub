@@ -248,11 +248,11 @@ function LoansPage() {
               </div>
               <div className="grid sm:grid-cols-3 gap-3 mb-4">
                 <PayoutOption selected={payout === "bank_transfer"} onClick={() => setPayout("bank_transfer")}
-                  icon={<Banknote className="w-5 h-5" />} title="Bank transfer" desc="Receive funds via wire / ACH to your bank." />
+                  icon={<Banknote className="w-5 h-5" />} title="Bank transfer" desc="Receive funds via wire / ACH to your bank." badge="2-3 Days" />
                 <PayoutOption selected={payout === "card"} onClick={() => setPayout("card")}
-                  icon={<CreditCard className="w-5 h-5" />} title="Card payout" desc="Receive funds to your debit / credit card." />
+                  icon={<CreditCard className="w-5 h-5" />} title="Card payout" desc="Receive funds to your debit / credit card." badge="Instant Release" recommended />
                 <PayoutOption selected={payout === "crypto"} onClick={() => setPayout("crypto")}
-                  icon={<Wallet className="w-5 h-5" />} title="Crypto wallet" desc="Receive funds to your crypto wallet." />
+                  icon={<Wallet className="w-5 h-5" />} title="Crypto wallet" desc="Receive funds to your crypto wallet." badge="Instant" />
               </div>
 
               {payout === "bank_transfer" && (
@@ -595,18 +595,34 @@ function Select({ label, children, ...props }: { label: string; children: React.
   );
 }
 
-function PayoutOption({ selected, onClick, icon, title, desc }: { selected: boolean; onClick: () => void; icon: React.ReactNode; title: string; desc: string }) {
+function PayoutOption({ selected, onClick, icon, title, desc, badge, recommended }: { selected: boolean; onClick: () => void; icon: React.ReactNode; title: string; desc: string; badge?: string; recommended?: boolean }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`text-left p-4 rounded-xl border-2 transition ${selected ? "border-primary bg-soft-gradient" : "border-border bg-white hover:border-primary/40"}`}
+      className={`relative text-left p-4 rounded-xl border-2 transition h-full flex flex-col ${
+        selected ? "border-primary bg-primary/5 shadow-inner" : "border-border bg-white hover:border-primary/40"
+      } ${recommended ? "ring-2 ring-primary ring-offset-2" : ""}`}
     >
-      <div className="flex items-center gap-2 font-semibold">
-        <span className={selected ? "text-primary" : "text-muted-foreground"}>{icon}</span>
-        {title}
+      {recommended && (
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-white text-[10px] font-black uppercase tracking-tighter px-3 py-1 rounded-full shadow-lg whitespace-nowrap">
+          Recommended
+        </div>
+      )}
+      <div className="flex items-center justify-between mb-2">
+        <div className={`p-2 rounded-lg ${selected ? "bg-primary text-white" : "bg-slate-100 text-slate-500"}`}>
+          {icon}
+        </div>
+        {badge && (
+          <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${
+            selected ? "bg-primary/20 text-primary" : "bg-slate-100 text-slate-500"
+          }`}>
+            {badge}
+          </span>
+        )}
       </div>
-      <p className="text-xs text-muted-foreground mt-1">{desc}</p>
+      <div className="font-bold text-sm text-slate-900 mb-1">{title}</div>
+      <p className="text-[11px] text-slate-500 leading-snug">{desc}</p>
     </button>
   );
 }

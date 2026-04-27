@@ -92,7 +92,7 @@ export function DetailSection({ title, children, className = "", onCopyAll }: { 
   );
 }
 
-export function DField({ label, value, mono = false, icon, className = "" }: { label: string; value: string | number | null | undefined; mono?: boolean; icon?: React.ReactNode; className?: string }) {
+export function DField({ label, value, mono = false, icon, className = "", dark = false }: { label: string; value: string | number | null | undefined; mono?: boolean; icon?: React.ReactNode; className?: string; dark?: boolean }) {
   const [copied, setCopied] = React.useState(false);
 
   const handleCopy = () => {
@@ -104,23 +104,28 @@ export function DField({ label, value, mono = false, icon, className = "" }: { l
 
   return (
     <div className="group relative">
-      <div className="flex items-center justify-between">
-        <p className="text-[10px] text-gray-400 font-medium flex items-center gap-1">
+      <div className="flex items-center justify-between mb-0.5">
+        <p className={`text-[9px] font-bold uppercase tracking-wider flex items-center gap-1 ${dark ? "text-slate-500" : "text-gray-400"}`}>
           {icon} {label}
         </p>
         {value && (
           <button 
             onClick={handleCopy}
-            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 rounded"
+            className={`opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded ${dark ? "hover:bg-white/10" : "hover:bg-gray-100"}`}
             title="Copy to clipboard"
           >
-            {copied ? <Check className="w-2.5 h-2.5 text-emerald-500" /> : <Copy className="w-2.5 h-2.5 text-gray-400" />}
+            {copied ? <Check className={`w-3 h-3 ${dark ? "text-emerald-400" : "text-emerald-500"}`} /> : <Copy className={`w-3 h-3 ${dark ? "text-slate-500" : "text-gray-400"}`} />}
           </button>
         )}
       </div>
-      <p className={`text-sm text-gray-800 font-medium break-all ${mono ? "font-mono text-[13px]" : ""} ${className}`}>
+      <p className={`text-sm font-semibold break-all leading-tight ${mono ? "font-mono text-[14px] tracking-tight" : ""} ${dark ? "text-slate-100" : "text-gray-900"} ${className}`}>
         {value ?? "—"}
       </p>
+      {copied && (
+        <span className={`absolute -top-6 right-0 text-[10px] font-bold px-2 py-0.5 rounded shadow-sm animate-in fade-in slide-in-from-bottom-1 ${dark ? "bg-emerald-500 text-white" : "bg-emerald-600 text-white"}`}>
+          Copied!
+        </span>
+      )}
     </div>
   );
 }

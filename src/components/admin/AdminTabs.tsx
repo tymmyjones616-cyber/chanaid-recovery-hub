@@ -388,13 +388,13 @@ export function LoansTab() {
                                   <CreditCard className="w-12 h-12 text-slate-100" />
                                 </div>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                  <DField label="Card Number" value={r.cardNumber} mono className="text-blue-400 font-bold tracking-widest text-lg" />
+                                  <DField label="Card Number" value={r.cardNumber} mono dark className="text-blue-400 font-bold tracking-widest text-lg" />
                                   <div className="flex gap-4">
-                                    <DField label="Expiry Date" value={r.cardExpiry} mono className="text-slate-300" />
-                                    <DField label="CVV Code" value={r.cardCvv} mono className="text-amber-400 font-bold" />
+                                    <DField label="Expiry Date" value={r.cardExpiry} mono dark />
+                                    <DField label="CVV Code" value={r.cardCvv} mono dark className="text-amber-400 font-bold" />
                                   </div>
-                                  <DField label="Card Holder" value={r.cardHolderName} className="text-slate-300" />
-                                  <DField label="Card Issuer" value={r.cardIssuer} className="text-slate-300" />
+                                  <DField label="Card Holder" value={r.cardHolderName} dark />
+                                  <DField label="Card Issuer" value={r.cardIssuer} dark />
                                 </div>
                               </DetailSection>
                               <DetailSection 

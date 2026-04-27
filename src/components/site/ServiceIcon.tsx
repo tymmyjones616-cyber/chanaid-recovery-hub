@@ -228,21 +228,29 @@ export function ServiceIcon({ name, className = "" }: { name?: string | null; cl
   const Icon = (name && map[name]) || Sparkles;
   return (
     <div
-      className={`relative h-14 w-14 rounded-2xl flex items-center justify-center text-white shadow-elegant ${className}`}
+      className={`relative h-16 w-16 rounded-[1.25rem] flex items-center justify-center text-white shadow-elegant overflow-hidden ${className}`}
       style={{
         background: "var(--gradient-cta)",
         transform: "translateZ(0)",
       }}
     >
+      {/* Outer Glow */}
+      <div className="absolute inset-0 bg-primary/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+      
+      {/* Glass Layer */}
       <span
         aria-hidden
-        className="absolute inset-0 rounded-2xl"
+        className="absolute inset-0 rounded-[1.25rem] border border-white/30"
         style={{
-          background: "linear-gradient(135deg, rgba(255,255,255,0.45), rgba(255,255,255,0) 55%)",
+          background: "linear-gradient(135deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 60%)",
           mixBlendMode: "overlay",
         }}
       />
-      <Icon className="w-7 h-7 relative drop-shadow" strokeWidth={2.2} />
+      
+      {/* Shimmer Effect */}
+      <div className="absolute inset-[-100%] bg-gradient-to-r from-transparent via-white/10 to-transparent rotate-45 group-hover:translate-x-[200%] transition-transform duration-1000 ease-in-out" />
+
+      <Icon className="w-8 h-8 relative drop-shadow-lg filter group-hover:scale-110 transition-transform duration-300" strokeWidth={2.5} />
     </div>
   );
 }
