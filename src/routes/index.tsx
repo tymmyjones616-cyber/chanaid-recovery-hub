@@ -19,16 +19,20 @@ const FALLBACK_SERVICES = SERVICES_DATA;
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "ChanAidRecovery Hub | Recover Funds from Crypto & Online Scams" },
-      { name: "description", content: "Victim of a crypto scam? ChanAidRecovery Hub helps you reclaim stolen Bitcoin, Ethereum, and USDT. No upfront fees. Get a free forensic consultation today." },
-      { property: "og:title", content: "ChanAidRecovery Hub | Professional Scam Recovery Services" },
-      { property: "og:description", content: "Reclaim stolen crypto and assets with our expert forensic investigators. $500M+ recovered for victims worldwide." },
+      { title: "ChanAidRecovery Hub | Professional Crypto Recovery Services | Reclaim Stolen Bitcoin & USDT" },
+      { name: "description", content: "ChanAidRecovery Hub provides expert crypto recovery services for victims of scams worldwide. Reclaim stolen Bitcoin, Ethereum, and USDT with our forensic specialists. $500M+ recovered. No upfront fees." },
+      { property: "og:title", content: "ChanAidRecovery Hub | Professional Asset & Funds Recovery Services" },
+      { property: "og:description", content: "Reclaim stolen crypto assets with our expert forensic investigators. Global leader in blockchain tracing and legal recovery services." },
+      { name: "keywords", content: "crypto recovery services, stolen bitcoin recovery, crypto scam refund, financial aid for crypto victims, blockchain forensics, USDT recovery" },
     ],
+    links: [
+      { rel: "canonical", href: "https://chanaidrecovery.com/" }
+    ]
   }),
   loader: async () => {
     const [services, testimonials, faqs] = await Promise.all([
       fetchServices().catch(() => []),
-      fetchTestimonials({ data: { featuredOnly: true, limit: 3 } }).catch(() => []),
+      fetchTestimonials({ data: { featuredOnly: true, limit: 50 } }).catch(() => []),
       fetchFaqs({ data: 5 }).catch(() => []),
     ]);
     return {
@@ -65,7 +69,7 @@ function Index() {
                 <Sparkles className="w-3.5 h-3.5" /> Asset & Funds Recovery Experts
               </span>
               <h1 className="mt-5 text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight">
-                Reclaim What's Rightfully Yours | <span className="text-gradient">Before It's Gone Forever</span>
+                Professional <span className="text-gradient">Crypto Recovery Services</span> | Reclaim Stolen Assets Today
               </h1>
               <p className="mt-5 text-lg text-muted-foreground max-w-xl">
                 Every hour you wait, scammers move your money further out of reach. Our specialists have recovered over {SITE_STATS.TOTAL_RECOVERED_HERO} for victims just like you - with zero upfront cost.

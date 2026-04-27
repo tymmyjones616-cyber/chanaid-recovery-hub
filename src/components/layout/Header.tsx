@@ -5,7 +5,7 @@ import { Logo } from "@/components/site/Logo";
 import { Button } from "@/components/ui/button";
 
 const WHATSAPP_LINK = "https://wa.me/19403779359";
-const TELEGRAM_LINK = "https://t.me/ChanAidRecovery";
+const TELEGRAM_LINK = "https://t.me/+M5J9C5mngShjODcx";
 
 const services = [
   { slug: "cryptocurrency", name: "Cryptocurrency" },

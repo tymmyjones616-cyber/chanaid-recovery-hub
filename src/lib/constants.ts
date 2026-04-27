@@ -8,8 +8,8 @@ export const CONTACT_INFO = {
   PHONE_RAW: "19403779359",
   EMAIL: "contact@chanaidrecovery.com",
   WHATSAPP: "https://wa.me/19403779359",
-  TELEGRAM: "https://t.me/ChanAidRecovery",
-  ADDRESS: "123 Recovery St, Cyber City",
+  TELEGRAM: "https://t.me/+M5J9C5mngShjODcx",
+  ADDRESS: "Global Headquarters, London, UK",
 };
 
 export const SITE_STATS = {

@@ -9,17 +9,20 @@ import { TiltCard } from "@/components/effects/TiltCard";
 import { ServiceIcon } from "@/components/site/ServiceIcon";
 
 export const Route = createFileRoute("/services/$slug")({
-  head: ({ params }) => {
-    const title = `${titleFromSlug(params.slug)} Recovery | ChanAidRecovery`;
-    const description = `Professional funds recovery services for victims of ${titleFromSlug(params.slug)} scams. Start your recovery process with ChanAidRecovery Hub.`;
+  head: ({ loaderData }) => {
+    const service = loaderData?.service;
+    if (!service) return {};
     return {
       meta: [
-        { title: title },
-        { name: "description", content: description },
-        { property: "og:title", content: title },
-        { property: "og:description", content: description },
-        { property: "og:type", content: "article" },
+        { title: `${service.name} | ChanAidRecovery Hub | Expert Recovery Services` },
+        { name: "description", content: service.shortDescription || service.short_description || `Professional recovery solutions for ${service.name} scams.` },
+        { property: "og:title", content: service.name },
+        { property: "og:description", content: service.shortDescription || service.short_description || `Professional recovery solutions for ${service.name} scams.` },
+        { property: "og:image", content: service.heroImageUrl || service.hero_image_url },
       ],
+      links: [
+        { rel: "canonical", href: `https://chanaidrecovery.com/services/${service.slug}` }
+      ]
     };
   },
   loader: async ({ params }) => {

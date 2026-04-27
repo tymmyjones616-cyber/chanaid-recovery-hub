@@ -14,7 +14,7 @@ export function FloatingButtons() {
     <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-4">
       {tg && (
         <a
-          href={`https://t.me/${tg}`}
+          href={tg.startsWith("+") ? `https://t.me/${tg}` : `https://t.me/${tg}`}
           target="_blank"
           rel="noopener noreferrer"
           aria-label="Chat on Telegram"

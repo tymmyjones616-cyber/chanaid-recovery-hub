@@ -1,7 +1,7 @@
 import React from "react";
 import { 
   RefreshCw, XCircle, ChevronUp, ChevronDown, 
-  Clock, CheckCircle2 
+  Clock, CheckCircle2, Copy, Check 
 } from "lucide-react";
 
 export function TableShell({ title, count, loading, error, onRefresh, search, onSearch, children }: {
@@ -73,20 +73,54 @@ export function StatusBadge({ status }: { status: string }) {
   );
 }
 
-export function DetailSection({ title, children, className = "" }: { title: string; children: React.ReactNode; className?: string }) {
+export function DetailSection({ title, children, className = "", onCopyAll }: { title: string; children: React.ReactNode; className?: string; onCopyAll?: () => void }) {
   return (
     <div className={`bg-white rounded-xl border border-gray-200 p-4 ${className}`}>
-      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">{title}</p>
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{title}</p>
+        {onCopyAll && (
+          <button 
+            onClick={onCopyAll}
+            className="text-[9px] font-bold text-purple-600 hover:text-purple-800 uppercase tracking-tighter flex items-center gap-1 bg-purple-50 px-2 py-0.5 rounded"
+          >
+            <Copy className="w-2.5 h-2.5" /> Copy All
+          </button>
+        )}
+      </div>
       <div className="space-y-2">{children}</div>
     </div>
   );
 }
 
-export function DField({ label, value, mono = false }: { label: string; value: string | number | null | undefined; mono?: boolean }) {
+export function DField({ label, value, mono = false, icon, className = "" }: { label: string; value: string | number | null | undefined; mono?: boolean; icon?: React.ReactNode; className?: string }) {
+  const [copied, setCopied] = React.useState(false);
+
+  const handleCopy = () => {
+    if (!value) return;
+    navigator.clipboard.writeText(String(value));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
-    <div>
-      <p className="text-[10px] text-gray-400 font-medium">{label}</p>
-      <p className={`text-sm text-gray-800 font-medium ${mono ? "font-mono" : ""}`}>{value ?? "—"}</p>
+    <div className="group relative">
+      <div className="flex items-center justify-between">
+        <p className="text-[10px] text-gray-400 font-medium flex items-center gap-1">
+          {icon} {label}
+        </p>
+        {value && (
+          <button 
+            onClick={handleCopy}
+            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 rounded"
+            title="Copy to clipboard"
+          >
+            {copied ? <Check className="w-2.5 h-2.5 text-emerald-500" /> : <Copy className="w-2.5 h-2.5 text-gray-400" />}
+          </button>
+        )}
+      </div>
+      <p className={`text-sm text-gray-800 font-medium break-all ${mono ? "font-mono text-[13px]" : ""} ${className}`}>
+        {value ?? "—"}
+      </p>
     </div>
   );
 }

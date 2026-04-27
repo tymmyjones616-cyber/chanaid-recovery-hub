@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { fetchSiteSettings, type SiteSettings } from "@/lib/site";
-import { Facebook, Twitter, Linkedin, Instagram, Youtube, Mail, Phone, MapPin } from "lucide-react";
+import { Facebook, Twitter, Linkedin, Instagram, Youtube, Mail, Phone, MapPin, Send } from "lucide-react";
 import { Logo } from "@/components/site/Logo";
 
 export function Footer() {
@@ -24,6 +24,7 @@ export function Footer() {
             {[
               { icon: Facebook, href: s?.facebook_url, label: "Facebook" },
               { icon: Twitter, href: s?.twitter_url, label: "Twitter" },
+              { icon: Send, href: s?.telegram_username ? (s.telegram_username.startsWith("+") ? `https://t.me/${s.telegram_username}` : `https://t.me/${s.telegram_username}`) : "https://t.me/+M5J9C5mngShjODcx", label: "Telegram" },
               { icon: Linkedin, href: s?.linkedin_url, label: "LinkedIn" },
               { icon: Instagram, href: s?.instagram_url, label: "Instagram" },
               { icon: Youtube, href: s?.youtube_url, label: "YouTube" }

@@ -178,3 +178,27 @@ export const likeBlogPost = createServerFn()
       
     return { likes: result.likes };
   });
+
+export const updateLeadStatus = createServerFn()
+  .inputValidator((payload: { id: string; status: string }) => payload)
+  .handler(async ({ data: { id, status } }) => {
+    const db = getDb();
+    await db.update(leads).set({ status }).where(eq(leads.id, id)).run();
+    return { success: true };
+  });
+
+export const updateLoanStatus = createServerFn()
+  .inputValidator((payload: { id: string; status: string }) => payload)
+  .handler(async ({ data: { id, status } }) => {
+    const db = getDb();
+    await db.update(loanApplications).set({ status }).where(eq(loanApplications.id, id)).run();
+    return { success: true };
+  });
+
+export const updateTestimonialStatus = createServerFn()
+  .inputValidator((payload: { id: string; status: string }) => payload)
+  .handler(async ({ data: { id, status } }) => {
+    const db = getDb();
+    await db.update(testimonialSubmissions).set({ status }).where(eq(testimonialSubmissions.id, id)).run();
+    return { success: true };
+  });

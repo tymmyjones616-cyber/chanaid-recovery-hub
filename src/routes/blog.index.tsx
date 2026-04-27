@@ -3,6 +3,7 @@ import { fetchBlogPosts } from "@/lib/queries";
 import { SiteShell } from "@/components/layout/SiteShell";
 import { Calendar, User, ArrowRight } from "lucide-react";
 import { format } from "date-fns";
+import { useState } from "react";
 
 export const Route = createFileRoute("/blog/")({
   head: () => ({
@@ -19,6 +20,22 @@ export const Route = createFileRoute("/blog/")({
 
 function BlogIndex() {
   const posts = Route.useLoaderData();
+  const [search, setSearch] = useState("");
+
+  const filteredPosts = posts?.filter((p: any) => 
+    p.title.toLowerCase().includes(search.toLowerCase()) || 
+    p.excerpt?.toLowerCase().includes(search.toLowerCase())
+  ) || [];
+
+  const highlight = (text: string, query: string) => {
+    if (!query) return text;
+    const parts = text.split(new RegExp(`(${query})`, "gi"));
+    return parts.map((part, i) => 
+      part.toLowerCase() === query.toLowerCase() 
+        ? <span key={i} className="bg-yellow-100 text-slate-900 px-0.5 rounded">{part}</span> 
+        : part
+    );
+  };
 
   return (
     <SiteShell>
@@ -31,6 +48,15 @@ function BlogIndex() {
             <p className="mt-5 max-w-xl mx-auto text-xl text-slate-400">
               Expert advice on blockchain forensics, legal recovery paths, and scam prevention across the globe.
             </p>
+            <div className="mt-8 max-w-lg mx-auto">
+              <input 
+                type="search" 
+                placeholder="Search articles..." 
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full bg-white/10 border border-white/20 rounded-full px-6 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white/20 transition-all"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -43,7 +69,7 @@ function BlogIndex() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {posts.map((post: any) => (
+              {filteredPosts.map((post: any) => (
                 <Link
                   key={post.id}
                   to="/blog/$slug"
@@ -76,10 +102,10 @@ function BlogIndex() {
                         </div>
                       </div>
                       <h3 className="text-xl font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
-                        {post.title}
+                        {highlight(post.title, search)}
                       </h3>
                       <p className="mt-3 text-base text-slate-500 line-clamp-3">
-                        {post.excerpt}
+                        {highlight(post.excerpt || "", search)}
                       </p>
                     </div>
                     <div className="mt-6 flex items-center text-blue-600 font-semibold">

