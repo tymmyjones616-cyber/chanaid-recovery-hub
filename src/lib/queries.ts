@@ -1,7 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
 import { createDb } from "@/db";
-import { createRequire } from "module";
-const require = createRequire(import.meta.url);
 import { 
   pages, 
   services, 
@@ -31,8 +29,9 @@ function getDb() {
     if (!localDb) {
       console.log("getDb: D1 not found, falling back to local SQLite (local.db)");
       try {
-        // Use createRequire approach to avoid bundling issues
-        const Database = require("better-sqlite3");
+        // Use eval('require') to keep better-sqlite3 out of the client bundle
+        // and to avoid issues with the Cloudflare/edge runtime during build
+        const Database = (0, eval)('require')("better-sqlite3");
         const sqlite = new Database("local.db");
         localDb = createDb(undefined, sqlite);
       } catch (err) {
