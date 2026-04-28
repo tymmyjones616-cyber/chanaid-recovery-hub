@@ -5,6 +5,7 @@ import { fetchTestimonials, submitTestimonial } from "@/lib/queries";
 import { Star, CheckCircle2, Loader2, Quote } from "lucide-react";
 import { Reveal } from "@/components/effects/Reveal";
 import { TiltCard } from "@/components/effects/TiltCard";
+import { InfiniteTestimonialCarousel } from "@/components/site/InfiniteTestimonialCarousel";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/testimonials")({
@@ -23,6 +24,11 @@ export const Route = createFileRoute("/testimonials")({
 function TestimonialsPage() {
   const items = Route.useLoaderData();
 
+  // Split testimonials into two rows for the marquee effect
+  const half = Math.ceil(items.length / 2);
+  const row1 = items.slice(0, half);
+  const row2 = items.slice(half);
+
   return (
     <SiteShell>
       <section className="relative bg-hero-gradient py-20 overflow-hidden">
@@ -38,40 +44,46 @@ function TestimonialsPage() {
         </div>
       </section>
 
-      <section className="max-w-7xl mx-auto px-4 py-20">
+      <section className="py-20 bg-white overflow-hidden space-y-4">
         {!items || items.length === 0 ? (
           <p className="text-center text-muted-foreground">No stories yet. Be the first to share!</p>
         ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 perspective-1000">
-            {items.map((t: any, idx: number) => (
-              <Reveal key={t.id} direction="up" delay={(idx % 6) * 80}>
-                <TiltCard className="rounded-2xl h-full" intensity={6}>
-                  <div className="relative bg-white rounded-2xl p-7 border border-border shadow-soft h-full">
-                    <Quote className="absolute top-5 right-5 w-8 h-8 text-primary/15" />
-                    <div className="flex gap-1 mb-4">
-                      {Array.from({ length: t.rating || 5 }).map((_, i) => (
-                        <Star key={i} className="w-4 h-4 fill-primary text-primary" />
-                      ))}
-                    </div>
-                    <p className="text-sm text-foreground/90 leading-relaxed">"{t.quote}"</p>
-                    <div className="mt-5 pt-4 border-t border-border flex justify-between items-center">
-                      <div>
-                        <div className="font-semibold text-sm">{t.clientName}</div>
-                        <div className="text-xs text-muted-foreground">{t.location}</div>
-                      </div>
-                      {t.amountRecovered && (
-                        <div className="text-sm font-bold text-gradient">{t.amountRecovered}</div>
-                      )}
-                    </div>
-                  </div>
-                </TiltCard>
+          <>
+            <Reveal direction="up" delay={100}>
+              <div className="mb-2">
+                <InfiniteTestimonialCarousel 
+                  testimonials={row1} 
+                  speed={0.6} 
+                  direction="forward" 
+                />
+              </div>
+            </Reveal>
+            <Reveal direction="up" delay={300}>
+              <div>
+                <InfiniteTestimonialCarousel 
+                  testimonials={row2} 
+                  speed={0.6} 
+                  direction="backward" 
+                />
+              </div>
+            </Reveal>
+            
+            <div className="max-w-7xl mx-auto px-4 mt-20 text-center">
+              <Reveal direction="up">
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-700 text-sm font-bold mb-6">
+                  <CheckCircle2 className="w-4 h-4" /> 1,200+ Verified Recovery Cases Worldwide
+                </div>
+                <h3 className="text-2xl font-bold mb-4">Every Story is a Victory Against Fraud</h3>
+                <p className="text-muted-foreground max-w-2xl mx-auto">
+                  Our specialists have worked across 40+ countries to reclaim stolen assets. These testimonials represent just a fraction of the lives we've helped restore.
+                </p>
               </Reveal>
-            ))}
-          </div>
+            </div>
+          </>
         )}
       </section>
 
-      <section id="share" className="bg-soft-gradient py-20">
+      <section id="share" className="bg-soft-gradient py-24">
         <div className="max-w-3xl mx-auto px-4">
           <Reveal direction="up">
             <div className="text-center mb-10">

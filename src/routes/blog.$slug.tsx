@@ -46,6 +46,22 @@ export const Route = createFileRoute("/blog/$slug")({
   ),
 });
 
+function BlogImage({ src, alt }: { src?: string; alt: string }) {
+  const [error, setError] = useState(false);
+  const fallback = "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=1000&auto=format&fit=crop";
+
+  return (
+    <div className="relative aspect-video w-full overflow-hidden rounded-2xl shadow-2xl mb-12">
+      <img
+        src={error || !src ? fallback : src}
+        alt={alt}
+        onError={() => setError(true)}
+        className="h-full w-full object-cover"
+      />
+    </div>
+  );
+}
+
 function BlogPost() {
   const post = Route.useLoaderData();
   const [likes, setLikes] = useState(post?.likes || 0);
@@ -121,13 +137,10 @@ function BlogPost() {
             </div>
           </header>
 
-            <div className="aspect-w-16 aspect-h-9 rounded-2xl overflow-hidden mb-12 shadow-2xl">
-              <img 
-                src={post.featuredImage || post.featured_image} 
-                alt={`${post.title} - Professional Crypto Recovery Services in USA, UK, Canada, and UAE`} 
-                className="object-cover w-full h-full"
-              />
-            </div>
+          <BlogImage 
+            src={post.featuredImage || post.featured_image} 
+            alt={`${post.title} - Professional Crypto Recovery Services in USA, UK, Canada, and UAE`} 
+          />
 
           <div 
             className="prose prose-lg prose-blue max-w-none text-slate-700

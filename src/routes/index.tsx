@@ -10,7 +10,7 @@ import { TiltCard } from "@/components/effects/TiltCard";
 import { ServiceIcon } from "@/components/site/ServiceIcon";
 import { useScrollY } from "@/hooks/use-reveal";
 import { ForbesLogo, BloombergLogo, ReutersLogo, CnbcLogo, FtLogo, BbcLogo } from "@/components/site/MediaLogos";
-import { TestimonialCarousel } from "@/components/site/TestimonialCarousel";
+import { InfiniteTestimonialCarousel } from "@/components/site/InfiniteTestimonialCarousel";
 import { SITE_STATS, ASSETS } from "@/lib/constants";
 
 // ─── Fallback services when database is empty ────────────────────────────────
@@ -307,7 +307,7 @@ function Index() {
             </div>
           </Reveal>
 
-          <TestimonialCarousel testimonials={testimonials} />
+          <InfiniteTestimonialCarousel testimonials={testimonials} speed={0.5} direction="forward" />
 
           <div className="text-center mt-12">
             <Link to="/testimonials" className="inline-flex items-center gap-2 text-primary font-bold hover:gap-3 transition-all group">
