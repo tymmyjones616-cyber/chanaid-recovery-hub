@@ -27,9 +27,9 @@ function BlogIndex() {
     p.excerpt?.toLowerCase().includes(search.toLowerCase())
   ) || [];
 
-  const highlight = (text: string, query: string) => {
-    if (!query) return text;
-    const parts = text.split(new RegExp(`(${query})`, "gi"));
+  const highlight = (text: string | null | undefined, query: string) => {
+    if (!query || !text) return text || "";
+    const parts = String(text).split(new RegExp(`(${query})`, "gi"));
     return parts.map((part, i) => 
       part.toLowerCase() === query.toLowerCase() 
         ? <span key={i} className="bg-yellow-100 text-slate-900 px-0.5 rounded">{part}</span> 

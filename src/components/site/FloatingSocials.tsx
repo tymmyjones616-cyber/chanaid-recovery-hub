@@ -19,7 +19,7 @@ export function FloatingSocials() {
       >
         <Send className="w-6 h-6" />
         <span className="absolute right-full mr-3 bg-slate-900 text-white text-xs font-bold px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-          Telegram {CONTACT_INFO.TELEGRAM.split('/').pop()}
+          Telegram {CONTACT_INFO.TELEGRAM?.split('/').pop() || "Chat"}
         </span>
       </a>
 

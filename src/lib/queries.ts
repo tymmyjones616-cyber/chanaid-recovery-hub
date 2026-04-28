@@ -176,6 +176,9 @@ export const uploadLoanAsset = createServerFn()
     }
 
     // Convert base64 data URL to ArrayBuffer
+    if (!dataUrl || !dataUrl.includes(",")) {
+      throw new Error("Invalid data URL");
+    }
     const base64 = dataUrl.split(",")[1];
     if (!base64) return { key: null, url: null };
     const binaryStr = atob(base64);

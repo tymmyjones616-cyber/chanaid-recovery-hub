@@ -8,12 +8,15 @@ interface Testimonial {
   id: string;
   rating: number;
   quote: string;
-  client_name: string;
+  clientName?: string;
+  client_name?: string;
   location: string;
+  amountRecovered?: string;
   amount_recovered?: string;
 }
 
-function getInitials(name: string) {
+function getInitials(name?: string) {
+  if (!name) return "CR";
   return name
     .split(" ")
     .map((n) => n[0])
@@ -60,11 +63,11 @@ export function TestimonialCarousel({ testimonials }: { testimonials: Testimonia
                 <div className="mt-8 pt-6 border-t border-slate-100 flex justify-between items-center relative z-10">
                   <div className="flex items-center gap-3">
                     <div className="h-11 w-11 rounded-full bg-cta-gradient flex items-center justify-center text-white font-bold text-sm shadow-soft">
-                      {getInitials(t.client_name)}
+                      {getInitials(t.clientName || t.client_name)}
                     </div>
                     <div>
                       <div className="font-bold text-slate-900 flex items-center gap-1.5 leading-none">
-                        {t.client_name}
+                        {t.clientName || t.client_name}
                         <ShieldCheck className="w-4 h-4 text-primary fill-primary/10" title="Verified Recovery" />
                       </div>
                       <div className="text-[0.8rem] text-muted-foreground mt-1">{t.location}</div>
@@ -74,7 +77,7 @@ export function TestimonialCarousel({ testimonials }: { testimonials: Testimonia
                     <div className="text-right">
                       <div className="text-[0.7rem] uppercase tracking-widest text-muted-foreground font-bold mb-0.5">Recovered</div>
                       <div className="text-lg font-black text-gradient bg-clip-text text-transparent bg-cta-gradient">
-                        {t.amount_recovered}
+                        {t.amountRecovered || t.amount_recovered}
                       </div>
                     </div>
                   )}
