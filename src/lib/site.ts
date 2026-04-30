@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { createDb } from "@/db";
 import { chanaidConfig } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { requireAdmin } from "@/lib/admin-auth";
 
 export type SiteSettings = {
   site_name: string;
@@ -109,6 +110,7 @@ export const fetchSiteSettings = createServerFn()
 export const saveSiteSettings = createServerFn()
   .inputValidator((settings: Partial<SiteSettings>) => settings)
   .handler(async ({ data: settings }): Promise<boolean> => {
+    await requireAdmin();
     const db = getDb();
     
     // Map from snake_case settings to camelCase schema
@@ -116,13 +118,33 @@ export const saveSiteSettings = createServerFn()
       updatedAt: new Date().toISOString(),
     };
     
-    if (settings.site_name) updatePayload.siteName = settings.site_name;
-    if (settings.tagline) updatePayload.tagline = settings.tagline;
-    if (settings.logo_url) updatePayload.logoUrl = settings.logo_url;
-    if (settings.contact_email) updatePayload.supportEmail = settings.contact_email;
-    if (settings.whatsapp_number) updatePayload.whatsappNumber = settings.whatsapp_number;
-    if (settings.telegram_username) updatePayload.telegramHandle = settings.telegram_username;
-    // ... add more mappings as needed
+    if (settings.site_name !== undefined) updatePayload.siteName = settings.site_name;
+    if (settings.tagline !== undefined) updatePayload.tagline = settings.tagline;
+    if (settings.logo_url !== undefined) updatePayload.logoUrl = settings.logo_url;
+    if (settings.contact_email !== undefined) updatePayload.supportEmail = settings.contact_email;
+    if (settings.contact_phone !== undefined) updatePayload.contactPhone = settings.contact_phone;
+    if (settings.contact_address !== undefined) updatePayload.contactAddress = settings.contact_address;
+    if (settings.whatsapp_number !== undefined) updatePayload.whatsappNumber = settings.whatsapp_number;
+    if (settings.telegram_username !== undefined) updatePayload.telegramHandle = settings.telegram_username;
+    if (settings.facebook_url !== undefined) updatePayload.facebookUrl = settings.facebook_url;
+    if (settings.twitter_url !== undefined) updatePayload.twitterUrl = settings.twitter_url;
+    if (settings.linkedin_url !== undefined) updatePayload.linkedinUrl = settings.linkedin_url;
+    if (settings.instagram_url !== undefined) updatePayload.instagramUrl = settings.instagram_url;
+    if (settings.youtube_url !== undefined) updatePayload.youtubeUrl = settings.youtube_url;
+    if (settings.hero_headline !== undefined) updatePayload.heroHeadline = settings.hero_headline;
+    if (settings.hero_subheadline !== undefined) updatePayload.heroSubheadline = settings.hero_subheadline;
+    if (settings.hero_cta_primary !== undefined) updatePayload.heroCtaPrimary = settings.hero_cta_primary;
+    if (settings.hero_cta_secondary !== undefined) updatePayload.heroCtaSecondary = settings.hero_cta_secondary;
+    if (settings.stats_recovered !== undefined) updatePayload.statsRecovered = settings.stats_recovered;
+    if (settings.stats_cases !== undefined) updatePayload.statsCases = settings.stats_cases;
+    if (settings.stats_success !== undefined) updatePayload.statsSuccess = settings.stats_success;
+    if (settings.footer_text !== undefined) updatePayload.footerText = settings.footer_text;
+    if (settings.default_seo_title !== undefined) updatePayload.defaultSeoTitle = settings.default_seo_title;
+    if (settings.default_seo_description !== undefined) updatePayload.defaultSeoDescription = settings.default_seo_description;
+    if (settings.og_image_url !== undefined) updatePayload.ogImageUrl = settings.og_image_url;
+    if (settings.google_analytics_id !== undefined) updatePayload.googleAnalyticsId = settings.google_analytics_id;
+    if (settings.primary_color !== undefined) updatePayload.primaryColor = settings.primary_color;
+    if (settings.accent_color !== undefined) updatePayload.accentColor = settings.accent_color;
     
     const result = await db.update(chanaidConfig)
       .set(updatePayload)

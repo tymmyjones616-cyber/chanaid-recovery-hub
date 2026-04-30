@@ -114,7 +114,12 @@ function BlogPost() {
                   <div className="text-sm font-bold text-slate-900">{post.author}</div>
                   <div className="text-xs text-slate-500 flex items-center mt-1">
                     <Calendar className="mr-1 h-3 w-3" />
-                    {format(new Date(post.createdAt || post.created_at), "MMMM d, yyyy")}
+                    {(() => {
+                      const raw = post.createdAt || post.created_at;
+                      if (!raw) return "Recent";
+                      const d = new Date(raw);
+                      return isNaN(d.getTime()) ? "Recent" : format(d, "MMMM d, yyyy");
+                    })()}
                   </div>
                 </div>
               </div>
@@ -142,12 +147,16 @@ function BlogPost() {
             alt={`${post.title} - Professional Crypto Recovery Services in USA, UK, Canada, and UAE`} 
           />
 
-          <div 
+          <div
             className="prose prose-lg prose-blue max-w-none text-slate-700
               prose-headings:text-slate-900 prose-headings:font-bold
               prose-a:text-blue-600 prose-strong:text-slate-900
               prose-img:rounded-2xl"
-            dangerouslySetInnerHTML={{ __html: post.content }}
+            dangerouslySetInnerHTML={{
+              __html:
+                post.content ||
+                `<p>${post.excerpt || "Full article coming soon — our specialists are finalizing the latest forensic guidance."}</p>`,
+            }}
           />
 
           <footer className="mt-16 pt-8 border-t border-slate-100">

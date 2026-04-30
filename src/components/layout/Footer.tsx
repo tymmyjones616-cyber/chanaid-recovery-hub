@@ -4,10 +4,16 @@ import { fetchSiteSettings, type SiteSettings } from "@/lib/site";
 import { Facebook, Twitter, Linkedin, Instagram, Youtube, Mail, Phone, MapPin, Send } from "lucide-react";
 import { Logo } from "@/components/site/Logo";
 
+// Locked at module load so SSR and CSR render the same string. The footer year
+// drifts at most by the time between deploys — acceptable trade-off for
+// stable hydration. Avoid `new Date().getFullYear()` in render: it produces
+// SSR/CSR mismatches when the request crosses midnight UTC.
+const FOOTER_YEAR = new Date().getFullYear();
+
 export function Footer() {
   const [s, setS] = useState<SiteSettings | null>(null);
   useEffect(() => { fetchSiteSettings().then(setS); }, []);
-  
+
   const contactEmail = s?.contact_email ?? "support@chanaidrecovery.com";
 
   return (
@@ -107,7 +113,7 @@ export function Footer() {
       
       <div className="border-t border-slate-200 py-8 text-center">
         <p className="text-xs text-muted-foreground font-medium">
-          {s?.footer_text ?? `© ${new Date().getFullYear()} ChanAidRecovery Hub. Registered Financial Asset Recovery Firm.`}
+          {s?.footer_text ?? `© ${FOOTER_YEAR} ChanAidRecovery Hub. All rights reserved.`}
         </p>
       </div>
     </footer>

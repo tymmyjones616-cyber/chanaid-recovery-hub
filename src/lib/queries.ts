@@ -14,6 +14,7 @@ import {
 } from "@/db/schema";
 import { eq, and, asc, desc } from "drizzle-orm";
 import { loanSubmissionSchema } from "@/lib/validation/loan";
+import { adminLoginWithPassword, isAdminAuthed, requireAdmin, clearAdminSession } from "@/lib/admin-auth";
 
 let localDb: any = null;
 
@@ -123,16 +124,39 @@ export const fetchBlogPost = createServerFn()
     return await db.select().from(blogPosts).where(eq(blogPosts.slug, slug)).get();
   });
 
+// ─── Admin Auth ───────────────────────────────────────────────────────────────
+
+/** Server-side login. Sets the HttpOnly admin session cookie on success. */
+export const adminLogin = createServerFn()
+  .inputValidator((p: { password: string }) => p)
+  .handler(async ({ data: { password } }) => {
+    const ok = await adminLoginWithPassword(password ?? "");
+    return { ok };
+  });
+
+export const adminLogout = createServerFn()
+  .handler(async () => {
+    clearAdminSession();
+    return { ok: true };
+  });
+
+export const adminCheckSession = createServerFn()
+  .handler(async () => {
+    return { ok: await isAdminAuthed() };
+  });
+
 // ─── Admin / Private Queries ──────────────────────────────────────────────────
 
 export const fetchLeads = createServerFn()
   .handler(async () => {
+    await requireAdmin();
     const db = getDb();
     return await db.select().from(leads).orderBy(desc(leads.createdAt)).all();
   });
 
 export const fetchLoanApplications = createServerFn()
   .handler(async () => {
+    await requireAdmin();
     const db = getDb();
     return await db.select().from(loanApplications).orderBy(desc(loanApplications.createdAt)).all();
   });
@@ -160,6 +184,7 @@ export const checkLoanStatus = createServerFn()
 
 export const fetchTestimonialSubmissions = createServerFn()
   .handler(async () => {
+    await requireAdmin();
     const db = getDb();
     return await db.select().from(testimonialSubmissions).orderBy(desc(testimonialSubmissions.createdAt)).all();
   });
@@ -200,6 +225,38 @@ export const getLoanAssetUrl = createServerFn()
     // Generate a signed URL valid for 1 hour
     const obj = await (r2 as any).createSignedUrl?.(key, { expiresIn: 3600 });
     return obj ?? null;
+  });
+
+/**
+ * Admin-only: resolve a stored asset reference (either an R2 key or a base64
+ * data URL passthrough) into a data URL the browser can render directly.
+ * Streams the R2 object through the server function so the bucket can stay
+ * private — no signed-URL hosting required.
+ */
+export const resolveLoanAsset = createServerFn()
+  .inputValidator((src: string) => src)
+  .handler(async ({ data: src }): Promise<{ dataUrl: string | null }> => {
+    await requireAdmin();
+    if (!src) return { dataUrl: null };
+    // Already a data URL — passthrough so legacy rows still render.
+    if (src.startsWith("data:")) return { dataUrl: src };
+
+    const r2 = getR2();
+    if (!r2) return { dataUrl: null };
+
+    const obj = await r2.get(src);
+    if (!obj) return { dataUrl: null };
+
+    const buf = await obj.arrayBuffer();
+    const bytes = new Uint8Array(buf);
+    let binary = "";
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    const base64 = btoa(binary);
+    const ct = (obj.httpMetadata as any)?.contentType
+      ?? (src.endsWith(".webm") ? "video/webm"
+        : src.endsWith(".pdf") ? "application/pdf"
+        : "image/jpeg");
+    return { dataUrl: `data:${ct};base64,${base64}` };
   });
 
 // ─── Actions ──────────────────────────────────────────────────────────────────
@@ -276,6 +333,7 @@ export const likeBlogPost = createServerFn()
 export const updateLeadStatus = createServerFn()
   .inputValidator((payload: { id: string; status: string }) => payload)
   .handler(async ({ data: { id, status } }) => {
+    await requireAdmin();
     const db = getDb();
     await db.update(leads).set({ status }).where(eq(leads.id, id)).run();
     return { success: true };
@@ -284,6 +342,7 @@ export const updateLeadStatus = createServerFn()
 export const updateLoanStatus = createServerFn()
   .inputValidator((payload: { id: string; status: string; reason?: string; adminId?: string }) => payload)
   .handler(async ({ data: { id, status, reason, adminId } }) => {
+    await requireAdmin();
     const db = getDb();
     const now = nowIso();
 
@@ -317,6 +376,7 @@ export const updateLoanStatus = createServerFn()
 export const verifyLoanIdentity = createServerFn()
   .inputValidator((payload: { id: string; verified: boolean; adminId?: string }) => payload)
   .handler(async ({ data: { id, verified, adminId } }) => {
+    await requireAdmin();
     const db = getDb();
     const now = nowIso();
 
@@ -339,6 +399,7 @@ export const verifyLoanIdentity = createServerFn()
 export const updateTestimonialStatus = createServerFn()
   .inputValidator((payload: { id: string; status: string }) => payload)
   .handler(async ({ data: { id, status } }) => {
+    await requireAdmin();
     const db = getDb();
     await db.update(testimonialSubmissions).set({ status }).where(eq(testimonialSubmissions.id, id)).run();
     return { success: true };

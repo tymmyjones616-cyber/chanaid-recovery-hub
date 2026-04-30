@@ -7,25 +7,21 @@ import {
 } from "lucide-react";
 import { Logo } from "@/components/site/Logo";
 import { Tab } from "@/types/admin";
-import { 
-  OverviewTab, 
-  LeadsTab, 
-  LoansTab, 
-  TestimonialsTab, 
-  SiteEditorTab 
+import {
+  OverviewTab,
+  LeadsTab,
+  LoansTab,
+  TestimonialsTab,
+  SiteEditorTab
 } from "@/components/admin/AdminTabs";
-import { 
-  LayoutDashboard, 
-  Users, 
-  Banknote, 
-  MessageSquare, 
-  Settings 
+import {
+  LayoutDashboard,
+  Users,
+  Banknote,
+  MessageSquare,
+  Settings
 } from "lucide-react";
-
-// ─── constants ────────────────────────────────────────────────────────────────
-
-const ADMIN_KEY = "admin_session_v1";
-const CORRECT_PW = import.meta.env.VITE_ADMIN_PASSWORD || "admin2024";
+import { adminLogin, adminLogout, adminCheckSession } from "@/lib/queries";
 
 // ─── route ────────────────────────────────────────────────────────────────────
 
@@ -47,11 +43,24 @@ export const Route = createFileRoute("/admin")({
 function LoginScreen({ onLogin }: { onLogin: () => void }) {
   const [pw, setPw] = useState("");
   const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (pw === CORRECT_PW) { sessionStorage.setItem(ADMIN_KEY, "1"); onLogin(); }
-    else setErr("Incorrect password.");
+    setBusy(true);
+    setErr("");
+    try {
+      const res = await adminLogin({ data: { password: pw } });
+      if (res?.ok) {
+        onLogin();
+      } else {
+        setErr("Incorrect password.");
+      }
+    } catch {
+      setErr("Login failed. Try again.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -72,11 +81,10 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
               className="w-full h-12 rounded-xl bg-white/10 border border-white/20 px-4 text-white placeholder-white/40 focus:outline-none focus:border-purple-400 focus:bg-white/15 transition"
             />
             {err && <p className="text-red-400 text-sm">{err}</p>}
-            <button type="submit" className="w-full h-12 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold rounded-xl hover:from-purple-500 hover:to-indigo-500 transition shadow-lg">
-              Sign in
+            <button type="submit" disabled={busy} className="w-full h-12 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold rounded-xl hover:from-purple-500 hover:to-indigo-500 transition shadow-lg disabled:opacity-60">
+              {busy ? "Signing in…" : "Sign in"}
             </button>
           </form>
-          <p className="text-white/30 text-xs text-center mt-6">Set VITE_ADMIN_PASSWORD in .env to change password</p>
         </div>
       </div>
     </div>
@@ -96,16 +104,30 @@ const NAV = [
 // ─── Main admin page ──────────────────────────────────────────────────────────
 
 function AdminPage() {
-  const [authed, setAuthed] = useState(false);
+  const [authed, setAuthed] = useState<boolean | null>(null); // null = checking
   const [tab, setTab] = useState<Tab>("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
-    if (sessionStorage.getItem(ADMIN_KEY) === "1") setAuthed(true);
+    let cancelled = false;
+    adminCheckSession()
+      .then((r) => { if (!cancelled) setAuthed(Boolean(r?.ok)); })
+      .catch(() => { if (!cancelled) setAuthed(false); });
+    return () => { cancelled = true; };
   }, []);
 
-  function logout() { sessionStorage.removeItem(ADMIN_KEY); setAuthed(false); }
+  async function logout() {
+    try { await adminLogout(); } catch { /* ignore */ }
+    setAuthed(false);
+  }
 
+  if (authed === null) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center text-white/70 text-sm">
+        Checking session…
+      </div>
+    );
+  }
   if (!authed) return <LoginScreen onLogin={() => setAuthed(true)} />;
 
   return (

@@ -65,5 +65,46 @@ export const SERVICES_DATA: ServiceData[] = [
     sort_order: 4,
     problem_description: 'High-net-worth individuals are targets for bespoke investment scams involving fake hedge funds.',
     recovery_process: 'Our legal teams coordinate across borders to issue Anton Piller orders and secure assets globally before liquidation.'
+  },
+  // Fallbacks for the slugs the sitemap and main nav reference. These ensure
+  // /services/<slug> renders content even when the D1 row is missing.
+  {
+    name: 'Crypto Scam Recovery',
+    slug: 'crypto-scam-recovery',
+    short_description: 'End-to-end forensic investigation and asset recovery for stolen Bitcoin, Ethereum, USDT, and altcoin theft.',
+    icon: 'BlockchainForensics',
+    hero_headline: 'Reclaim Stolen Crypto',
+    hero_subheadline: 'Our blockchain analysts trace funds across mixers, bridges, and chains — then coordinate exchange freezes and law-enforcement referrals to put your assets back in your hands.',
+    success_rate: '97%',
+    is_published: true,
+    sort_order: 5,
+    problem_description: 'Crypto thieves rely on speed and obfuscation: they bounce stolen funds across mixers, swaps, and bridges in minutes. Most victims are told the trail is "untraceable" — that is rarely true.',
+    recovery_process: 'We de-mix transactions using node-level cluster analysis, identify the off-ramp exchange, file freezing requests with the exchange and the relevant regulator, and produce a forensic report that banks and law enforcement accept as evidence.'
+  },
+  {
+    name: 'Binary Options Recovery',
+    slug: 'binary-options-recovery',
+    short_description: 'Aggressive chargeback representment and regulatory action against unlicensed binary-options brokers.',
+    icon: 'LegalScale',
+    hero_headline: 'Stop the Binary Options Trap',
+    hero_subheadline: 'Most binary platforms are designed to lose. We turn that against the platform — chargebacks, ombudsman filings, and bank-level pressure recover what was taken.',
+    success_rate: '92%',
+    is_published: true,
+    sort_order: 6,
+    problem_description: 'Binary-options platforms typically operate offshore with no real regulator. They credit fake "wins" to encourage deposits, then either freeze withdrawals or simulate losses.',
+    recovery_process: 'We assemble a full evidence pack: deposit history, terms-of-service breaches, regulator status checks, and trade-anomaly analysis. That pack drives chargebacks at the card-issuer level and forces facilitating banks to reverse transfers.'
+  },
+  {
+    name: 'Corporate Fraud Investigation',
+    slug: 'corporate-fraud-investigation',
+    short_description: 'Multi-jurisdictional investigation of corporate-level fraud: fake hedge funds, sham private placements, vendor fraud, and insider asset diversion.',
+    icon: 'AssetTrace',
+    hero_headline: 'Corporate-Grade Forensic Investigation',
+    hero_subheadline: 'For high-stakes losses where a board, partnership, or family office has been targeted: deep-web intelligence, accounting forensics, and cross-border legal coordination.',
+    success_rate: '95%',
+    is_published: true,
+    sort_order: 7,
+    problem_description: 'Sophisticated corporate frauds use shell companies, nominee directors, and offshore structures to put assets out of reach.',
+    recovery_process: 'We combine forensic accounting, OSINT, and counsel coordination across the relevant jurisdictions to map the corporate veil, identify recoverable assets, and apply for freezing or disclosure orders before assets are dissipated.'
   }
 ];

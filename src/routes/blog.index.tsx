@@ -16,7 +16,9 @@ export const Route = createFileRoute("/blog/")({
   }),
   loader: async () => (await fetchBlogPosts().catch(() => [])) ?? [],
   component: BlogIndex,
-});function BlogImage({ src, alt }: { src?: string; alt: string }) {
+});
+
+function BlogImage({ src, alt }: { src?: string; alt: string }) {
   const [error, setError] = useState(false);
   const fallback = "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=1000&auto=format&fit=crop";
 
@@ -112,11 +114,16 @@ function BlogIndex() {
                       <div className="flex items-center text-[0.75rem] font-bold uppercase tracking-widest text-slate-400 mb-4 space-x-4">
                         <div className="flex items-center gap-1.5">
                           <Calendar className="h-3.5 w-3.5 text-blue-500" />
-                          {format(new Date(post.createdAt || post.created_at), "MMM d, yyyy")}
+                          {(() => {
+                            const raw = post.createdAt || post.created_at;
+                            if (!raw) return "Recent";
+                            const d = new Date(raw);
+                            return isNaN(d.getTime()) ? "Recent" : format(d, "MMM d, yyyy");
+                          })()}
                         </div>
                         <div className="flex items-center gap-1.5">
                           <User className="h-3.5 w-3.5 text-blue-500" />
-                          {post.author.split(',')[0]}
+                          {(post.author || "ChanAidRecovery Team").split(',')[0]}
                         </div>
                       </div>
                       <h3 className="text-2xl font-bold text-slate-900 group-hover:text-blue-600 transition-colors leading-tight mb-4">

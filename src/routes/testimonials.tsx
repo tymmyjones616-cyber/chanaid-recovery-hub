@@ -24,10 +24,14 @@ export const Route = createFileRoute("/testimonials")({
 function TestimonialsPage() {
   const items = Route.useLoaderData();
 
-  // Split testimonials into two rows for the marquee effect
-  const half = Math.ceil(items.length / 2);
-  const row1 = items.slice(0, half);
-  const row2 = items.slice(half);
+  // Split testimonials into THREE rows for an infinite triple-marquee effect.
+  // Round up so the first rows soak up any remainder; cards are deterministically
+  // distributed and survive empty corpora (Math.ceil(0/3) === 0).
+  const total = items.length;
+  const third = Math.ceil(total / 3);
+  const row1 = items.slice(0, third);
+  const row2 = items.slice(third, third * 2);
+  const row3 = items.slice(third * 2);
 
   return (
     <SiteShell>
@@ -50,23 +54,36 @@ function TestimonialsPage() {
         ) : (
           <>
             <Reveal direction="up" delay={100}>
-              <div className="mb-2">
-                <InfiniteTestimonialCarousel 
-                  testimonials={row1} 
-                  speed={0.6} 
-                  direction="forward" 
-                />
-              </div>
-            </Reveal>
-            <Reveal direction="up" delay={300}>
               <div>
-                <InfiniteTestimonialCarousel 
-                  testimonials={row2} 
-                  speed={0.6} 
-                  direction="backward" 
+                <InfiniteTestimonialCarousel
+                  testimonials={row1}
+                  speed={0.6}
+                  direction="forward"
                 />
               </div>
             </Reveal>
+            {row2.length > 0 && (
+              <Reveal direction="up" delay={250}>
+                <div>
+                  <InfiniteTestimonialCarousel
+                    testimonials={row2}
+                    speed={0.5}
+                    direction="backward"
+                  />
+                </div>
+              </Reveal>
+            )}
+            {row3.length > 0 && (
+              <Reveal direction="up" delay={400}>
+                <div>
+                  <InfiniteTestimonialCarousel
+                    testimonials={row3}
+                    speed={0.7}
+                    direction="forward"
+                  />
+                </div>
+              </Reveal>
+            )}
             
             <div className="max-w-7xl mx-auto px-4 mt-20 text-center">
               <Reveal direction="up">
