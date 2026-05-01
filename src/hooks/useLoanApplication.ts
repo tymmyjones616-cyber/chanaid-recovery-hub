@@ -12,6 +12,48 @@ function makeTempId() {
     : Math.random().toString(36).slice(2);
 }
 
+/**
+ * Returns the value as-is if it is an R2 key or a small base64 string.
+ * Strips (returns null) any data URI whose base64 content exceeds ~800 KB
+ * to prevent 413 errors on Cloudflare Workers.
+ */
+function safeImgVal(v: string | null): string | null {
+  if (!v) return null;
+  if (!v.startsWith("data:")) return v; // R2 key — always safe
+  // base64 chars ≈ 4/3 of binary bytes; 800 KB binary ≈ 1,066,666 base64 chars
+  const base64Part = v.indexOf(",") > -1 ? v.slice(v.indexOf(",") + 1) : v;
+  return base64Part.length > 1_066_666 ? null : v;
+}
+
+/**
+ * Compresses and resizes an image file client-side using canvas.
+ * Resizes to max 1280px on the longest edge and encodes as JPEG at 72% quality.
+ * This keeps payloads well under Cloudflare Workers' body size limits (~6 MB).
+ */
+async function compressImage(file: File, maxPx = 1280, quality = 0.72): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        const { width, height } = img;
+        const scale = Math.min(1, maxPx / Math.max(width, height));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(width * scale);
+        canvas.height = Math.round(height * scale);
+        const ctx = canvas.getContext("2d");
+        if (!ctx) { resolve(ev.target!.result as string); return; }
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.src = ev.target!.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 export type AppStatus = {
   status: string;
   identityVerified: boolean;
@@ -82,33 +124,30 @@ export function useLoanApplication() {
   }, [done, appId, appStatus?.status, appStatus?.updatedAt]);
 
   /**
-   * Attempts to upload a file to R2 via the server function.
-   * Falls back to base64 data URI if R2 is unavailable (dev mode).
+   * Compresses the image client-side, shows a preview immediately, then
+   * attempts to upload the compressed data to R2 via the server function.
+   * Falls back to storing the compressed base64 if R2 is unavailable (dev).
+   * Using compressed base64 keeps payloads small enough for Cloudflare Workers.
    */
   async function uploadAsset(
     file: File,
     kind: string,
     setter: (v: string | null) => void
   ) {
-    // Always convert to base64 first so we have a preview immediately
-    const dataUrl = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-    setter(dataUrl); // Show preview instantly
+    // Compress/resize the image before anything leaves the browser
+    const dataUrl = await compressImage(file);
+    setter(dataUrl); // Show compressed preview instantly
 
     // Attempt R2 upload; if it returns a key, swap preview to key
     try {
       const result = await uploadLoanAsset({
-        data: { tempId, kind, dataUrl, contentType: file.type || "application/octet-stream" },
+        data: { tempId, kind, dataUrl, contentType: "image/jpeg" },
       });
       if (result?.key) {
         setter(result.key); // Store R2 key instead of base64
       }
     } catch {
-      // R2 unavailable — keep base64 (already set above)
+      // R2 unavailable — keep compressed base64 (already set above)
     }
   }
 
@@ -247,12 +286,14 @@ export function useLoanApplication() {
       accountHolderName: String(fd.get("account_holder_name") || "").trim() || null,
       sourcePage: typeof window !== "undefined" ? window.location.pathname : "/loans",
       status: "pending",
-      selfieImage: selfieImage || null,
-      idFrontImage: idFrontImage || null,
-      idBackImage: idBackImage || null,
-      passportFrontImage: passportFrontImage || null,
-      passportBackImage: passportBackImage || null,
-      videoSelfieUrl: videoSelfie || null,
+      // Strip any base64 value larger than ~800 KB to avoid 413 on submission.
+      // R2-uploaded values are short keys (not data URIs) and always pass through.
+      selfieImage: safeImgVal(selfieImage),
+      idFrontImage: safeImgVal(idFrontImage),
+      idBackImage: safeImgVal(idBackImage),
+      passportFrontImage: safeImgVal(passportFrontImage),
+      passportBackImage: safeImgVal(passportBackImage),
+      videoSelfieUrl: safeImgVal(videoSelfie),
     };
 
     setLoading(true);
