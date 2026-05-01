@@ -13,24 +13,23 @@ function makeTempId() {
 }
 
 /**
- * Returns the value as-is if it is an R2 key or a small base64 string.
- * Strips (returns null) any data URI whose base64 content exceeds ~800 KB
- * to prevent 413 errors on Cloudflare Workers.
+ * Returns the value as-is if it is an R2 key or a base64 string under 10 MB.
+ * Strips (returns null) anything over 10 MB to stay within server limits.
  */
 function safeImgVal(v: string | null): string | null {
   if (!v) return null;
   if (!v.startsWith("data:")) return v; // R2 key — always safe
-  // base64 chars ≈ 4/3 of binary bytes; 800 KB binary ≈ 1,066,666 base64 chars
+  // base64 chars ≈ 4/3 of binary bytes; 10 MB binary ≈ 13,981,013 base64 chars
   const base64Part = v.indexOf(",") > -1 ? v.slice(v.indexOf(",") + 1) : v;
-  return base64Part.length > 1_066_666 ? null : v;
+  return base64Part.length > 13_981_013 ? null : v;
 }
 
 /**
- * Compresses and resizes an image file client-side using canvas.
- * Resizes to max 1280px on the longest edge and encodes as JPEG at 72% quality.
- * This keeps payloads well under Cloudflare Workers' body size limits (~6 MB).
+ * Resizes an image so neither dimension exceeds 4096 px, then encodes as
+ * JPEG at 92% quality. This preserves high detail while staying within the
+ * 10 MB per-image limit.
  */
-async function compressImage(file: File, maxPx = 1280, quality = 0.72): Promise<string> {
+async function compressImage(file: File, maxPx = 4096, quality = 0.92): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = reject;

