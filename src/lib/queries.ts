@@ -127,14 +127,14 @@ export const fetchBlogPost = createServerFn()
 // ─── Admin Auth ───────────────────────────────────────────────────────────────
 
 /** Server-side login. Sets the HttpOnly admin session cookie on success. */
-export const adminLogin = createServerFn()
+export const adminLogin = createServerFn({ method: "POST" })
   .inputValidator((p: { password: string }) => p)
   .handler(async ({ data: { password } }) => {
     const ok = await adminLoginWithPassword(password ?? "");
     return { ok };
   });
 
-export const adminLogout = createServerFn()
+export const adminLogout = createServerFn({ method: "POST" })
   .handler(async () => {
     clearAdminSession();
     return { ok: true };
@@ -191,7 +191,7 @@ export const fetchTestimonialSubmissions = createServerFn()
 
 // ─── R2 Asset Upload ──────────────────────────────────────────────────────────
 
-export const uploadLoanAsset = createServerFn()
+export const uploadLoanAsset = createServerFn({ method: "POST" })
   .inputValidator((payload: { tempId: string; kind: string; dataUrl: string; contentType: string }) => payload)
   .handler(async ({ data: { tempId, kind, dataUrl, contentType } }) => {
     const r2 = getR2();
@@ -261,7 +261,7 @@ export const resolveLoanAsset = createServerFn()
 
 // ─── Actions ──────────────────────────────────────────────────────────────────
 
-export const submitTestimonial = createServerFn()
+export const submitTestimonial = createServerFn({ method: "POST" })
   .inputValidator((payload: any) => payload)
   .handler(async ({ data: payload }) => {
     const db = getDb();
@@ -269,7 +269,7 @@ export const submitTestimonial = createServerFn()
     return { data: result, error: null };
   });
 
-export const submitLead = createServerFn()
+export const submitLead = createServerFn({ method: "POST" })
   .inputValidator((payload: any) => payload)
   .handler(async ({ data: payload }) => {
     const db = getDb();
@@ -277,7 +277,7 @@ export const submitLead = createServerFn()
     return { data: result, error: null };
   });
 
-export const submitLoanApplication = createServerFn()
+export const submitLoanApplication = createServerFn({ method: "POST" })
   .inputValidator((payload: any) => payload)
   .handler(async ({ data: payload, request }) => {
     // Zod validation — returns structured field errors on failure
@@ -314,7 +314,7 @@ export const submitLoanApplication = createServerFn()
     return { data: result, error: null };
   });
 
-export const likeBlogPost = createServerFn()
+export const likeBlogPost = createServerFn({ method: "POST" })
   .inputValidator((slug: string) => slug)
   .handler(async ({ data: slug }) => {
     const db = getDb();
@@ -330,7 +330,7 @@ export const likeBlogPost = createServerFn()
     return { likes: result.likes };
   });
 
-export const updateLeadStatus = createServerFn()
+export const updateLeadStatus = createServerFn({ method: "POST" })
   .inputValidator((payload: { id: string; status: string }) => payload)
   .handler(async ({ data: { id, status } }) => {
     await requireAdmin();
@@ -339,7 +339,7 @@ export const updateLeadStatus = createServerFn()
     return { success: true };
   });
 
-export const updateLoanStatus = createServerFn()
+export const updateLoanStatus = createServerFn({ method: "POST" })
   .inputValidator((payload: { id: string; status: string; reason?: string; adminId?: string }) => payload)
   .handler(async ({ data: { id, status, reason, adminId } }) => {
     await requireAdmin();
@@ -373,7 +373,7 @@ export const updateLoanStatus = createServerFn()
     return { success: true };
   });
 
-export const verifyLoanIdentity = createServerFn()
+export const verifyLoanIdentity = createServerFn({ method: "POST" })
   .inputValidator((payload: { id: string; verified: boolean; adminId?: string }) => payload)
   .handler(async ({ data: { id, verified, adminId } }) => {
     await requireAdmin();
@@ -396,7 +396,7 @@ export const verifyLoanIdentity = createServerFn()
     return { success: true };
   });
 
-export const updateTestimonialStatus = createServerFn()
+export const updateTestimonialStatus = createServerFn({ method: "POST" })
   .inputValidator((payload: { id: string; status: string }) => payload)
   .handler(async ({ data: { id, status } }) => {
     await requireAdmin();
