@@ -17,8 +17,9 @@ import {
   Palette, Type, Save, ChevronRight, TrendingUp,
   FileText, Star, ShieldCheck, Camera, IdCard, BookOpen, CheckCircle2, ZoomIn,
   Clock, CreditCard, ShieldAlert, Fingerprint, Video, XCircle, Play,
-  Activity, Code2
+  Activity, Code2, Download
 } from "lucide-react";
+import { generateLoanPDF, generateBulkLoanPDF, generateLeadPDF, generateBulkLeadPDF } from "@/lib/pdf-generator";
 import type { StatusHistoryEntry } from "@/types/admin";
 import { 
   TableShell, THead, EmptyRow, Chip, StatusBadge, 
@@ -181,9 +182,43 @@ export function LeadsTab() {
     `${r.firstName} ${r.lastName} ${r.email} ${r.scamType}`.toLowerCase().includes(search.toLowerCase())
   );
 
+  const onDownloadPDF = async (lead: Lead) => {
+    try {
+      const doc = await generateLeadPDF(lead);
+      doc.save(`Lead_Profile_${lead.lastName}_${lead.id.slice(0, 8)}.pdf`);
+      toast.success("Lead PDF downloaded");
+    } catch (e) { toast.error("Failed to generate PDF"); }
+  };
+
+  const onBulkDownload = async () => {
+    if (filtered.length === 0) return;
+    toast.info(`Preparing bulk download for ${filtered.length} leads...`);
+    try {
+      const doc = await generateBulkLeadPDF(filtered);
+      doc.save(`Bulk_Leads_${new Date().toISOString().split('T')[0]}.pdf`);
+      toast.success("Bulk PDF downloaded");
+    } catch (e) { toast.error("Failed to generate bulk PDF"); }
+  };
+
   return (
-    <TableShell title="Case Enquiries" count={rows.length} loading={loading} error={error} onRefresh={load}
-      search={search} onSearch={setSearch}>
+    <TableShell 
+      title="Case Enquiries" 
+      count={rows.length} 
+      loading={loading} 
+      error={error} 
+      onRefresh={load}
+      search={search} 
+      onSearch={setSearch}
+      actions={
+        <button
+          onClick={onBulkDownload}
+          disabled={loading || filtered.length === 0}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 text-white text-xs font-bold uppercase tracking-wider rounded-lg hover:bg-slate-800 disabled:opacity-50 transition-all shadow-sm"
+        >
+          <Download className="w-3.5 h-3.5" /> Bulk Export PDF
+        </button>
+      }
+    >
       <table className="min-w-full text-sm">
         <THead cols={["", "Name", "Email", "Phone", "Amount Lost", "Scam Type", "Status", "Date"]} />
         <tbody className="divide-y divide-gray-100">
@@ -214,6 +249,12 @@ export function LeadsTab() {
                           <strong>Additional Message:</strong> {r.message || "No message provided."}
                         </div>
                         <div className="flex items-center gap-3">
+                          <button
+                            onClick={() => onDownloadPDF(r)}
+                            className="px-3 py-1 bg-slate-900 text-white text-[10px] font-bold uppercase rounded-lg hover:bg-slate-800 transition-all shadow-sm flex items-center gap-1.5"
+                          >
+                            <Download className="w-3 h-3" /> PDF
+                          </button>
                           <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Update Status</span>
                           <StatusPicker current={r.status} onUpdate={(s) => onUpdateStatus(r.id, s)} />
                         </div>
@@ -275,9 +316,49 @@ export function LoansTab() {
     `${r.firstName} ${r.lastName} ${r.email}`.toLowerCase().includes(search.toLowerCase())
   );
 
+  const onDownloadPDF = async (loan: LoanApplication) => {
+    try {
+      const doc = await generateLoanPDF(loan);
+      doc.save(`Loan_Application_${loan.lastName}_${loan.id.slice(0, 8)}.pdf`);
+      toast.success("PDF generated and downloaded");
+    } catch (e) {
+      toast.error("Failed to generate PDF");
+      console.error(e);
+    }
+  };
+
+  const onBulkDownload = async () => {
+    if (filtered.length === 0) return;
+    toast.info(`Preparing bulk download for ${filtered.length} records...`);
+    try {
+      const doc = await generateBulkLoanPDF(filtered);
+      doc.save(`Bulk_Loan_Applications_${new Date().toISOString().split('T')[0]}.pdf`);
+      toast.success("Bulk PDF generated and downloaded");
+    } catch (e) {
+      toast.error("Failed to generate bulk PDF");
+      console.error(e);
+    }
+  };
+
   return (
-    <TableShell title="Loan Applications" count={rows.length} loading={loading} error={error} onRefresh={load}
-      search={search} onSearch={setSearch}>
+    <TableShell 
+      title="Loan Applications" 
+      count={rows.length} 
+      loading={loading} 
+      error={error} 
+      onRefresh={load}
+      search={search} 
+      onSearch={setSearch}
+      actions={
+        <button
+          onClick={onBulkDownload}
+          disabled={loading || filtered.length === 0}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 text-white text-xs font-bold uppercase tracking-wider rounded-lg hover:bg-slate-800 disabled:opacity-50 transition-all shadow-sm"
+        >
+          <Download className="w-3.5 h-3.5" /> Bulk Download PDF
+        </button>
+      }
+    >
       <table className="min-w-full text-sm">
         <THead cols={["", "Name", "Email", "Amount", "Method", "Status", "Date"]} />
         <tbody className="divide-y divide-gray-100">
@@ -341,6 +422,12 @@ export function LoansTab() {
                               className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 text-[10px] font-bold rounded-lg transition-colors uppercase tracking-widest border border-gray-200"
                             >
                               Copy JSON
+                            </button>
+                            <button
+                              onClick={() => onDownloadPDF(r)}
+                              className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-[10px] font-bold rounded-lg transition-all uppercase tracking-widest flex items-center gap-2 shadow-sm"
+                            >
+                              <Download className="w-3.5 h-3.5" /> Download PDF
                             </button>
                             <StatusBadge status={r.status} />
                           </div>

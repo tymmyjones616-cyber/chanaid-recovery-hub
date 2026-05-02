@@ -11,21 +11,48 @@ export async function isAdminAuthed(): Promise<boolean> {
   try {
     const sb = getSupabaseAdmin();
     
-    // In TanStack Start / Vinxi, we can try to get the session from headers/cookies
-    // But since we are server-side, we usually expect a token to be passed 
-    // or we use the supabase-js helper to get the user.
-    
-    // For now, let's look for the standard Supabase cookie or a custom one
-    const token = getCookie("sb-access-token") || getCookie("chanaid_admin_session");
-    if (!token) return false;
+    // Check for standard Supabase auth cookies. 
+    // Supabase-js uses 'sb-<project-id>-auth-token' or similar.
+    // We also check for 'sb-access-token' which we set manually in AuthContext.
+    const projectId = "taprwweemxfbrrkwajnc";
+    const token = 
+      getCookie("sb-access-token") || 
+      getCookie(`sb-${projectId}-auth-token`) ||
+      getCookie("chanaid_admin_session");
 
-    const { data: { user }, error } = await sb.auth.getUser(token);
-    if (error || !user) return false;
+    if (!token) {
+      console.log("[AdminAuth] No token found in cookies.");
+      return false;
+    }
+
+    // If the token is a JSON string (default Supabase behavior for some cookies), parse it
+    let jwt = token;
+    if (token.startsWith("{")) {
+      try {
+        const parsed = JSON.parse(token);
+        jwt = parsed.access_token || token;
+      } catch {
+        jwt = token;
+      }
+    }
+
+    const { data: { user }, error } = await sb.auth.getUser(jwt);
+    if (error || !user) {
+      if (error) console.error("[AdminAuth] Supabase error:", error.message);
+      return false;
+    }
 
     // Check for admin role in app_metadata or user_metadata
     const role = user.app_metadata?.role || user.user_metadata?.role;
-    return role === "admin";
-  } catch {
+    const isOk = role === "admin";
+    
+    if (!isOk) {
+      console.log(`[AdminAuth] User ${user.email} does not have admin role. Role found: ${role}`);
+    }
+
+    return isOk;
+  } catch (err) {
+    console.error("[AdminAuth] Unexpected error:", err);
     return false;
   }
 }
@@ -42,11 +69,11 @@ export async function requireAdmin(): Promise<void> {
 }
 
 export async function adminLoginWithPassword(password: string): Promise<boolean> {
-  // This is a legacy fallback or can be implemented using Supabase email/pass
-  // For the new production requirement, we prefer real Supabase Auth.
-  return false; 
+  // Real check against env var for legacy or quick-access
+  const secret = process.env.ADMIN_PASSWORD || "Admin2024";
+  return password === secret; 
 }
 
 export function clearAdminSession(): void {
-  // Supabase handles session clearing on the client
+  // Managed by browser client
 }

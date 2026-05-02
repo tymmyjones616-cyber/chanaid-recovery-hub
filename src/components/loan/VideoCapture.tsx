@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Camera, StopCircle, RefreshCw, CheckCircle2, Video, Upload, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { PremiumProgressBar } from "../ui/PremiumProgressBar";
 
 interface VideoCaptureProps {
   onCapture: (base64: string | null) => void;
@@ -254,52 +255,12 @@ export function VideoCapture({ onCapture, value, label, progress }: VideoCapture
         {/* ── Uploading state ── */}
         {mode === "uploading" && (
           <div className="flex flex-col items-center gap-5 p-10 w-full max-w-sm">
-            {/* Animated spinner with pulsing ring */}
-            <div className="relative w-20 h-20">
-              <div className="absolute inset-0 rounded-full border-4 border-primary/15" />
-              <div className="absolute inset-0 rounded-full border-4 border-primary border-t-transparent animate-spin" />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <Loader2 className="w-8 h-8 text-primary animate-spin" style={{ animationDuration: "1.5s" }} />
-              </div>
-            </div>
-
-            {/* Status text */}
-            <div className="text-center">
-              <h4 className="text-slate-900 font-bold text-sm mb-1">Uploading Video</h4>
-              <p className="text-slate-500 text-[11px]">Encrypting and uploading to secure storage…</p>
-            </div>
-
-            {/* Progress bar */}
-            <div className="w-full space-y-2">
-              <div className="relative h-3 bg-slate-100 rounded-full overflow-hidden">
-                {/* Animated gradient fill */}
-                <div
-                  className="absolute inset-y-0 left-0 rounded-full transition-all duration-500 ease-out"
-                  style={{
-                    width: `${pct}%`,
-                    background: "linear-gradient(90deg, #6366f1, #8b5cf6, #a855f7, #ec4899, #6366f1)",
-                    backgroundSize: "300% 100%",
-                    animation: "shimmer 2s infinite linear",
-                  }}
-                />
-                {/* Glow effect on the leading edge */}
-                <div
-                  className="absolute inset-y-0 rounded-full opacity-50 blur-md transition-all duration-500"
-                  style={{
-                    width: `${Math.min(pct + 12, 100)}%`,
-                    left: 0,
-                    background: "linear-gradient(90deg, transparent 50%, #8b5cf6)",
-                  }}
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold text-primary tracking-wider uppercase flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
-                  Processing…
-                </span>
-                <span className="text-sm font-black text-primary tabular-nums">{pct}%</span>
-              </div>
-            </div>
+            <PremiumProgressBar 
+              progress={pct} 
+              status={pct < 100 ? "uploading" : "processing"} 
+              fileName="video-selfie.webm"
+              className="!bg-transparent !border-none !shadow-none !p-0"
+            />
           </div>
         )}
 

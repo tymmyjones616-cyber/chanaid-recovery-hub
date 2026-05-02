@@ -4,9 +4,11 @@ import {
   Clock, CheckCircle2, Copy, Check 
 } from "lucide-react";
 
-export function TableShell({ title, count, loading, error, onRefresh, search, onSearch, children }: {
+export function TableShell({ title, count, loading, error, onRefresh, search, onSearch, actions, children }: {
   title: string; count: number; loading: boolean; error: string;
-  onRefresh: () => void; search: string; onSearch: (s: string) => void; children: React.ReactNode;
+  onRefresh: () => void; search: string; onSearch: (s: string) => void; 
+  actions?: React.ReactNode;
+  children: React.ReactNode;
 }) {
   return (
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
@@ -19,6 +21,7 @@ export function TableShell({ title, count, loading, error, onRefresh, search, on
           type="search" placeholder="Search…" value={search} onChange={e => onSearch(e.target.value)}
           className="h-9 w-48 rounded-lg border border-gray-200 px-3 text-sm focus:outline-none focus:border-purple-400 transition"
         />
+        {actions}
         <button onClick={onRefresh} disabled={loading}
           className="flex items-center gap-1.5 text-sm text-purple-600 font-medium hover:text-purple-800 disabled:opacity-50 transition">
           <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} /> Refresh

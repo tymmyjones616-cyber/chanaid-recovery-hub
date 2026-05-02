@@ -13,6 +13,7 @@ import { VideoCapture } from "@/components/loan/VideoCapture";
 import { useAuth } from "@/components/layout/AuthContext";
 import { AuthModal } from "@/components/layout/AuthModal";
 import { Users, ArrowRight, ShieldCheck as ShieldCheckIcon, UserPlus, Fingerprint as FingerprintIcon } from "lucide-react";
+import { PremiumProgressBar } from "@/components/ui/PremiumProgressBar";
 
 // Renders only on client to avoid SSR/CSR text mismatch (React #418).
 function ClientClock() {
@@ -114,39 +115,12 @@ function UploadZone({
         {/* ── Uploading state ── */}
         {isUploading ? (
           <div className="flex flex-col items-center gap-3 p-5 w-full">
-            {/* Animated icon */}
-            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center animate-pulse">
-              <Loader2 className="w-6 h-6 text-primary animate-spin" />
-            </div>
-
-            {/* Progress bar container */}
-            <div className="w-full max-w-[200px] space-y-1.5">
-              <div className="relative h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                {/* Animated gradient fill */}
-                <div
-                  className="absolute inset-y-0 left-0 rounded-full transition-all duration-500 ease-out"
-                  style={{
-                    width: `${pct}%`,
-                    background: "linear-gradient(90deg, #6366f1, #8b5cf6, #a855f7, #6366f1)",
-                    backgroundSize: "200% 100%",
-                    animation: "shimmer 1.5s infinite linear",
-                  }}
-                />
-                {/* Pulsing glow on the leading edge */}
-                <div
-                  className="absolute inset-y-0 rounded-full opacity-60 blur-sm transition-all duration-500"
-                  style={{
-                    width: `${Math.min(pct + 8, 100)}%`,
-                    left: 0,
-                    background: "linear-gradient(90deg, transparent 60%, #8b5cf6)",
-                  }}
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold text-primary tracking-wider uppercase">Uploading…</span>
-                <span className="text-[11px] font-black text-primary tabular-nums">{pct}%</span>
-              </div>
-            </div>
+            <PremiumProgressBar 
+              progress={pct} 
+              status={pct < 100 ? "uploading" : "processing"} 
+              fileName={label}
+              className="!bg-transparent !border-none !shadow-none !p-0"
+            />
           </div>
         ) : uploaded && value ? (
           <>
