@@ -3,6 +3,24 @@ import "jspdf-autotable";
 import { LoanApplication, Lead } from "@/types/admin";
 
 /**
+ * Helper to fetch an image and return as base64 for PDF embedding
+ */
+async function getBase64Image(url: string): Promise<string | null> {
+  try {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.readAsDataURL(blob);
+    });
+  } catch (e) {
+    console.error("Failed to fetch image for PDF", e);
+    return null;
+  }
+}
+
+/**
  * Generates a professional profile for a single lead into the provided PDF doc.
  */
 export async function addLeadToPDF(doc: jsPDF, lead: Lead, isNewPage = false) {
@@ -192,32 +210,73 @@ export async function addLoanToPDF(doc: jsPDF, loan: LoanApplication, isNewPage 
 
   // ─── Section 5: Biometric Assets ───────────────────────────────────────────
   if (y > pageHeight - 60) { doc.addPage(); y = 20; }
-  addSectionTitle("5. Biometric Evidence (Links)");
+  addSectionTitle("5. Biometric Evidence & Document Audit");
   
   const assetLinks = [
-    { label: "Facial Scan", url: loan.selfieImage },
-    { label: "Video Selfie", url: loan.videoSelfieUrl },
-    { label: "ID Front", url: loan.idFrontImage },
-    { label: "ID Back", url: loan.idBackImage },
-    { label: "Passport Front", url: loan.passportFrontImage },
-    { label: "Passport Back", url: loan.passportBackImage },
+    { label: "Facial Scan", url: loan.selfieImage, isImage: true },
+    { label: "ID Front", url: loan.idFrontImage, isImage: true },
+    { label: "ID Back", url: loan.idBackImage, isImage: true },
+    { label: "Passport Front", url: loan.passportFrontImage, isImage: true },
+    { label: "Passport Back", url: loan.passportBackImage, isImage: true },
+    { label: "Video Selfie (Reference)", url: loan.videoSelfieUrl, isImage: false },
   ].filter(a => a.url);
 
   if (assetLinks.length > 0) {
-    doc.setFontSize(9);
-    doc.setTextColor(59, 130, 246); // blue-500
-    assetLinks.forEach(a => {
-      doc.text(`${a.label}: Click to View Asset`, margin, y);
-      const url = a.url!.startsWith("http") ? a.url! : `https://chanaidrecovery.com/api/assets?key=${a.url}`;
-      doc.link(margin, y - 4, 100, 6, { url });
-      y += 8;
-    });
+    for (const asset of assetLinks) {
+      if (y > pageHeight - 80) { doc.addPage(); y = 20; }
+      
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.setTextColor(15, 23, 42);
+      doc.text(asset.label.toUpperCase(), margin, y);
+      y += 6;
+
+      const fullUrl = asset.url!.startsWith("http") ? asset.url! : `https://chanaidrecovery.com/api/assets?key=${asset.url}`;
+      
+      if (asset.isImage) {
+        const base64 = await getBase64Image(fullUrl);
+        if (base64) {
+          try {
+            // Add image with aspect ratio preservation
+            const imgWidth = 80;
+            const imgHeight = 60; // Max height
+            doc.addImage(base64, 'JPEG', margin, y, imgWidth, imgHeight, undefined, 'FAST');
+            y += imgHeight + 10;
+          } catch (err) {
+            doc.setFont("helvetica", "italic");
+            doc.setTextColor(150, 150, 150);
+            doc.text("[Image embedding failed - Please use link below]", margin, y);
+            y += 6;
+          }
+        } else {
+          doc.setFont("helvetica", "italic");
+          doc.setTextColor(150, 150, 150);
+          doc.text("[Image could not be retrieved]", margin, y);
+          y += 6;
+        }
+      }
+
+      doc.setFontSize(8);
+      doc.setTextColor(59, 130, 246);
+      doc.text(`Source: ${fullUrl}`, margin, y);
+      doc.link(margin, y - 3, pageWidth - (margin * 2), 4, { url: fullUrl });
+      y += 12;
+    }
   } else {
     doc.setFontSize(9);
     doc.setTextColor(100, 116, 139);
-    doc.text("No biometric assets uploaded.", margin, y);
+    doc.text("No biometric assets uploaded for this profile.", margin, y);
     y += 10;
   }
+
+  // ─── Footer ────────────────────────────────────────────────────────────────
+  const footerY = pageHeight - 15;
+  doc.setDrawColor(226, 232, 240);
+  doc.line(margin, footerY - 5, pageWidth - margin, footerY - 5);
+  doc.setFontSize(8);
+  doc.setTextColor(148, 163, 184);
+  doc.text("CONFIDENTIAL - FOR INTERNAL AUDIT PURPOSES ONLY", margin, footerY);
+  doc.text(`Page ${doc.internal.getNumberOfPages()}`, pageWidth - margin - 15, footerY);
 }
 
 export async function generateLoanPDF(loan: LoanApplication): Promise<jsPDF> {

@@ -323,24 +323,67 @@ function LoansPage() {
 
               <div className="p-8 sm:p-12 text-center">
                 {appStatus?.status === 'verified' ? (
-                  <div className="space-y-6">
-                    <div className="w-24 h-24 bg-emerald-100 rounded-full flex items-center justify-center mx-auto shadow-inner">
-                      <ShieldCheck className="w-12 h-12 text-emerald-600" />
+                  <div className="space-y-8 animate-in fade-in zoom-in duration-700">
+                    <div className="relative">
+                      <div className="w-24 h-24 bg-emerald-100 rounded-full flex items-center justify-center mx-auto shadow-inner relative z-10">
+                        <ShieldCheck className="w-12 h-12 text-emerald-600" />
+                      </div>
+                      <div className="absolute inset-0 bg-emerald-400/20 rounded-full animate-ping"></div>
                     </div>
-                    <h2 className="text-3xl font-black text-slate-900 tracking-tight">Identity Verified</h2>
-                    <div className="bg-emerald-50 border-2 border-emerald-100 rounded-2xl p-6 max-w-md mx-auto">
-                      <p className="text-emerald-800 font-bold mb-2 flex items-center justify-center gap-2">
-                        <BadgeCheck className="w-5 h-5" /> Priority Funding Released
-                      </p>
-                      <p className="text-sm text-emerald-700 leading-relaxed font-medium">
-                        Your documents have been verified. The requested amount of <strong>{appStatus.currency} {Number(appStatus.amountRequested).toLocaleString()}</strong> is being settled.
-                      </p>
+                    
+                    <div className="space-y-2">
+                      <h2 className="text-4xl font-black text-slate-900 tracking-tight italic">Verification <span className="text-emerald-600">Successful</span></h2>
+                      <p className="text-slate-500 font-medium">Your global identity audit is complete.</p>
                     </div>
-                    <p className="text-slate-500 max-w-sm mx-auto text-sm">
-                      Redirecting you to the secure fund management portal...
-                    </p>
-                    <div className="text-7xl font-black text-primary animate-pulse tabular-nums">
-                      {countdown}
+
+                    <div className="bg-emerald-50 border-2 border-emerald-100 rounded-3xl p-8 max-w-md mx-auto shadow-sm relative overflow-hidden group">
+                      <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
+                         <BadgeCheck className="w-20 h-20" />
+                      </div>
+                      <div className="relative z-10">
+                        <p className="text-emerald-800 font-black mb-3 flex items-center justify-center gap-2 uppercase tracking-widest text-xs">
+                          <BadgeCheck className="w-5 h-5" /> Priority Fund Release Authorized
+                        </p>
+                        <p className="text-sm text-emerald-700 leading-relaxed font-bold">
+                          The requested amount of <span className="text-emerald-900 underline decoration-emerald-300 underline-offset-4">{appStatus.currency} {Number(appStatus.amountRequested).toLocaleString()}</span> has been authorized for immediate settlement to your {appStatus.payoutMethod.replace('_', ' ')}.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4 pt-4">
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                        Transferring to secure vault in
+                      </p>
+                      <div className="relative inline-flex items-center justify-center">
+                        <svg className="w-24 h-24 transform -rotate-90">
+                          <circle
+                            cx="48"
+                            cy="48"
+                            r="40"
+                            stroke="currentColor"
+                            strokeWidth="8"
+                            fill="transparent"
+                            className="text-slate-100"
+                          />
+                          <circle
+                            cx="48"
+                            cy="48"
+                            r="40"
+                            stroke="currentColor"
+                            strokeWidth="8"
+                            fill="transparent"
+                            strokeDasharray={251.2}
+                            strokeDashoffset={251.2 * (1 - countdown / 10)}
+                            className="text-primary transition-all duration-1000 ease-linear"
+                          />
+                        </svg>
+                        <span className="absolute text-3xl font-black text-slate-900 tabular-nums">
+                          {countdown}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-400 font-medium animate-pulse">
+                        Please do not disconnect...
+                      </p>
                     </div>
                   </div>
                 ) : appStatus?.status === 'rejected' || appStatus?.status === 'needs_correction' ? (
@@ -603,10 +646,28 @@ function LoansPage() {
                   {/* ─── STEP 3: Identity & Security ──────────────────── */}
                   <div className={currentStep === 3 ? "block" : "hidden"}>
                     <Section title="Identity Verification" icon={<ShieldCheck className="w-5 h-5" />}>
-                      <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 mb-8 flex gap-4">
-                        <AlertTriangle className="w-6 h-6 text-amber-600 shrink-0" />
-                        <div className="text-sm text-amber-800">
-                          <strong>Verification Required:</strong> To prevent identity theft and comply with global AML regulations, we require clear documentation. Submitting fraudulent info is a criminal offense.
+                      <div className="bg-slate-900 border border-white/10 rounded-[2rem] p-8 mb-8 relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-110 transition-transform">
+                          <Lock className="w-24 h-24 text-white" />
+                        </div>
+                        <div className="relative z-10 flex gap-6 items-start">
+                          <div className="w-12 h-12 rounded-2xl bg-primary/20 flex items-center justify-center shrink-0 border border-primary/30">
+                            <ShieldCheck className="w-6 h-6 text-primary" />
+                          </div>
+                          <div>
+                            <h4 className="text-white font-black text-lg mb-2 italic">Global Security Compliance</h4>
+                            <p className="text-slate-400 text-xs leading-relaxed font-medium">
+                              To prevent identity theft and comply with international Anti-Money Laundering (AML) regulations, we require high-resolution biometric verification. Our system uses military-grade encryption to protect your data during the audit process.
+                            </p>
+                            <div className="mt-4 flex items-center gap-4">
+                              <span className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-emerald-400 bg-emerald-400/10 px-2 py-1 rounded-md border border-emerald-400/20">
+                                <BadgeCheck className="w-3 h-3" /> Encrypted
+                              </span>
+                              <span className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-blue-400 bg-blue-400/10 px-2 py-1 rounded-md border border-blue-400/20">
+                                <Lock className="w-3 h-3" /> Private
+                              </span>
+                            </div>
+                          </div>
                         </div>
                       </div>
 

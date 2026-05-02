@@ -8,6 +8,7 @@ import {
   Clock, 
   CheckCircle2, 
   XCircle, 
+  Lock,
   AlertCircle, 
   CreditCard, 
   Banknote, 
@@ -35,7 +36,8 @@ function UserDashboard() {
   const { user, signOut, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [loans, setLoans] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [isSecurityModalOpen, setIsSecurityModalOpen] = useState(false);
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -206,8 +208,11 @@ function UserDashboard() {
                 </div>
 
                 <div className="mt-8 pt-8 border-t border-slate-100">
-                  <button className="w-full py-3 rounded-xl bg-slate-50 text-slate-600 font-bold text-xs hover:bg-slate-100 transition-all flex items-center justify-center gap-2">
-                    <Settings className="w-4 h-4" /> Security Settings
+                  <button 
+                    onClick={() => setIsSecurityModalOpen(true)}
+                    className="w-full py-3 rounded-xl bg-slate-50 text-slate-600 font-bold text-xs hover:bg-slate-100 transition-all flex items-center justify-center gap-2 group"
+                  >
+                    <Settings className="w-4 h-4 group-hover:rotate-90 transition-transform duration-500" /> Security Settings
                   </button>
                 </div>
               </div>
@@ -231,6 +236,18 @@ function UserDashboard() {
           </div>
         </div>
       </div>
+      
+      <SecuritySettingsModal 
+        isOpen={isSecurityModalOpen} 
+        onClose={() => setIsSecurityModalOpen(false)}
+        twoFactorEnabled={twoFactorEnabled}
+        onToggle2FA={() => {
+          setTwoFactorEnabled(!twoFactorEnabled);
+          toast.success(twoFactorEnabled ? "2FA Disabled" : "2FA Protection Enabled Successfully");
+        }}
+        user={user}
+        loans={loans}
+      />
     </SiteShell>
   );
 }
@@ -359,4 +376,116 @@ function RefreshCw(props: any) {
 function DialogWrapper({ children }: { children: React.ReactNode }) {
   // Empty wrapper to avoid compile error if it was used in code above
   return <>{children}</>;
+}
+
+function SecuritySettingsModal({ 
+  isOpen, onClose, twoFactorEnabled, onToggle2FA, user, loans 
+}: { 
+  isOpen: boolean, onClose: () => void, twoFactorEnabled: boolean, onToggle2FA: () => void, user: any, loans: any[] 
+}) {
+  if (!isOpen) return null;
+
+  const kycCompleted = loans.some(l => l.status === 'verified');
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
+      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300" onClick={onClose} />
+      
+      <div className="relative w-full max-w-xl bg-white rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 fade-in duration-300 border border-slate-100">
+        <div className="bg-slate-900 p-8 text-white relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-8 opacity-10">
+            <ShieldCheck className="w-32 h-32 rotate-12" />
+          </div>
+          <div className="relative z-10">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-primary/20 flex items-center justify-center border border-primary/30">
+                  <Lock className="w-5 h-5 text-primary" />
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Security Protocol</span>
+              </div>
+              <button onClick={onClose} className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-all">
+                <XCircle className="w-5 h-5 text-white" />
+              </button>
+            </div>
+            <h2 className="text-3xl font-black tracking-tight italic text-white">Vault <span className="text-primary">Settings</span></h2>
+            <p className="text-slate-400 font-medium mt-2 text-sm">Configure your multi-layer defense parameters.</p>
+          </div>
+        </div>
+
+        <div className="p-8 space-y-8">
+          {/* Identity Section */}
+          <div className="space-y-4">
+            <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Identity & Access</h4>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                <div className="flex items-center gap-4">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${kycCompleted ? "bg-emerald-100 text-emerald-600" : "bg-amber-100 text-amber-600"}`}>
+                    <BadgeCheck className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-bold text-slate-900">KYC Verification</div>
+                    <div className="text-[10px] font-medium text-slate-500">Identity document validation</div>
+                  </div>
+                </div>
+                <div className="flex flex-col items-end gap-1">
+                  <span className={`text-[10px] font-black uppercase tracking-tighter px-2 py-0.5 rounded-lg ${kycCompleted ? "bg-emerald-100 text-emerald-600" : "bg-amber-100 text-amber-600"}`}>
+                    {kycCompleted ? "Verified" : "Action Required"}
+                  </span>
+                  {!kycCompleted && (
+                    <Link to="/loans" className="text-[10px] font-bold text-primary hover:underline">Complete Now</Link>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                <div className="flex items-center gap-4">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${twoFactorEnabled ? "bg-emerald-100 text-emerald-600" : "bg-slate-100 text-slate-400"}`}>
+                    <ShieldCheck className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-bold text-slate-900">2FA Protection</div>
+                    <div className="text-[10px] font-medium text-slate-500">Two-factor authentication</div>
+                  </div>
+                </div>
+                <button 
+                  onClick={onToggle2FA}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${twoFactorEnabled ? 'bg-primary' : 'bg-slate-200'}`}
+                >
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${twoFactorEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Account Info */}
+          <div className="space-y-4">
+            <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Session Information</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                <div className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">User ID</div>
+                <div className="text-[11px] font-mono font-bold text-slate-700 truncate">{user?.id}</div>
+              </div>
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                <div className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Last Login</div>
+                <div className="text-[11px] font-bold text-slate-700">{new Date(user?.last_sign_in_at || Date.now()).toLocaleDateString()}</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-4 flex flex-col sm:flex-row items-center gap-4">
+            <button className="w-full py-4 rounded-2xl bg-slate-900 text-white font-black text-sm shadow-xl hover:bg-slate-800 transition-all flex items-center justify-center gap-2 group">
+              Update Security Profile <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </button>
+            <button 
+              onClick={onClose}
+              className="w-full py-4 rounded-2xl bg-white text-slate-500 font-bold text-sm hover:bg-slate-50 transition-all"
+            >
+              Close Settings
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }

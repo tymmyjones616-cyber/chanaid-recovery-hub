@@ -1,7 +1,7 @@
 import React from "react";
 import { 
   RefreshCw, XCircle, ChevronUp, ChevronDown, 
-  Clock, CheckCircle2, Copy, Check 
+  Clock, CheckCircle2, Copy, Check, Eye, Download, Play, ShieldCheck, Lock
 } from "lucide-react";
 
 export function TableShell({ title, count, loading, error, onRefresh, search, onSearch, actions, children }: {
@@ -132,6 +132,58 @@ export function DField({ label, value, mono = false, icon, className = "", dark 
           Copied!
         </span>
       )}
+    </div>
+  );
+}
+
+export function MediaPreview({ label, url, type = "image" }: { label: string; url: string | null | undefined; type?: "image" | "video" }) {
+  if (!url) return null;
+  const fullUrl = url.startsWith("http") ? url : `https://chanaidrecovery.com/api/assets?key=${url}`;
+
+  return (
+    <div className="group relative bg-slate-900 rounded-xl overflow-hidden border border-slate-800 shadow-lg">
+      <div className="absolute top-2 left-2 z-10 px-2 py-1 bg-black/50 backdrop-blur-md rounded-md border border-white/10">
+        <p className="text-[9px] font-black uppercase tracking-widest text-white/80">{label}</p>
+      </div>
+      
+      <div className="aspect-[4/3] bg-slate-800 flex items-center justify-center relative">
+        {type === "image" ? (
+          <img src={fullUrl} alt={label} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+        ) : (
+          <div className="flex flex-col items-center gap-2">
+            <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center border border-primary/30">
+              <Play className="w-6 h-6 text-primary fill-primary" />
+            </div>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Video Evidence</span>
+          </div>
+        )}
+      </div>
+
+      <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3 backdrop-blur-[2px]">
+        <a 
+          href={fullUrl} 
+          target="_blank" 
+          rel="noreferrer"
+          className="p-3 bg-white/10 hover:bg-white/20 rounded-full border border-white/10 transition-all hover:scale-110"
+          title="View Fullscreen"
+        >
+          <Eye className="w-5 h-5 text-white" />
+        </a>
+        <button 
+          onClick={() => {
+            const a = document.createElement('a');
+            a.href = fullUrl;
+            a.download = `${label}_${Date.now()}`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+          }}
+          className="p-3 bg-primary/20 hover:bg-primary/30 rounded-full border border-primary/30 transition-all hover:scale-110"
+          title="Download File"
+        >
+          <Download className="w-5 h-5 text-primary" />
+        </button>
+      </div>
     </div>
   );
 }

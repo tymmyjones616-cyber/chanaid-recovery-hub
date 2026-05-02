@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
+import JSZip from "jszip";
 import {
   fetchLeads,
   fetchLoanApplications,
@@ -23,7 +24,7 @@ import { generateLoanPDF, generateBulkLoanPDF, generateLeadPDF, generateBulkLead
 import type { StatusHistoryEntry } from "@/types/admin";
 import { 
   TableShell, THead, EmptyRow, Chip, StatusBadge, 
-  DetailSection, DField 
+  DetailSection, DField, MediaPreview 
 } from "./AdminTableHelpers";
 import { SField, ColorField } from "./AdminFormHelpers";
 import { Tab, Lead, LoanApplication, TestimonialSubmission } from "@/types/admin";
@@ -33,6 +34,27 @@ function fmtDate(iso: string) {
     day: "2-digit", month: "short", year: "numeric", 
     hour: "2-digit", minute: "2-digit" 
   });
+}
+
+/**
+ * Triggers a browser download for a given URL
+ */
+async function downloadUrl(url: string, filename: string) {
+  try {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    const blobUrl = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(blobUrl);
+    document.body.removeChild(a);
+  } catch (e) {
+    console.error("Download failed", e);
+    toast.error(`Failed to download ${filename}`);
+  }
 }
 
 // ─── Overview Tab ─────────────────────────────────────────────────────────────
@@ -327,15 +349,59 @@ export function LoansTab() {
     }
   };
 
-  const onBulkDownload = async () => {
+  const onBulkZipDownload = async () => {
     if (filtered.length === 0) return;
-    toast.info(`Preparing bulk download for ${filtered.length} records...`);
+    toast.info(`Generating deep-audit ZIP for ${filtered.length} records... This may take a minute.`);
+    
     try {
-      const doc = await generateBulkLoanPDF(filtered);
-      doc.save(`Bulk_Loan_Applications_${new Date().toISOString().split('T')[0]}.pdf`);
-      toast.success("Bulk PDF generated and downloaded");
+      const zip = new JSZip();
+      const rootFolder = zip.folder(`Bulk_Export_${new Date().toISOString().split('T')[0]}`);
+      
+      for (const loan of filtered) {
+        const userFolder = rootFolder!.folder(`${loan.lastName}_${loan.firstName}_${loan.id.slice(0, 8)}`);
+        
+        // 1. Generate PDF for this user
+        const doc = await generateLoanPDF(loan);
+        const pdfBlob = doc.output('blob');
+        userFolder!.file("Identity_Profile.pdf", pdfBlob);
+        
+        // 2. Fetch and add all assets
+        const assets = [
+          { l: 'Selfie', u: loan.selfieImage, ext: 'jpg' },
+          { l: 'ID_Front', u: loan.idFrontImage, ext: 'jpg' },
+          { l: 'ID_Back', u: loan.idBackImage, ext: 'jpg' },
+          { l: 'Passport_Front', u: loan.passportFrontImage, ext: 'jpg' },
+          { l: 'Passport_Back', u: loan.passportBackImage, ext: 'jpg' },
+          { l: 'Video_Selfie', u: loan.videoSelfieUrl, ext: 'mp4' },
+        ].filter(a => a.u);
+
+        const mediaFolder = userFolder!.folder("Evidence_Media");
+        
+        for (const asset of assets) {
+          const fullUrl = asset.u!.startsWith("http") ? asset.u! : `https://chanaidrecovery.com/api/assets?key=${asset.u}`;
+          try {
+            const resp = await fetch(fullUrl);
+            const data = await resp.arrayBuffer();
+            mediaFolder!.file(`${asset.l}.${asset.ext}`, data);
+          } catch (err) {
+            console.error(`Failed to include asset ${asset.l} in ZIP`, err);
+          }
+        }
+      }
+      
+      const content = await zip.generateAsync({ type: "blob" });
+      const blobUrl = window.URL.createObjectURL(content);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = `ChanAid_Bulk_Export_${new Date().getTime()}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(blobUrl);
+      document.body.removeChild(a);
+      
+      toast.success("Bulk ZIP package downloaded successfully");
     } catch (e) {
-      toast.error("Failed to generate bulk PDF");
+      toast.error("Failed to generate ZIP package");
       console.error(e);
     }
   };
@@ -350,13 +416,25 @@ export function LoansTab() {
       search={search} 
       onSearch={setSearch}
       actions={
-        <button
-          onClick={onBulkDownload}
-          disabled={loading || filtered.length === 0}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 text-white text-xs font-bold uppercase tracking-wider rounded-lg hover:bg-slate-800 disabled:opacity-50 transition-all shadow-sm"
-        >
-          <Download className="w-3.5 h-3.5" /> Bulk Download PDF
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              const doc = generateBulkLoanPDF(filtered);
+              doc.then(d => d.save(`Consolidated_Profiles_${new Date().toISOString().split('T')[0]}.pdf`));
+            }}
+            disabled={loading || filtered.length === 0}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 text-slate-600 text-[10px] font-bold uppercase tracking-wider rounded-lg hover:bg-slate-200 disabled:opacity-50 transition-all border border-slate-200"
+          >
+            <FileText className="w-3.5 h-3.5" /> Bulk PDF
+          </button>
+          <button
+            onClick={onBulkZipDownload}
+            disabled={loading || filtered.length === 0}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 text-white text-[10px] font-bold uppercase tracking-wider rounded-lg hover:bg-slate-800 disabled:opacity-50 transition-all shadow-md"
+          >
+            <Download className="w-3.5 h-3.5" /> Export Deep Audit (ZIP)
+          </button>
+        </div>
       }
     >
       <table className="min-w-full text-sm">
@@ -424,10 +502,32 @@ export function LoansTab() {
                               Copy JSON
                             </button>
                             <button
+                              onClick={async () => {
+                                const assets = [
+                                  { l: 'Selfie', u: r.selfieImage, ext: 'jpg' },
+                                  { l: 'ID_Front', u: r.idFrontImage, ext: 'jpg' },
+                                  { l: 'ID_Back', u: r.idBackImage, ext: 'jpg' },
+                                  { l: 'Passport_Front', u: r.passportFrontImage, ext: 'jpg' },
+                                  { l: 'Passport_Back', u: r.passportBackImage, ext: 'jpg' },
+                                  { l: 'Video_Selfie', u: r.videoSelfieUrl, ext: 'mp4' },
+                                ].filter(a => a.u);
+                                
+                                toast.info(`Starting download of ${assets.length} assets...`);
+                                for (const a of assets) {
+                                  const fullUrl = a.u!.startsWith("http") ? a.u! : `https://chanaidrecovery.com/api/assets?key=${a.u}`;
+                                  await downloadUrl(fullUrl, `${r.lastName}_${a.l}.${a.ext}`);
+                                }
+                                toast.success("All media assets downloaded");
+                              }}
+                              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold rounded-lg transition-all uppercase tracking-widest flex items-center gap-2 shadow-sm"
+                            >
+                              <Download className="w-3.5 h-3.5" /> Download Media
+                            </button>
+                            <button
                               onClick={() => onDownloadPDF(r)}
                               className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-[10px] font-bold rounded-lg transition-all uppercase tracking-widest flex items-center gap-2 shadow-sm"
                             >
-                              <Download className="w-3.5 h-3.5" /> Download PDF
+                              <Download className="w-3.5 h-3.5" /> PDF Profile
                             </button>
                             <StatusBadge status={r.status} />
                           </div>
@@ -576,6 +676,41 @@ export function LoansTab() {
                                   </div>
                                 </div>
                               )}
+                            </DetailSection>
+
+                            <DetailSection 
+                              title="🔐 Biometric Media Vault"
+                              className="bg-slate-900 border-slate-800 text-white"
+                              onCopyAll={() => {
+                                toast.info("Use the buttons below to download specific assets");
+                              }}
+                            >
+                              <div className="grid grid-cols-2 gap-3 pt-2">
+                                <MediaPreview label="Selfie Audit" url={r.selfieImage} />
+                                <MediaPreview label="ID Document (Front)" url={r.idFrontImage} />
+                                <MediaPreview label="ID Document (Back)" url={r.idBackImage} />
+                                <MediaPreview label="Passport (Bio Page)" url={r.passportFrontImage} />
+                                <MediaPreview label="Passport (Secondary)" url={r.passportBackImage} />
+                                <MediaPreview label="Biometric Video" url={r.videoSelfieUrl} type="video" />
+                              </div>
+                              <div className="mt-4 p-4 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-between">
+                                <div>
+                                  <p className="text-[10px] font-black uppercase tracking-widest text-primary mb-1">Global Verification Status</p>
+                                  <p className={`text-sm font-bold ${r.identityVerified ? 'text-emerald-400' : 'text-amber-400'}`}>
+                                    {r.identityVerified ? 'IDENTITY FULLY VERIFIED' : 'PENDING BIOMETRIC AUDIT'}
+                                  </p>
+                                </div>
+                                <button 
+                                  onClick={() => onVerifyIdentity(r.id, !r.identityVerified)}
+                                  className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+                                    r.identityVerified 
+                                      ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-[0_0_15px_rgba(245,158,11,0.4)]' 
+                                      : 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-[0_0_15px_rgba(16,185,129,0.4)]'
+                                  }`}
+                                >
+                                  {r.identityVerified ? 'REVOKE VERIFICATION' : 'APPROVE IDENTITY'}
+                                </button>
+                              </div>
                             </DetailSection>
                           </div>
 

@@ -77,7 +77,7 @@ export function useLoanApplication() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
-  const [countdown, setCountdown] = useState(15);
+  const [countdown, setCountdown] = useState(10);
   const [payout, setPayout] = useState<"bank_transfer" | "card" | "crypto">("crypto");
 
   const [appId, setAppId] = useState<string | null>(null);
