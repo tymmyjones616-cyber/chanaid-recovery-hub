@@ -15,10 +15,7 @@ export default {
       globalThis.SUPABASE_SERVICE_ROLE_KEY = env.SUPABASE_SERVICE_ROLE_KEY;
     }
 
-    // ─── Legacy D1 binding (kept for backward compat, no longer primary) ─
-    if (env.DB) {
-      globalThis.DB = env.DB;
-    }
+
     if (env.LOAN_UPLOADS) {
       globalThis.LOAN_UPLOADS = env.LOAN_UPLOADS;
     }

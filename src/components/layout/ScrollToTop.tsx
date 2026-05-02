@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
-import { ArrowUp } from "lucide-react";
-import { Reveal } from "@/components/effects/Reveal";
+import { ChevronUp } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 export function ScrollToTop() {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
     const toggleVisibility = () => {
-      if (window.pageYOffset > 300) {
+      if (window.scrollY > 300) {
         setIsVisible(true);
       } else {
         setIsVisible(false);
@@ -25,22 +25,20 @@ export function ScrollToTop() {
     });
   };
 
-  if (!isVisible) return null;
-
   return (
-    <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50">
-      <Reveal direction="up" delay={100}>
-        <button
+    <AnimatePresence>
+      {isVisible && (
+        <motion.button
+          initial={{ opacity: 0, scale: 0.8, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.8, y: 20 }}
           onClick={scrollToTop}
-          className="group relative flex items-center justify-center w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl transition-all hover:scale-110 active:scale-95 hover:bg-white/20"
+          className="fixed bottom-8 left-8 z-[100] h-14 w-14 rounded-full bg-slate-900/90 backdrop-blur-xl border border-white/20 text-white flex items-center justify-center shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:shadow-[0_0_30px_rgba(255,255,255,0.2)] hover:bg-primary transition-all duration-500 group"
           aria-label="Scroll to top"
         >
-          {/* Pulsing background effect */}
-          <div className="absolute inset-0 rounded-2xl bg-primary/20 animate-pulse group-hover:bg-primary/30 transition-colors" />
-          
-          <ArrowUp className="w-5 h-5 text-slate-800 relative z-10 transition-transform group-hover:-translate-y-1" />
-        </button>
-      </Reveal>
-    </div>
+          <ChevronUp className="w-7 h-7 group-hover:-translate-y-1.5 transition-transform duration-500 ease-out" />
+        </motion.button>
+      )}
+    </AnimatePresence>
   );
 }

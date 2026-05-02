@@ -82,15 +82,37 @@ export const Route = createFileRoute("/")({
     };
   },
   loader: async () => {
-    const [services, testimonials, faqs] = await Promise.all([
+    const [servicesData, testimonialsData, faqsData] = await Promise.all([
       fetchServices().catch(() => []),
       fetchTestimonials({ data: {} }).catch(() => []),
       fetchFaqs({ data: undefined }).catch(() => []),
     ]);
+
+    // De-duplicate services by slug
+    const uniqueServices = Array.from(
+      new Map(
+        [...FALLBACK_SERVICES, ...(Array.isArray(servicesData) ? servicesData : [])].map(s => [s.slug, s])
+      ).values()
+    ).sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+
+    // De-duplicate testimonials by quote/id
+    const uniqueTestimonials = Array.from(
+      new Map(
+        (Array.isArray(testimonialsData) ? testimonialsData : []).map(t => [t.quote || t.id, t])
+      ).values()
+    );
+
+    // De-duplicate FAQs by question
+    const uniqueFaqs = Array.from(
+      new Map(
+        (Array.isArray(faqsData) ? faqsData : []).map(f => [f.question, f])
+      ).values()
+    );
+
     return {
-      services: Array.isArray(services) && services.length > 0 ? services : FALLBACK_SERVICES,
-      testimonials: Array.isArray(testimonials) ? testimonials : [],
-      faqs: Array.isArray(faqs) ? faqs : [],
+      services: uniqueServices.length > 0 ? uniqueServices : FALLBACK_SERVICES,
+      testimonials: uniqueTestimonials,
+      faqs: uniqueFaqs,
     };
   },
   component: Index,

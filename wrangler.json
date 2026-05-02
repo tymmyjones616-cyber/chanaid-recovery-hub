@@ -3,7 +3,7 @@
   "name": "tanstack-start-app",
   "compatibility_date": "2024-11-01",
   "compatibility_flags": ["nodejs_compat"],
-  "main": "./dist/server/server.js",
+  "main": "worker.js",
   "assets": {
     "directory": "./dist/client",
     "binding": "ASSETS"
@@ -16,14 +16,7 @@
     "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRhcHJ3d2VlbXhmYnJya3dham5jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwNjczMjQsImV4cCI6MjA5MjY0MzMyNH0.AKGtcqIb7HDkIQYa0sy6BiW_JopU1GXaiLZ4B9Ki1WU",
     "SUPABASE_SERVICE_ROLE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRhcHJ3d2VlbXhmYnJya3dham5jIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NzA2NzMyNCwiZXhwIjoyMDkyNjQzMzI0fQ.qo9CPDxFb9Ht5BP-x3imn-_jb0aoXV-yue_Do8l3WcU"
   },
-  "d1_databases": [
-    {
-      "binding": "DB",
-      "database_name": "tanstack-start-db",
-      "database_id": "577d2666-b983-448b-b770-e444bc591703",
-      "migrations_dir": "./drizzle"
-    }
-  ],
+
   "r2_buckets": [
     {
       "binding": "LOAN_UPLOADS",

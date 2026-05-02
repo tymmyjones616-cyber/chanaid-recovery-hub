@@ -9,6 +9,9 @@ let _adminClient: SupabaseClient | null = null;
 let _publicClient: SupabaseClient | null = null;
 let _browserClient: SupabaseClient | null = null;
 
+const PUBLIC_SUPABASE_URL = "https://taprwweemxfbrrkwajnc.supabase.co";
+const PUBLIC_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRhcHJ3d2VlbXhmYnJya3dham5jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwNjczMjQsImV4cCI6MjA5MjY0MzMyNH0.AKGtcqIb7HDkIQYa0sy6BiW_JopU1GXaiLZ4B9Ki1WU";
+
 function getEnv(key: string): string {
   // 1. Check globalThis (set by worker.js in Cloudflare)
   const fromGlobal = (globalThis as any)[key];
@@ -26,6 +29,14 @@ function getEnv(key: string): string {
     if (fromVite) return fromVite;
   } catch { /* no import.meta in some contexts */ }
 
+  // 4. Hardcoded Fallbacks (Public keys only)
+  if (key === "SUPABASE_URL" || key === "VITE_SUPABASE_URL") {
+    return PUBLIC_SUPABASE_URL;
+  }
+  if (key === "SUPABASE_ANON_KEY" || key === "VITE_SUPABASE_ANON_KEY") {
+    return PUBLIC_SUPABASE_ANON_KEY;
+  }
+
   return "";
 }
 
@@ -38,6 +49,12 @@ export function getSupabaseAdmin(): SupabaseClient {
 
   const url = getEnv("SUPABASE_URL");
   const key = getEnv("SUPABASE_SERVICE_ROLE_KEY");
+
+  console.log("Supabase Admin Init attempt:", { 
+    url: url ? "FOUND" : "MISSING", 
+    key: key ? "FOUND" : "MISSING",
+    globalKeys: Object.keys(globalThis).filter(k => k.includes("SUPABASE"))
+  });
 
   if (!url || !key) {
     throw new Error(
@@ -82,11 +99,11 @@ export function getSupabaseBrowser(): SupabaseClient {
   }
   if (_browserClient) return _browserClient;
 
-  const url = getEnv("SUPABASE_URL") || getEnv("VITE_SUPABASE_URL");
-  const key = getEnv("VITE_SUPABASE_ANON_KEY") || getEnv("SUPABASE_ANON_KEY");
+  const url = getEnv("SUPABASE_URL") || getEnv("VITE_SUPABASE_URL") || PUBLIC_SUPABASE_URL;
+  const key = getEnv("VITE_SUPABASE_ANON_KEY") || getEnv("SUPABASE_ANON_KEY") || PUBLIC_SUPABASE_ANON_KEY;
 
   if (!url || !key) {
-    throw new Error("Supabase browser client: URL or ANON_KEY missing.");
+    throw new Error(`Supabase browser client: URL or ANON_KEY missing.`);
   }
 
   _browserClient = createClient(url, key, {

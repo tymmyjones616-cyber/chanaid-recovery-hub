@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Header } from "./Header";
 import { Footer } from "./Footer";
 import { FloatingButtons } from "./FloatingButtons";
+import { ScrollToTop } from "./ScrollToTop";
 
 export function SiteShell({ children }: { children: ReactNode }) {
   return (
@@ -26,6 +27,7 @@ export function SiteShell({ children }: { children: ReactNode }) {
       <main className="flex-1 animate-page-in">{children}</main>
       <Footer />
       <FloatingButtons />
+      <ScrollToTop />
     </div>
   );
 }

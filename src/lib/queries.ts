@@ -350,9 +350,25 @@ export const submitTestimonial = createServerFn({ method: "POST" })
   .inputValidator((payload: any) => payload)
   .handler(async ({ data: payload }) => {
     const sb = getSupabaseAdmin();
+    
+    // Map camelCase -> snake_case
+    const row = {
+      client_name: payload.clientName,
+      email: payload.email,
+      location: payload.location,
+      scam_type: payload.scamType,
+      amount_recovered: payload.amountRecovered,
+      rating: payload.rating,
+      quote: payload.quote,
+      consent_to_publish: payload.consentToPublish,
+      status: payload.status || 'pending',
+      notes: payload.notes,
+      source_page: payload.sourcePage,
+    };
+
     const { data, error } = await sb
       .from("testimonial_submissions")
-      .insert(payload)
+      .insert(row)
       .select()
       .single();
     if (error) return { data: null, error: { message: error.message } };
@@ -363,9 +379,23 @@ export const submitLead = createServerFn({ method: "POST" })
   .inputValidator((payload: any) => payload)
   .handler(async ({ data: payload }) => {
     const sb = getSupabaseAdmin();
+
+    // Map camelCase -> snake_case
+    const row = {
+      first_name: payload.firstName,
+      last_name: payload.lastName,
+      email: payload.email,
+      phone: payload.phone,
+      amount_lost: payload.amountLost,
+      scam_type: payload.scamType,
+      message: payload.message,
+      source_page: payload.sourcePage,
+      status: payload.status || 'new',
+    };
+
     const { data, error } = await sb
       .from("leads")
-      .insert(payload)
+      .insert(row)
       .select()
       .single();
     if (error) return { data: null, error: { message: error.message } };
