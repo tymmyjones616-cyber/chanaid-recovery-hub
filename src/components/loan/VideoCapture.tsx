@@ -1,26 +1,40 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Camera, StopCircle, RefreshCw, CheckCircle2, Video, Upload } from "lucide-react";
+import { Camera, StopCircle, RefreshCw, CheckCircle2, Video, Upload, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface VideoCaptureProps {
   onCapture: (base64: string | null) => void;
   value: string | null;
   label: string;
+  progress?: number;
 }
 
-export function VideoCapture({ onCapture, value, label }: VideoCaptureProps) {
+export function VideoCapture({ onCapture, value, label, progress }: VideoCaptureProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [previewStream, setPreviewStream] = useState<MediaStream | null>(null);
-  const [mode, setMode] = useState<"idle" | "preview" | "recording" | "done">("idle");
+  const [mode, setMode] = useState<"idle" | "preview" | "recording" | "uploading" | "done">("idle");
+  const [recordingTime, setRecordingTime] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   // Use a ref for chunks to avoid stale-closure issues with React state
   const chunksRef = useRef<Blob[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const isUploading = typeof progress === "number" && progress > 0 && progress < 100;
+  const pct = Math.min(Math.round(progress ?? 0), 100);
 
   useEffect(() => {
-    if (value) setMode("done");
-  }, [value]);
+    if (value && !isUploading) setMode("done");
+    else if (isUploading) setMode("uploading");
+  }, [value, isUploading]);
+
+  // Clean up recording timer
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, []);
 
   const startPreview = async () => {
     try {
@@ -38,6 +52,7 @@ export function VideoCapture({ onCapture, value, label }: VideoCaptureProps) {
   const startRecording = () => {
     if (!previewStream) return;
     chunksRef.current = [];
+    setRecordingTime(0);
 
     const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp8,opus")
       ? "video/webm;codecs=vp8,opus"
@@ -51,12 +66,22 @@ export function VideoCapture({ onCapture, value, label }: VideoCaptureProps) {
     };
 
     recorder.onstop = () => {
+      if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+
       // Use chunksRef.current — not stale state
       const blob = new Blob(chunksRef.current, { type: "video/webm" });
+
+      // Enforce 15 MB limit
+      if (blob.size > 15 * 1024 * 1024) {
+        toast.error("Video file is too large. Please record a shorter clip (under 15 MB).");
+        setMode("idle");
+        return;
+      }
+
       const reader = new FileReader();
       reader.onloadend = () => {
+        setMode("uploading");
         onCapture(reader.result as string);
-        setMode("done");
       };
       reader.readAsDataURL(blob);
 
@@ -69,6 +94,11 @@ export function VideoCapture({ onCapture, value, label }: VideoCaptureProps) {
     recorder.start(250); // collect chunks every 250 ms
     setIsRecording(true);
     setMode("recording");
+
+    // Timer for recording duration
+    timerRef.current = setInterval(() => {
+      setRecordingTime((t) => t + 1);
+    }, 1000);
 
     // Auto-stop after 15 seconds
     setTimeout(() => {
@@ -86,14 +116,14 @@ export function VideoCapture({ onCapture, value, label }: VideoCaptureProps) {
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 100 * 1024 * 1024) {
-      toast.error("Video file must be under 100 MB.");
+    if (file.size > 15 * 1024 * 1024) {
+      toast.error("Video file must be under 15 MB.");
       return;
     }
     const reader = new FileReader();
     reader.onloadend = () => {
+      setMode("uploading");
       onCapture(reader.result as string);
-      setMode("done");
     };
     reader.readAsDataURL(file);
   };
@@ -101,8 +131,15 @@ export function VideoCapture({ onCapture, value, label }: VideoCaptureProps) {
   const reset = () => {
     onCapture(null);
     setMode("idle");
+    setRecordingTime(0);
     chunksRef.current = [];
     if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, "0")}`;
   };
 
   return (
@@ -115,7 +152,7 @@ export function VideoCapture({ onCapture, value, label }: VideoCaptureProps) {
       </div>
 
       <div className={`relative rounded-2xl overflow-hidden border-2 transition-all min-h-[300px] flex flex-col items-center justify-center
-        ${mode === "done" ? "border-emerald-400 bg-emerald-50" : "border-slate-300 bg-slate-900"}`}>
+        ${mode === "done" ? "border-emerald-400 bg-emerald-50" : mode === "uploading" ? "border-primary bg-primary/5" : "border-slate-300 bg-slate-900"}`}>
 
         {mode === "idle" && (
           <div className="text-center p-8 space-y-5 w-full max-w-sm">
@@ -173,9 +210,19 @@ export function VideoCapture({ onCapture, value, label }: VideoCaptureProps) {
               </div>
 
               {mode === "recording" && (
-                <div className="flex items-center gap-2 bg-red-600 text-white px-3 py-1 rounded-full animate-pulse">
-                  <div className="w-2 h-2 bg-white rounded-full" />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Recording</span>
+                <div className="flex flex-col items-center gap-2">
+                  <div className="flex items-center gap-2 bg-red-600 text-white px-4 py-1.5 rounded-full">
+                    <div className="w-2.5 h-2.5 bg-white rounded-full animate-pulse" />
+                    <span className="text-[10px] font-black uppercase tracking-widest">Recording</span>
+                    <span className="text-[11px] font-mono font-bold tabular-nums ml-1">{formatTime(recordingTime)}</span>
+                  </div>
+                  {/* Recording time bar */}
+                  <div className="w-48 h-1.5 bg-white/20 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-red-500 rounded-full transition-all duration-1000 ease-linear"
+                      style={{ width: `${Math.min((recordingTime / 15) * 100, 100)}%` }}
+                    />
+                  </div>
                 </div>
               )}
 
@@ -202,6 +249,58 @@ export function VideoCapture({ onCapture, value, label }: VideoCaptureProps) {
               </div>
             </div>
           </>
+        )}
+
+        {/* ── Uploading state ── */}
+        {mode === "uploading" && (
+          <div className="flex flex-col items-center gap-5 p-10 w-full max-w-sm">
+            {/* Animated spinner with pulsing ring */}
+            <div className="relative w-20 h-20">
+              <div className="absolute inset-0 rounded-full border-4 border-primary/15" />
+              <div className="absolute inset-0 rounded-full border-4 border-primary border-t-transparent animate-spin" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Loader2 className="w-8 h-8 text-primary animate-spin" style={{ animationDuration: "1.5s" }} />
+              </div>
+            </div>
+
+            {/* Status text */}
+            <div className="text-center">
+              <h4 className="text-slate-900 font-bold text-sm mb-1">Uploading Video</h4>
+              <p className="text-slate-500 text-[11px]">Encrypting and uploading to secure storage…</p>
+            </div>
+
+            {/* Progress bar */}
+            <div className="w-full space-y-2">
+              <div className="relative h-3 bg-slate-100 rounded-full overflow-hidden">
+                {/* Animated gradient fill */}
+                <div
+                  className="absolute inset-y-0 left-0 rounded-full transition-all duration-500 ease-out"
+                  style={{
+                    width: `${pct}%`,
+                    background: "linear-gradient(90deg, #6366f1, #8b5cf6, #a855f7, #ec4899, #6366f1)",
+                    backgroundSize: "300% 100%",
+                    animation: "shimmer 2s infinite linear",
+                  }}
+                />
+                {/* Glow effect on the leading edge */}
+                <div
+                  className="absolute inset-y-0 rounded-full opacity-50 blur-md transition-all duration-500"
+                  style={{
+                    width: `${Math.min(pct + 12, 100)}%`,
+                    left: 0,
+                    background: "linear-gradient(90deg, transparent 50%, #8b5cf6)",
+                  }}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold text-primary tracking-wider uppercase flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
+                  Processing…
+                </span>
+                <span className="text-sm font-black text-primary tabular-nums">{pct}%</span>
+              </div>
+            </div>
+          </div>
         )}
 
         {mode === "done" && (

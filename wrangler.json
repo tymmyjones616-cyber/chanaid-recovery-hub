@@ -10,7 +10,8 @@
   },
   "vars": {
     "VITE_LOAN_REDIRECT_URL": "https://wiscewallet.com",
-    "NODE_VERSION": "20"
+    "NODE_VERSION": "20",
+    "ADMIN_PASSWORD": "admin2024"
   },
   "d1_databases": [
     {

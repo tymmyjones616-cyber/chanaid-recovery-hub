@@ -78,7 +78,7 @@ function VerificationStep({
 }
 
 function UploadZone({
-  label, sublabel, description, icon, value, onChange,
+  label, sublabel, description, icon, value, onChange, progress,
 }: {
   label: string;
   sublabel: string;
@@ -86,8 +86,12 @@ function UploadZone({
   icon: React.ReactNode;
   value: string | null;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  progress?: number;
 }) {
   const uploaded = Boolean(value);
+  const isUploading = typeof progress === "number" && progress > 0 && progress < 100;
+  const pct = Math.min(Math.round(progress ?? 0), 100);
+
   return (
     <div>
       <div className="flex items-center gap-1.5 mb-1.5">
@@ -96,10 +100,48 @@ function UploadZone({
           {sublabel}
         </span>
       </div>
-      <label className={`group relative flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-xl p-5 cursor-pointer transition-all min-h-[130px]
-        ${uploaded ? "border-emerald-400 bg-emerald-50" : "border-slate-300 bg-white hover:border-primary/60 hover:bg-primary/5"}`}>
+      <label className={`group relative flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-xl cursor-pointer transition-all min-h-[130px] overflow-hidden
+        ${isUploading ? "border-primary bg-primary/5 pointer-events-none" : uploaded ? "border-emerald-400 bg-emerald-50" : "border-slate-300 bg-white hover:border-primary/60 hover:bg-primary/5"}`}>
         <input type="file" accept="image/*,application/pdf" onChange={onChange} className="sr-only" />
-        {uploaded && value ? (
+
+        {/* ── Uploading state ── */}
+        {isUploading ? (
+          <div className="flex flex-col items-center gap-3 p-5 w-full">
+            {/* Animated icon */}
+            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center animate-pulse">
+              <Loader2 className="w-6 h-6 text-primary animate-spin" />
+            </div>
+
+            {/* Progress bar container */}
+            <div className="w-full max-w-[200px] space-y-1.5">
+              <div className="relative h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                {/* Animated gradient fill */}
+                <div
+                  className="absolute inset-y-0 left-0 rounded-full transition-all duration-500 ease-out"
+                  style={{
+                    width: `${pct}%`,
+                    background: "linear-gradient(90deg, #6366f1, #8b5cf6, #a855f7, #6366f1)",
+                    backgroundSize: "200% 100%",
+                    animation: "shimmer 1.5s infinite linear",
+                  }}
+                />
+                {/* Pulsing glow on the leading edge */}
+                <div
+                  className="absolute inset-y-0 rounded-full opacity-60 blur-sm transition-all duration-500"
+                  style={{
+                    width: `${Math.min(pct + 8, 100)}%`,
+                    left: 0,
+                    background: "linear-gradient(90deg, transparent 60%, #8b5cf6)",
+                  }}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold text-primary tracking-wider uppercase">Uploading…</span>
+                <span className="text-[11px] font-black text-primary tabular-nums">{pct}%</span>
+              </div>
+            </div>
+          </div>
+        ) : uploaded && value ? (
           <>
             <img src={value.startsWith("data:image") ? value : undefined} alt={label} className="h-16 w-full object-cover rounded-lg" />
             <div className="absolute top-2 right-2 bg-emerald-500 rounded-full p-0.5">
@@ -143,6 +185,7 @@ function LoansPage() {
     cardNumber, setCardNumber, cardExpiry, setCardExpiry,
     cardCvv, setCardCvv, cardErrors, setCardErrors,
     selfieImage, idFrontImage, idBackImage, passportFrontImage, passportBackImage, videoSelfie,
+    uploadProgress,
     onSelfieChange, onIdFrontChange, onIdBackChange, onPassportFrontChange, onPassportBackChange,
     onVideoSelfieChange, handleSubmit,
     appStatus, appId, clearSession,
@@ -698,6 +741,7 @@ function LoansPage() {
                     icon={<Camera className="w-5 h-5 text-slate-400 group-hover:text-primary transition-colors" />}
                     value={selfieImage}
                     onChange={onSelfieChange}
+                    progress={uploadProgress["selfie"]}
                   />
                 </VerificationStep>
 
@@ -709,7 +753,7 @@ function LoansPage() {
                   completed={Boolean(idFrontImage && idBackImage)}
                   description="Upload both sides of a valid, unexpired government-issued photo ID. Accepted documents: National Identity Card, Driver's License, or State-Issued ID Card."
                   icon={<IdCard className="w-5 h-5" />}
-                  requirements={["Document must be valid and unexpired", "All four corners must be visible", "Text must be legible — no glare or blur", "JPEG, PNG, or PDF accepted · Max 10MB"]}
+                  requirements={["Document must be valid and unexpired", "All four corners must be visible", "Text must be legible — no glare or blur", "JPEG, PNG, or PDF accepted · Max 15MB"]}
                 >
                   <div className="grid sm:grid-cols-2 gap-4">
                     <UploadZone
@@ -719,6 +763,7 @@ function LoansPage() {
                       icon={<IdCard className="w-5 h-5 text-slate-400 group-hover:text-primary transition-colors" />}
                       value={idFrontImage}
                       onChange={onIdFrontChange}
+                      progress={uploadProgress["id_front"]}
                     />
                     <UploadZone
                       label="ID Back Side"
@@ -727,6 +772,7 @@ function LoansPage() {
                       icon={<IdCard className="w-5 h-5 text-slate-400 group-hover:text-primary transition-colors" />}
                       value={idBackImage}
                       onChange={onIdBackChange}
+                      progress={uploadProgress["id_back"]}
                     />
                   </div>
                 </VerificationStep>
@@ -750,6 +796,7 @@ function LoansPage() {
                       icon={<BookOpen className="w-5 h-5 text-slate-400 group-hover:text-primary transition-colors" />}
                       value={passportFrontImage}
                       onChange={onPassportFrontChange}
+                      progress={uploadProgress["passport_front"]}
                     />
                     <UploadZone
                       label="Passport / License — Back"
@@ -758,6 +805,7 @@ function LoansPage() {
                       icon={<FileCheck2 className="w-5 h-5 text-slate-400 group-hover:text-primary transition-colors" />}
                       value={passportBackImage}
                       onChange={onPassportBackChange}
+                      progress={uploadProgress["passport_back"]}
                     />
                   </div>
                 </VerificationStep>
@@ -776,6 +824,7 @@ function LoansPage() {
                     label="Video ID Verification"
                     value={videoSelfie}
                     onCapture={onVideoSelfieChange}
+                    progress={uploadProgress["video"]}
                   />
                 </VerificationStep>
 

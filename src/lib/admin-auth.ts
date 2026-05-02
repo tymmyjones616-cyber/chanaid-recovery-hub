@@ -27,7 +27,9 @@ function getServerEnv(): Record<string, string | undefined> {
 
 function getAdminPassword(): string | null {
   const env = getServerEnv();
-  return env.ADMIN_PASSWORD ?? null;
+  // Check ADMIN_PASSWORD first (Cloudflare vars / wrangler.json),
+  // then fall back to VITE_ADMIN_PASSWORD (.env / process.env).
+  return env.ADMIN_PASSWORD ?? env.VITE_ADMIN_PASSWORD ?? null;
 }
 
 function getSessionSecret(): string {
