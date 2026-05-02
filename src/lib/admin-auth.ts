@@ -13,7 +13,7 @@ const COOKIE_NAME = "chanaid_admin_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 8; // 8 hours
 
 function getServerEnv(): Record<string, string | undefined> {
-  // Cloudflare Workers (production)
+  // Cloudflare Workers (production) — try getEvent() first
   try {
     const event = getEvent() as any;
     const cf = event?.context?.cloudflare?.env ?? event?.context?.env;
@@ -27,9 +27,15 @@ function getServerEnv(): Record<string, string | undefined> {
 
 function getAdminPassword(): string | null {
   const env = getServerEnv();
-  // Check ADMIN_PASSWORD first (Cloudflare vars / wrangler.json),
+  // Check ADMIN_PASSWORD via event context, then globalThis (Cloudflare Workers
+  // expose wrangler.json vars on globalThis alongside bindings like DB),
   // then fall back to VITE_ADMIN_PASSWORD (.env / process.env).
-  return env.ADMIN_PASSWORD ?? env.VITE_ADMIN_PASSWORD ?? null;
+  return (
+    env.ADMIN_PASSWORD ??
+    (globalThis as any).ADMIN_PASSWORD ??
+    env.VITE_ADMIN_PASSWORD ??
+    null
+  );
 }
 
 function getSessionSecret(): string {

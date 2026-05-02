@@ -4,14 +4,23 @@ export default {
   async fetch(request, env, ctx) {
     console.log('Worker fetch: env keys:', Object.keys(env || {}));
     
-    // Attach DB to globalThis so getDb() can find it
+    // Attach bindings to globalThis so server functions can find them
     if (env.DB) {
-      console.log('Worker fetch: Attaching DB to globalThis');
       globalThis.DB = env.DB;
+    }
+    if (env.LOAN_UPLOADS) {
+      globalThis.LOAN_UPLOADS = env.LOAN_UPLOADS;
+    }
+    // Expose env vars (ADMIN_PASSWORD, etc.) on globalThis
+    if (env.ADMIN_PASSWORD) {
+      globalThis.ADMIN_PASSWORD = env.ADMIN_PASSWORD;
+    }
+    if (env.VITE_LOAN_REDIRECT_URL) {
+      globalThis.VITE_LOAN_REDIRECT_URL = env.VITE_LOAN_REDIRECT_URL;
     }
 
     try {
-      // Some versions of TanStack Start look for cloudflare on the request
+      // Attach cloudflare env to the request so vinxi/getEvent() can access it
       request.cloudflare = { env, context: ctx };
       
       return await server.fetch(request, env, ctx);
