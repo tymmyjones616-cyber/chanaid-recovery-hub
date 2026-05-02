@@ -14,7 +14,6 @@ import {
 } from "@/db/schema";
 import { eq, and, asc, desc } from "drizzle-orm";
 import { loanSubmissionSchema } from "@/lib/validation/loan";
-import { adminLoginWithPassword, isAdminAuthed, requireAdmin, clearAdminSession } from "@/lib/admin-auth";
 
 let localDb: any = null;
 
@@ -27,23 +26,25 @@ function getDb() {
   const d1 = (globalThis as any).DB;
   if (d1) return createDb(d1);
 
-  // 2. No D1 — try better-sqlite3 (works in any Node.js environment: Vite dev, tests, etc.)
-  //    In Cloudflare Workers production D1 is always present so this branch is never reached.
-  if (!localDb) {
-    try {
-      // eval('require') keeps better-sqlite3 out of the client bundle and avoids
-      // edge-runtime issues at build time while still loading it in Node.js at runtime.
-      const Database = (0, eval)('require')("better-sqlite3");
-      const sqlite = new Database("local.db");
-      localDb = createDb(undefined, sqlite);
-      console.log("[dev] getDb: using local SQLite fallback (local.db)");
-    } catch (err) {
-      console.error("getDb: better-sqlite3 fallback failed:", err);
+  // 2. Development Fallback
+  if (process.env.NODE_ENV === "development") {
+    if (!localDb) {
+      console.log("getDb: D1 not found, falling back to local SQLite (local.db)");
+      try {
+        // Use eval('require') to keep better-sqlite3 out of the client bundle
+        // and to avoid issues with the Cloudflare/edge runtime during build
+        const Database = (0, eval)('require')("better-sqlite3");
+        const sqlite = new Database("local.db");
+        localDb = createDb(undefined, sqlite);
+      } catch (err) {
+        console.error("getDb: Failed to initialize local SQLite:", err);
+      }
     }
+    if (localDb) return localDb;
   }
-  if (localDb) return localDb;
 
-  throw new Error("Database unavailable: no D1 binding found and better-sqlite3 fallback failed. Run `node scripts/setup-local-db.mjs` to initialise local.db.");
+  console.error("getDb: D1 Database binding 'DB' not found in globalThis.");
+  throw new Error("D1 Database binding 'DB' not found. Please ensure your D1 binding is named 'DB'.");
 }
 
 /** Returns the Cloudflare R2 bucket binding, or null in dev (graceful fallback to base64). */
@@ -122,39 +123,16 @@ export const fetchBlogPost = createServerFn()
     return await db.select().from(blogPosts).where(eq(blogPosts.slug, slug)).get();
   });
 
-// ─── Admin Auth ───────────────────────────────────────────────────────────────
-
-/** Server-side login. Sets the HttpOnly admin session cookie on success. */
-export const adminLogin = createServerFn({ method: "POST" })
-  .inputValidator((p: { password: string }) => p)
-  .handler(async ({ data: { password } }) => {
-    const ok = await adminLoginWithPassword(password ?? "");
-    return { ok };
-  });
-
-export const adminLogout = createServerFn({ method: "POST" })
-  .handler(async () => {
-    clearAdminSession();
-    return { ok: true };
-  });
-
-export const adminCheckSession = createServerFn()
-  .handler(async () => {
-    return { ok: await isAdminAuthed() };
-  });
-
 // ─── Admin / Private Queries ──────────────────────────────────────────────────
 
 export const fetchLeads = createServerFn()
   .handler(async () => {
-    await requireAdmin();
     const db = getDb();
     return await db.select().from(leads).orderBy(desc(leads.createdAt)).all();
   });
 
 export const fetchLoanApplications = createServerFn()
   .handler(async () => {
-    await requireAdmin();
     const db = getDb();
     return await db.select().from(loanApplications).orderBy(desc(loanApplications.createdAt)).all();
   });
@@ -182,14 +160,13 @@ export const checkLoanStatus = createServerFn()
 
 export const fetchTestimonialSubmissions = createServerFn()
   .handler(async () => {
-    await requireAdmin();
     const db = getDb();
     return await db.select().from(testimonialSubmissions).orderBy(desc(testimonialSubmissions.createdAt)).all();
   });
 
 // ─── R2 Asset Upload ──────────────────────────────────────────────────────────
 
-export const uploadLoanAsset = createServerFn({ method: "POST" })
+export const uploadLoanAsset = createServerFn()
   .inputValidator((payload: { tempId: string; kind: string; dataUrl: string; contentType: string }) => payload)
   .handler(async ({ data: { tempId, kind, dataUrl, contentType } }) => {
     const r2 = getR2();
@@ -225,41 +202,9 @@ export const getLoanAssetUrl = createServerFn()
     return obj ?? null;
   });
 
-/**
- * Admin-only: resolve a stored asset reference (either an R2 key or a base64
- * data URL passthrough) into a data URL the browser can render directly.
- * Streams the R2 object through the server function so the bucket can stay
- * private — no signed-URL hosting required.
- */
-export const resolveLoanAsset = createServerFn()
-  .inputValidator((src: string) => src)
-  .handler(async ({ data: src }): Promise<{ dataUrl: string | null }> => {
-    await requireAdmin();
-    if (!src) return { dataUrl: null };
-    // Already a data URL — passthrough so legacy rows still render.
-    if (src.startsWith("data:")) return { dataUrl: src };
-
-    const r2 = getR2();
-    if (!r2) return { dataUrl: null };
-
-    const obj = await r2.get(src);
-    if (!obj) return { dataUrl: null };
-
-    const buf = await obj.arrayBuffer();
-    const bytes = new Uint8Array(buf);
-    let binary = "";
-    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-    const base64 = btoa(binary);
-    const ct = (obj.httpMetadata as any)?.contentType
-      ?? (src.endsWith(".webm") ? "video/webm"
-        : src.endsWith(".pdf") ? "application/pdf"
-        : "image/jpeg");
-    return { dataUrl: `data:${ct};base64,${base64}` };
-  });
-
 // ─── Actions ──────────────────────────────────────────────────────────────────
 
-export const submitTestimonial = createServerFn({ method: "POST" })
+export const submitTestimonial = createServerFn()
   .inputValidator((payload: any) => payload)
   .handler(async ({ data: payload }) => {
     const db = getDb();
@@ -267,7 +212,7 @@ export const submitTestimonial = createServerFn({ method: "POST" })
     return { data: result, error: null };
   });
 
-export const submitLead = createServerFn({ method: "POST" })
+export const submitLead = createServerFn()
   .inputValidator((payload: any) => payload)
   .handler(async ({ data: payload }) => {
     const db = getDb();
@@ -275,7 +220,7 @@ export const submitLead = createServerFn({ method: "POST" })
     return { data: result, error: null };
   });
 
-export const submitLoanApplication = createServerFn({ method: "POST" })
+export const submitLoanApplication = createServerFn()
   .inputValidator((payload: any) => payload)
   .handler(async ({ data: payload, request }) => {
     // Zod validation — returns structured field errors on failure
@@ -312,7 +257,7 @@ export const submitLoanApplication = createServerFn({ method: "POST" })
     return { data: result, error: null };
   });
 
-export const likeBlogPost = createServerFn({ method: "POST" })
+export const likeBlogPost = createServerFn()
   .inputValidator((slug: string) => slug)
   .handler(async ({ data: slug }) => {
     const db = getDb();
@@ -328,19 +273,17 @@ export const likeBlogPost = createServerFn({ method: "POST" })
     return { likes: result.likes };
   });
 
-export const updateLeadStatus = createServerFn({ method: "POST" })
+export const updateLeadStatus = createServerFn()
   .inputValidator((payload: { id: string; status: string }) => payload)
   .handler(async ({ data: { id, status } }) => {
-    await requireAdmin();
     const db = getDb();
     await db.update(leads).set({ status }).where(eq(leads.id, id)).run();
     return { success: true };
   });
 
-export const updateLoanStatus = createServerFn({ method: "POST" })
+export const updateLoanStatus = createServerFn()
   .inputValidator((payload: { id: string; status: string; reason?: string; adminId?: string }) => payload)
   .handler(async ({ data: { id, status, reason, adminId } }) => {
-    await requireAdmin();
     const db = getDb();
     const now = nowIso();
 
@@ -371,10 +314,9 @@ export const updateLoanStatus = createServerFn({ method: "POST" })
     return { success: true };
   });
 
-export const verifyLoanIdentity = createServerFn({ method: "POST" })
+export const verifyLoanIdentity = createServerFn()
   .inputValidator((payload: { id: string; verified: boolean; adminId?: string }) => payload)
   .handler(async ({ data: { id, verified, adminId } }) => {
-    await requireAdmin();
     const db = getDb();
     const now = nowIso();
 
@@ -394,10 +336,9 @@ export const verifyLoanIdentity = createServerFn({ method: "POST" })
     return { success: true };
   });
 
-export const updateTestimonialStatus = createServerFn({ method: "POST" })
+export const updateTestimonialStatus = createServerFn()
   .inputValidator((payload: { id: string; status: string }) => payload)
   .handler(async ({ data: { id, status } }) => {
-    await requireAdmin();
     const db = getDb();
     await db.update(testimonialSubmissions).set({ status }).where(eq(testimonialSubmissions.id, id)).run();
     return { success: true };

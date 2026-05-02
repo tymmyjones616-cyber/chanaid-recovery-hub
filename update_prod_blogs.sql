@@ -1,0 +1,12 @@
+UPDATE blog_posts SET author = 'Marcus Thorne, Head of Forensics', created_at = '2026-04-10T09:15:00.000Z' WHERE slug = 'how-to-recover-stolen-bitcoin-2026';
+UPDATE blog_posts SET author = 'Elena Rodriguez, Legal Counsel', created_at = '2026-04-12T14:22:00.000Z' WHERE slug = 'pig-butchering-psychology';
+UPDATE blog_posts SET author = 'James Okafor, Blockchain Analyst', created_at = '2026-04-15T10:45:00.000Z' WHERE slug = 'analysis-forex-broker-red-flags-a-legal-perspective';
+UPDATE blog_posts SET author = 'Sarah Chen, Recovery Specialist', created_at = '2026-04-18T08:30:00.000Z' WHERE slug = 'analysis-nft-wash-trading-detecting-digital-fraud';
+UPDATE blog_posts SET author = 'David Kowalski, Compliance Officer', created_at = '2026-04-20T13:10:00.000Z' WHERE slug = 'analysis-the-rise-of-ai-voice-scams-biometric-security';
+UPDATE blog_posts SET author = 'Priya Patel, Cyber Fraud Investigator', created_at = '2026-04-22T11:05:00.000Z' WHERE slug = 'analysis-how-to-secure-your-metamask-institutional-grade';
+UPDATE blog_posts SET author = 'Thomas Andersen, Senior Investigator', created_at = '2026-04-25T15:40:00.000Z' WHERE slug = 'analysis-chargeback-rights-2026-financial-justice';
+UPDATE blog_posts SET author = 'Aisha Mohammed, Financial Crime Analyst', created_at = '2026-04-27T09:55:00.000Z' WHERE slug = 'analysis-corporate-email-compromise-defending-your-business';
+UPDATE blog_posts SET author = 'Robert Kim, Digital Asset Specialist', created_at = '2026-04-28T12:20:00.000Z' WHERE slug = 'analysis-dating-app-fraud-from-emotion-to-investigation';
+UPDATE blog_posts SET author = 'Claire Beaumont, International Recovery Lead', created_at = '2026-04-29T10:00:00.000Z' WHERE slug = 'analysis-the-truth-about-hyip-deconstructing-the-pyramid';
+UPDATE blog_posts SET author = 'Marcus Thorne, Head of Forensics', created_at = '2026-04-30T14:35:00.000Z' WHERE slug = 'analysis-recovery-loans-your-bridge-to-financial-justice';
+UPDATE blog_posts SET author = 'Elena Rodriguez, Legal Counsel', created_at = '2026-05-01T08:45:00.000Z' WHERE slug = 'analysis-telegram-scam-groups-exposed-and-neutralized';

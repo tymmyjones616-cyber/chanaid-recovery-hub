@@ -4,16 +4,10 @@ import { fetchSiteSettings, type SiteSettings } from "@/lib/site";
 import { Facebook, Twitter, Linkedin, Instagram, Youtube, Mail, Phone, MapPin, Send } from "lucide-react";
 import { Logo } from "@/components/site/Logo";
 
-// Locked at module load so SSR and CSR render the same string. The footer year
-// drifts at most by the time between deploys — acceptable trade-off for
-// stable hydration. Avoid `new Date().getFullYear()` in render: it produces
-// SSR/CSR mismatches when the request crosses midnight UTC.
-const FOOTER_YEAR = new Date().getFullYear();
-
 export function Footer() {
   const [s, setS] = useState<SiteSettings | null>(null);
   useEffect(() => { fetchSiteSettings().then(setS); }, []);
-
+  
   const contactEmail = s?.contact_email ?? "support@chanaidrecovery.com";
 
   return (
@@ -50,11 +44,11 @@ export function Footer() {
         <div className="md:col-span-2">
           <h4 className="font-bold text-slate-900 mb-6 text-sm uppercase tracking-wider">Expertise</h4>
           <ul className="space-y-3 text-sm text-muted-foreground">
-            <li><Link to="/services/$slug" params={{ slug: "crypto-recovery" }} className="hover:text-primary transition-colors">Crypto Recovery</Link></li>
-            <li><Link to="/services/$slug" params={{ slug: "forex-scam-recovery" }} className="hover:text-primary transition-colors">Forex Scam Recovery</Link></li>
-            <li><Link to="/services/$slug" params={{ slug: "romance-scam-recovery" }} className="hover:text-primary transition-colors">Romance Scams</Link></li>
-            <li><Link to="/services/$slug" params={{ slug: "asset-tracing" }} className="hover:text-primary transition-colors">Asset Tracing</Link></li>
-            <li><Link to="/services/$slug" params={{ slug: "corporate-fraud-investigation" }} className="hover:text-primary transition-colors">Investment Fraud</Link></li>
+            <li><Link to="/services/$slug" params={{ slug: "cryptocurrency" }} className="hover:text-primary transition-colors">Crypto Recovery</Link></li>
+            <li><Link to="/services/$slug" params={{ slug: "pig-butchering" }} className="hover:text-primary transition-colors">Pig Butchering</Link></li>
+            <li><Link to="/services/$slug" params={{ slug: "romance-scams" }} className="hover:text-primary transition-colors">Romance Scams</Link></li>
+            <li><Link to="/services/$slug" params={{ slug: "forex" }} className="hover:text-primary transition-colors">Forex & Trading</Link></li>
+            <li><Link to="/services/$slug" params={{ slug: "investment-fraud" }} className="hover:text-primary transition-colors">Investment Fraud</Link></li>
           </ul>
         </div>
 
@@ -113,7 +107,7 @@ export function Footer() {
       
       <div className="border-t border-slate-200 py-8 text-center">
         <p className="text-xs text-muted-foreground font-medium">
-          {s?.footer_text ?? `© ${FOOTER_YEAR} ChanAidRecovery Hub. All rights reserved.`}
+          {s?.footer_text ?? `© ${new Date().getFullYear()} ChanAidRecovery Hub. Registered Financial Asset Recovery Firm.`}
         </p>
       </div>
     </footer>

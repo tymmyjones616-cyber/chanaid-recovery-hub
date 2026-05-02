@@ -1,0 +1,29 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "tanstack-start-app",
+  "compatibility_date": "2024-11-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": "./worker.js",
+  "assets": {
+    "directory": "./dist/client",
+    "binding": "ASSETS"
+  },
+  "vars": {
+    "VITE_LOAN_REDIRECT_URL": "https://wiscewallet.com",
+    "NODE_VERSION": "20"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "tanstack-start-db",
+      "database_id": "577d2666-b983-448b-b770-e444bc591703",
+      "migrations_dir": "./drizzle"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "LOAN_UPLOADS",
+      "bucket_name": "loan-uploads"
+    }
+  ]
+}

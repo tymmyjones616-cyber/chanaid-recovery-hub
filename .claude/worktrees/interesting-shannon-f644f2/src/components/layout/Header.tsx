@@ -8,12 +8,16 @@ const WHATSAPP_LINK = "https://wa.me/19403779359";
 const TELEGRAM_LINK = "https://t.me/+M5J9C5mngShjODcx";
 
 const services = [
-  { slug: "crypto-recovery", name: "Cryptocurrency Recovery" },
-  { slug: "forex-scam-recovery", name: "Forex Scam Recovery" },
-  { slug: "romance-scam-recovery", name: "Romance Fraud Remediation" },
-  { slug: "asset-tracing", name: "Global Asset Tracing" },
-  { slug: "binary-options-recovery", name: "Binary Options Recovery" },
-  { slug: "corporate-fraud-investigation", name: "Corporate Fraud Investigation" }
+  { slug: "cryptocurrency", name: "Cryptocurrency" },
+  { slug: "pig-butchering", name: "Pig Butchering" },
+  { slug: "romance-scams", name: "Romance Scams" },
+  { slug: "forex", name: "Forex & Trading" },
+  { slug: "binary-options", name: "Binary Options" },
+  { slug: "investment-fraud", name: "Investment Fraud" },
+  { slug: "phishing", name: "Phishing & ID Theft" },
+  { slug: "tax-fraud", name: "Tax Fraud Recovery" },
+  { slug: "credit-card-fraud", name: "Credit Card Fraud" },
+  { slug: "tech-support", name: "Tech Support Scams" },
 ];
 
 export function Header() {
