@@ -95,12 +95,12 @@ export const Route = createFileRoute("/")({
       ).values()
     ).sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
 
-    // De-duplicate testimonials by quote/id
+    // De-duplicate testimonials by quote/id to ensure no repeating cards
     const uniqueTestimonials = Array.from(
       new Map(
         (Array.isArray(testimonialsData) ? testimonialsData : []).map(t => [t.quote || t.id, t])
       ).values()
-    );
+    ).sort(() => Math.random() - 0.5); // Shuffle for variety
 
     // De-duplicate FAQs by question
     const uniqueFaqs = Array.from(

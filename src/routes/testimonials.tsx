@@ -17,7 +17,13 @@ export const Route = createFileRoute("/testimonials")({
       { property: "og:description", content: "Real recoveries from real clients. See how we help victims of crypto fraud reclaim their assets." },
     ],
   }),
-  loader: async () => await fetchTestimonials().catch(() => []),
+  loader: async () => {
+    const items = await fetchTestimonials().catch(() => []);
+    // De-duplicate and shuffle
+    return Array.from(
+      new Map(items.map(t => [t.quote || t.id, t])).values()
+    ).sort(() => Math.random() - 0.5);
+  },
   component: TestimonialsPage,
 });
 
