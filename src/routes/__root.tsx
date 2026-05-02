@@ -3,7 +3,7 @@ import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/r
 
 import appCss from "../styles.css?url";
 import { Toaster } from "@/components/ui/sonner";
-import { FloatingSocials } from "@/components/site/FloatingSocials";
+import { ScrollToTop } from "@/components/layout/ScrollToTop";
 
 function NotFoundComponent() {
   return (
@@ -101,7 +101,7 @@ function RootShell({ children }: { children: React.ReactNode }) {
       <head>
         <HeadContent />
       </head>
-      <body>
+      <body suppressHydrationWarning>
         {children}
         <Scripts />
       </body>
@@ -110,15 +110,18 @@ function RootShell({ children }: { children: React.ReactNode }) {
 }
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { AuthProvider } from "@/components/layout/AuthContext";
 
 const queryClient = new QueryClient();
 
 function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
-      <Outlet />
-      <Toaster />
-      <FloatingSocials />
+      <AuthProvider>
+        <Outlet />
+        <Toaster />
+        <ScrollToTop />
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

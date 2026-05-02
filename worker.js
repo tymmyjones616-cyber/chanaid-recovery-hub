@@ -4,14 +4,26 @@ export default {
   async fetch(request, env, ctx) {
     console.log('Worker fetch: env keys:', Object.keys(env || {}));
     
-    // Attach bindings to globalThis so server functions can find them
+    // ─── Supabase credentials ───────────────────────────────────────────
+    if (env.SUPABASE_URL) {
+      globalThis.SUPABASE_URL = env.SUPABASE_URL;
+    }
+    if (env.SUPABASE_ANON_KEY) {
+      globalThis.SUPABASE_ANON_KEY = env.SUPABASE_ANON_KEY;
+    }
+    if (env.SUPABASE_SERVICE_ROLE_KEY) {
+      globalThis.SUPABASE_SERVICE_ROLE_KEY = env.SUPABASE_SERVICE_ROLE_KEY;
+    }
+
+    // ─── Legacy D1 binding (kept for backward compat, no longer primary) ─
     if (env.DB) {
       globalThis.DB = env.DB;
     }
     if (env.LOAN_UPLOADS) {
       globalThis.LOAN_UPLOADS = env.LOAN_UPLOADS;
     }
-    // Expose env vars (ADMIN_PASSWORD, etc.) on globalThis
+
+    // ─── App config ──────────────────────────────────────────────────────
     if (env.ADMIN_PASSWORD) {
       globalThis.ADMIN_PASSWORD = env.ADMIN_PASSWORD;
     }

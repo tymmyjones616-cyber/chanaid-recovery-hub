@@ -6,6 +6,8 @@ import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useAuth } from "@/components/layout/AuthContext";
+import { AuthModal } from "@/components/layout/AuthModal";
 
 export const Route = createFileRoute("/blog/$slug")({
   head: ({ loaderData }) => {
@@ -64,12 +66,22 @@ function BlogImage({ src, alt }: { src?: string; alt: string }) {
 
 function BlogPost() {
   const post = Route.useLoaderData();
+  const { user } = useAuth();
   const [likes, setLikes] = useState(post?.likes || 0);
   const [isLiking, setIsLiking] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   if (!post) {
     throw notFound();
   }
+
+  const handleAction = (to: string) => {
+    if (!user) {
+      setIsAuthModalOpen(true);
+      return;
+    }
+    window.location.href = to;
+  };
 
   const handleLike = async () => {
     if (isLiking) return;
@@ -160,34 +172,27 @@ function BlogPost() {
           />
 
           <footer className="mt-16 pt-8 border-t border-slate-100">
-            {/* Telegram Community CTA */}
-            <div className="mb-8 bg-gradient-to-br from-[#229ED9] to-[#1d8dbf] rounded-3xl p-8 text-white shadow-xl flex flex-col sm:flex-row items-center gap-6 group hover:shadow-2xl transition-all">
-              <div className="h-16 w-16 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                <Send className="w-8 h-8 text-white" />
-              </div>
-              <div className="flex-1 text-center sm:text-left">
-                <h3 className="text-xl font-bold mb-1">Join Our VIP Recovery Group</h3>
-                <p className="text-white/80 text-sm">
-                  Get real-time scam alerts, leaked wallet lists, and exclusive recovery strategies before they go public. 12k+ members strong.
-                </p>
-              </div>
-              <Button size="lg" className="bg-white text-[#229ED9] hover:bg-slate-50 font-bold rounded-full px-8 shrink-0" asChild>
-                <a href="https://t.me/+M5J9C5mngShjODcx" target="_blank" rel="noopener noreferrer">Join Now</a>
-              </Button>
-            </div>
-
-            <div className="bg-slate-900 rounded-3xl p-8 text-center text-white relative overflow-hidden">
+            <div className="bg-slate-900 rounded-3xl p-8 text-center text-white relative overflow-hidden shadow-2xl">
               <div className="relative z-10">
-                <h3 className="text-2xl font-bold mb-4">Lost Your Assets to This Type of Scam?</h3>
-                <p className="text-slate-400 mb-8 max-w-lg mx-auto">
+                <h3 className="text-2xl font-bold mb-4 italic">Lost Your Assets to This Type of Scam?</h3>
+                <p className="text-slate-400 mb-8 max-w-lg mx-auto text-sm font-medium">
                   Our forensic experts are standing by to review your case. The faster we act, the higher the recovery probability.
                 </p>
                 <div className="flex flex-col sm:flex-row justify-center gap-4">
-                  <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white px-8 rounded-full shadow-lg shadow-blue-900/20" asChild>
-                    <Link to="/contact">Start Free Recovery Audit</Link>
+                  <Button 
+                    size="lg" 
+                    onClick={() => handleAction("/contact")}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-10 rounded-full shadow-lg shadow-blue-900/40 font-bold transition-all hover:scale-105"
+                  >
+                    Start Free Recovery Audit
                   </Button>
-                  <Button size="lg" variant="outline" className="border-slate-700 text-white hover:bg-slate-800 rounded-full px-8" asChild>
-                    <Link to="/loans">Apply for Recovery Loan</Link>
+                  <Button 
+                    size="lg" 
+                    variant="outline" 
+                    onClick={() => handleAction("/loans")}
+                    className="border-slate-700 text-white hover:bg-slate-800 rounded-full px-10 font-bold"
+                  >
+                    Apply for Recovery Loan
                   </Button>
                 </div>
               </div>
@@ -197,6 +202,7 @@ function BlogPost() {
           </footer>
         </div>
       </article>
+      <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
     </SiteShell>
   );
 }

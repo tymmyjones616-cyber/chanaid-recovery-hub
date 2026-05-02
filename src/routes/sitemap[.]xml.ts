@@ -1,8 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { getEvent } from "vinxi/http";
-import { drizzle } from "drizzle-orm/d1";
-import * as schema from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { getSupabaseAdmin } from "@/lib/supabase";
 
 export const Route = createFileRoute("/sitemap.xml")({
   server: {
@@ -12,21 +9,17 @@ export const Route = createFileRoute("/sitemap.xml")({
         const base = `${url.protocol}//${url.host}`;
         const staticUrls = ["", "/about", "/contact", "/testimonials", "/success-calculator", "/privacy-policy", "/blog", "/loans"];
         
-        const event = getEvent() as any;
-        const d1 = event.context.cloudflare?.env?.DB || event.context.env?.DB || (globalThis as any).DB;
-        
-        if (!d1) throw new Error("D1 Database binding 'DB' not found.");
-        const db = drizzle(d1, { schema });
+        const sb = getSupabaseAdmin();
 
-        const services = await db.query.services.findMany({
-          where: eq(schema.services.isPublished, true),
-          columns: { slug: true }
-        });
+        const { data: services } = await sb
+          .from("services")
+          .select("slug")
+          .eq("is_published", true);
 
-        const blogPosts = await db.query.blogPosts.findMany({
-          where: eq(schema.blogPosts.isPublished, true),
-          columns: { slug: true }
-        });
+        const { data: blogPosts } = await sb
+          .from("blog_posts")
+          .select("slug")
+          .eq("is_published", true);
 
         const urls = [
           ...staticUrls.map((u) => `${base}${u}`),

@@ -12,6 +12,9 @@ import { useScrollY } from "@/hooks/use-reveal";
 import { ForbesLogo, BloombergLogo, ReutersLogo, CnbcLogo, FtLogo, BbcLogo } from "@/components/site/MediaLogos";
 import { InfiniteTestimonialCarousel } from "@/components/site/InfiniteTestimonialCarousel";
 import { SITE_STATS, ASSETS } from "@/lib/constants";
+import { useAuth } from "@/components/layout/AuthContext";
+import { AuthModal } from "@/components/layout/AuthModal";
+import { useState } from "react";
 
 // ─── Fallback services when database is empty ────────────────────────────────
 const FALLBACK_SERVICES = SERVICES_DATA;
@@ -96,6 +99,17 @@ export const Route = createFileRoute("/")({
 function Index() {
   const { services, testimonials, faqs } = Route.useLoaderData();
   const scrollY = useScrollY();
+  const { user } = useAuth();
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
+
+  const handleAction = (to: string) => {
+    if (!user) {
+      setIsAuthModalOpen(true);
+      return;
+    }
+    window.location.href = to;
+  };
 
   return (
     <SiteShell>
@@ -126,15 +140,18 @@ function Index() {
             </Reveal>
 
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link to="/contact" className="group inline-flex items-center gap-2 bg-cta-gradient text-white font-semibold px-6 h-12 rounded-full shadow-elegant">
+              <button 
+                onClick={() => handleAction("/contact")}
+                className="group inline-flex items-center gap-2 bg-cta-gradient text-white font-semibold px-8 h-12 rounded-full shadow-elegant hover:scale-105 transition-all"
+              >
                 Free consultation <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition" />
-              </Link>
-              <a href="https://t.me/+M5J9C5mngShjODcx" target="_blank" rel="noopener noreferrer" className="group inline-flex items-center gap-2 bg-[#229ED9] text-white font-semibold px-6 h-12 rounded-full shadow-soft hover:brightness-110 transition-all">
-                <Send className="w-4 h-4" /> Join Telegram
-              </a>
-              <Link to="/loans" className="group inline-flex items-center gap-2 bg-white text-primary font-semibold px-6 h-12 rounded-full border-2 border-primary hover:bg-primary hover:text-white transition-all">
+              </button>
+              <button 
+                onClick={() => handleAction("/loans")}
+                className="group inline-flex items-center gap-2 bg-white text-primary font-semibold px-8 h-12 rounded-full border-2 border-primary hover:bg-primary hover:text-white transition-all shadow-soft"
+              >
                 Apply for a loan <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition" />
-              </Link>
+              </button>
             </div>
 
             <Reveal direction="up" delay={200}>
@@ -375,12 +392,16 @@ function Index() {
             <div aria-hidden className="absolute -bottom-20 -left-20 h-72 w-72 rounded-full bg-white/10 blur-3xl animate-float-slower" />
             <h2 className="relative text-3xl sm:text-5xl font-bold">The Window to Recovery Is Narrow | Act Before It Closes</h2>
             <p className="relative mt-3 text-white/90 max-w-2xl mx-auto">Free consultation. No obligation. We only get paid when you do.</p>
-            <Link to="/contact" className="relative inline-flex mt-8 bg-white text-primary font-semibold px-8 h-12 items-center rounded-full shadow-soft transition-transform">
+            <button 
+              onClick={() => handleAction("/contact")}
+              className="relative inline-flex mt-8 bg-white text-primary font-semibold px-8 h-12 items-center rounded-full shadow-soft transition-transform hover:scale-105"
+            >
               Start my case <ArrowRight className="ml-2 w-4 h-4" />
-            </Link>
+            </button>
           </div>
         </Reveal>
       </section>
+      <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} defaultMode={authMode} />
     </SiteShell>
   );
 }

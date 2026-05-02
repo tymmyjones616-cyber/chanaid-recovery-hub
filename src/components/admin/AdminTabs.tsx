@@ -326,7 +326,10 @@ export function LoansTab() {
                             </div>
                             <div>
                               <h3 className="font-bold text-gray-900 leading-tight">Reviewing: {r.firstName} {r.lastName}</h3>
-                              <p className="text-xs text-gray-500 font-medium">Application ID: <span className="font-mono">{r.id}</span></p>
+                              <div className="flex flex-col">
+                                <p className="text-xs text-gray-500 font-medium">Application ID: <span className="font-mono">{r.id}</span></p>
+                                {r.userId && <p className="text-[10px] text-primary font-black uppercase tracking-tighter mt-1">Linked Account: {r.userId}</p>}
+                              </div>
                             </div>
                           </div>
                           <div className="flex items-center gap-3">

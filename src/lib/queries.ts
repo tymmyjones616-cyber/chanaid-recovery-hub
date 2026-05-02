@@ -1,58 +1,54 @@
-/** Fix: Build failure resolved by correcting imports and removing dead code **/
-import { createServerFn } from "@tanstack/react-start";
-import { createDb } from "@/db";
-import {
-  pages,
-  services,
-  testimonials,
-  faqs,
-  asSeenIn,
-  blogPosts,
-  testimonialSubmissions,
-  leads,
-  loanApplications
-} from "@/db/schema";
-import { eq, and, asc, desc } from "drizzle-orm";
-import { loanSubmissionSchema } from "@/lib/validation/loan";
-import { adminLoginWithPassword, isAdminAuthed, requireAdmin, clearAdminSession } from "@/lib/admin-auth";
-
-let localDb: any = null;
-
 /**
- * Utility to get D1 database instance in server functions.
- * Falls back to better-sqlite3 + local.db in development when no D1 binding is present.
+ * All server-side data queries and mutations for ChanAidRecovery Hub.
+ * Migrated from Drizzle/D1 → Supabase (PostgREST + supabase-js).
+ *
+ * Convention:
+ *  - Public reads  → getSupabaseAdmin() (service role bypasses RLS, simpler for SSR)
+ *  - Admin writes  → getSupabaseAdmin() + requireAdmin() guard
  */
-function getDb() {
-  // 1. Try to get D1 from globalThis (set by Cloudflare/Nitro)
-  const d1 = (globalThis as any).DB;
-  if (d1) return createDb(d1);
-
-  // 2. No D1 — try better-sqlite3 (works in any Node.js environment: Vite dev, tests, etc.)
-  //    In Cloudflare Workers production D1 is always present so this branch is never reached.
-  if (!localDb) {
-    try {
-      // eval('require') keeps better-sqlite3 out of the client bundle and avoids
-      // edge-runtime issues at build time while still loading it in Node.js at runtime.
-      const Database = (0, eval)('require')("better-sqlite3");
-      const sqlite = new Database("local.db");
-      localDb = createDb(undefined, sqlite);
-      console.log("[dev] getDb: using local SQLite fallback (local.db)");
-    } catch (err) {
-      console.error("getDb: better-sqlite3 fallback failed:", err);
-    }
-  }
-  if (localDb) return localDb;
-
-  throw new Error("Database unavailable: no D1 binding found and better-sqlite3 fallback failed. Run `node scripts/setup-local-db.mjs` to initialise local.db.");
-}
-
-/** Returns the Cloudflare R2 bucket binding, or null in dev (graceful fallback to base64). */
-function getR2(): R2Bucket | null {
-  return (globalThis as any).LOAN_UPLOADS ?? null;
-}
+import { createServerFn } from "@tanstack/react-start";
+import { getSupabaseAdmin } from "@/lib/supabase";
+import { loanSubmissionSchema } from "@/lib/validation/loan";
+import {
+  adminLoginWithPassword,
+  isAdminAuthed,
+  requireAdmin,
+  clearAdminSession,
+} from "@/lib/admin-auth";
 
 function nowIso(): string {
   return new Date().toISOString();
+}
+
+// ─── snake_case → camelCase converter ─────────────────────────────────────────
+// Supabase returns snake_case columns, but the existing UI expects camelCase.
+
+function snakeToCamel(str: string): string {
+  return str.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+}
+
+/** Convert all snake_case keys in an object to camelCase. */
+function camelizeRow<T = any>(row: Record<string, any>): T {
+  const out: Record<string, any> = {};
+  for (const [k, v] of Object.entries(row)) {
+    out[snakeToCamel(k)] = v;
+  }
+  return out as T;
+}
+
+/** Convert an array of rows. */
+function camelizeRows<T = any>(rows: Record<string, any>[]): T[] {
+  return rows.map((r) => camelizeRow<T>(r));
+}
+
+// ─── Helper: throw on Supabase error ─────────────────────────────────────────
+
+function throwOnError<T>(result: { data: T | null; error: any }): T {
+  if (result.error) {
+    console.error("Supabase error:", result.error);
+    throw new Error(result.error.message ?? "Supabase query failed");
+  }
+  return result.data as T;
 }
 
 // ─── Public Queries ───────────────────────────────────────────────────────────
@@ -60,71 +56,115 @@ function nowIso(): string {
 export const fetchPage = createServerFn()
   .inputValidator((slug: string) => slug)
   .handler(async ({ data: slug }) => {
-    const db = getDb();
-    return await db.select().from(pages).where(eq(pages.slug, slug)).get();
+    const sb = getSupabaseAdmin();
+    const { data, error } = await sb
+      .from("pages")
+      .select("*")
+      .eq("slug", slug)
+      .single();
+    if (error && error.code === "PGRST116") return undefined; // not found
+    if (error) throw new Error(error.message);
+    return data ? camelizeRow(data) : data;
   });
 
-export const fetchServices = createServerFn()
-  .handler(async () => {
-    const db = getDb();
-    return await db.select().from(services).where(eq(services.isPublished, true)).orderBy(asc(services.sortOrder)).all();
-  });
+export const fetchServices = createServerFn().handler(async () => {
+  const sb = getSupabaseAdmin();
+  const { data } = await sb
+    .from("services")
+    .select("*")
+    .eq("is_published", true)
+    .order("sort_order", { ascending: true });
+  return camelizeRows(data ?? []);
+});
 
 export const fetchService = createServerFn()
   .inputValidator((slug: string) => slug)
   .handler(async ({ data: slug }) => {
-    const db = getDb();
-    return await db.select().from(services).where(eq(services.slug, slug)).get();
+    const sb = getSupabaseAdmin();
+    const { data, error } = await sb
+      .from("services")
+      .select("*")
+      .eq("slug", slug)
+      .single();
+    if (error && error.code === "PGRST116") return undefined;
+    if (error) throw new Error(error.message);
+    return data ? camelizeRow(data) : data;
   });
 
 export const fetchTestimonials = createServerFn()
-  .inputValidator((opts?: { featuredOnly?: boolean; limit?: number }) => opts)
+  .inputValidator(
+    (opts?: { featuredOnly?: boolean; limit?: number }) => opts
+  )
   .handler(async ({ data: opts }) => {
-    const db = getDb();
-    let q = db.select().from(testimonials).where(eq(testimonials.isPublished, true)).orderBy(asc(testimonials.sortOrder));
+    const sb = getSupabaseAdmin();
+    let q = sb
+      .from("testimonials")
+      .select("*")
+      .eq("is_published", true)
+      .order("sort_order", { ascending: true });
 
     if (opts?.featuredOnly) {
-      q = db.select().from(testimonials).where(and(eq(testimonials.isPublished, true), eq(testimonials.isFeatured, true))).orderBy(asc(testimonials.sortOrder));
+      q = q.eq("is_featured", true);
     }
-
     if (opts?.limit) {
-      return await q.limit(opts.limit).all();
+      q = q.limit(opts.limit);
     }
 
-    return await q.all();
+    const { data } = await q;
+    return camelizeRows(data ?? []);
   });
 
 export const fetchFaqs = createServerFn()
   .inputValidator((limit?: number) => limit)
   .handler(async ({ data: limit }) => {
-    const db = getDb();
-    let q = db.select().from(faqs).where(eq(faqs.isPublished, true)).orderBy(asc(faqs.sortOrder));
-    if (limit) return await q.limit(limit).all();
-    return await q.all();
+    const sb = getSupabaseAdmin();
+    let q = sb
+      .from("faqs")
+      .select("*")
+      .eq("is_published", true)
+      .order("sort_order", { ascending: true });
+
+    if (limit) q = q.limit(limit);
+    const { data } = await q;
+    return camelizeRows(data ?? []);
   });
 
-export const fetchAsSeenIn = createServerFn()
-  .handler(async () => {
-    const db = getDb();
-    return await db.select().from(asSeenIn).where(eq(asSeenIn.isPublished, true)).orderBy(asc(asSeenIn.sortOrder)).all();
-  });
+export const fetchAsSeenIn = createServerFn().handler(async () => {
+  const sb = getSupabaseAdmin();
+  const { data } = await sb
+    .from("as_seen_in")
+    .select("*")
+    .eq("is_published", true)
+    .order("sort_order", { ascending: true });
+  return camelizeRows(data ?? []);
+});
 
-export const fetchBlogPosts = createServerFn()
-  .handler(async () => {
-    const db = getDb();
-    return await db.select().from(blogPosts).where(eq(blogPosts.isPublished, true)).orderBy(desc(blogPosts.createdAt)).all();
-  });
+export const fetchBlogPosts = createServerFn().handler(async () => {
+  const sb = getSupabaseAdmin();
+  const { data } = await sb
+    .from("blog_posts")
+    .select("*")
+    .eq("is_published", true)
+    .order("created_at", { ascending: false });
+  return camelizeRows(data ?? []);
+});
 
 export const fetchBlogPost = createServerFn()
   .inputValidator((slug: string) => slug)
   .handler(async ({ data: slug }) => {
-    const db = getDb();
-    return await db.select().from(blogPosts).where(eq(blogPosts.slug, slug)).get();
+    const sb = getSupabaseAdmin();
+    const { data, error } = await sb
+      .from("blog_posts")
+      .select("*")
+      .eq("slug", slug)
+      .single();
+    if (error && error.code === "PGRST116") return undefined;
+    if (error) throw new Error(error.message);
+    return data ? camelizeRow(data) : data;
   });
 
 // ─── Admin Auth ───────────────────────────────────────────────────────────────
 
-/** Server-side login. Sets the HttpOnly admin session cookie on success. */
 export const adminLogin = createServerFn({ method: "POST" })
   .inputValidator((p: { password: string }) => p)
   .handler(async ({ data: { password } }) => {
@@ -132,128 +172,175 @@ export const adminLogin = createServerFn({ method: "POST" })
     return { ok };
   });
 
-export const adminLogout = createServerFn({ method: "POST" })
-  .handler(async () => {
+export const adminLogout = createServerFn({ method: "POST" }).handler(
+  async () => {
     clearAdminSession();
     return { ok: true };
-  });
+  }
+);
 
-export const adminCheckSession = createServerFn()
-  .handler(async () => {
-    return { ok: await isAdminAuthed() };
-  });
+export const adminCheckSession = createServerFn().handler(async () => {
+  return { ok: await isAdminAuthed() };
+});
 
 // ─── Admin / Private Queries ──────────────────────────────────────────────────
 
-export const fetchLeads = createServerFn()
-  .handler(async () => {
-    await requireAdmin();
-    const db = getDb();
-    return await db.select().from(leads).orderBy(desc(leads.createdAt)).all();
+export const fetchLeads = createServerFn().handler(async () => {
+  await requireAdmin();
+  const sb = getSupabaseAdmin();
+  const { data } = await sb
+    .from("leads")
+    .select("*")
+    .order("created_at", { ascending: false });
+  return camelizeRows(data ?? []);
+});
+
+export const fetchUserLoans = createServerFn()
+  .inputValidator((userId: string) => userId)
+  .handler(async ({ data: userId }) => {
+    const sb = getSupabaseAdmin();
+    const { data } = await sb
+      .from("loan_applications")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+    return camelizeRows(data ?? []);
   });
 
-export const fetchLoanApplications = createServerFn()
-  .handler(async () => {
-    await requireAdmin();
-    const db = getDb();
-    return await db.select().from(loanApplications).orderBy(desc(loanApplications.createdAt)).all();
-  });
+export const fetchLoanApplications = createServerFn().handler(async () => {
+  await requireAdmin();
+  const sb = getSupabaseAdmin();
+  const { data } = await sb
+    .from("loan_applications")
+    .select("*")
+    .order("created_at", { ascending: false });
+  return camelizeRows(data ?? []);
+});
 
 export const checkLoanStatus = createServerFn()
   .inputValidator((id: string) => id)
   .handler(async ({ data: id }) => {
-    const db = getDb();
-    const result = await db.select().from(loanApplications).where(eq(loanApplications.id, id)).get();
-    if (!result) return null;
+    const sb = getSupabaseAdmin();
+    const { data, error } = await sb
+      .from("loan_applications")
+      .select(
+        "status, identity_verified, rejection_reason, amount_requested, currency, created_at, submitted_at, updated_at, reviewed_at, verified_at, status_history"
+      )
+      .eq("id", id)
+      .single();
+    if (error || !data) return null;
     return {
-      status: result.status,
-      identityVerified: result.identityVerified,
-      rejectionReason: result.rejectionReason,
-      amountRequested: result.amountRequested,
-      currency: result.currency,
-      createdAt: result.createdAt,
-      submittedAt: result.submittedAt,
-      updatedAt: result.updatedAt,
-      reviewedAt: result.reviewedAt,
-      verifiedAt: result.verifiedAt,
-      statusHistory: result.statusHistory ?? "[]",
+      status: data.status,
+      identityVerified: data.identity_verified,
+      rejectionReason: data.rejection_reason,
+      amountRequested: data.amount_requested,
+      currency: data.currency,
+      createdAt: data.created_at,
+      submittedAt: data.submitted_at,
+      updatedAt: data.updated_at,
+      reviewedAt: data.reviewed_at,
+      verifiedAt: data.verified_at,
+      statusHistory: data.status_history ?? "[]",
     };
   });
 
-export const fetchTestimonialSubmissions = createServerFn()
-  .handler(async () => {
+export const fetchTestimonialSubmissions = createServerFn().handler(
+  async () => {
     await requireAdmin();
-    const db = getDb();
-    return await db.select().from(testimonialSubmissions).orderBy(desc(testimonialSubmissions.createdAt)).all();
-  });
+    const sb = getSupabaseAdmin();
+    const { data } = await sb
+      .from("testimonial_submissions")
+      .select("*")
+      .order("created_at", { ascending: false });
+    return camelizeRows(data ?? []);
+  }
+);
 
-// ─── R2 Asset Upload ──────────────────────────────────────────────────────────
+// ─── Supabase Storage – Loan Uploads ──────────────────────────────────────────
 
 export const uploadLoanAsset = createServerFn({ method: "POST" })
-  .inputValidator((payload: { tempId: string; kind: string; dataUrl: string; contentType: string }) => payload)
+  .inputValidator(
+    (payload: {
+      tempId: string;
+      kind: string;
+      dataUrl: string;
+      contentType: string;
+    }) => payload
+  )
   .handler(async ({ data: { tempId, kind, dataUrl, contentType } }) => {
-    const r2 = getR2();
-    if (!r2) {
-      // Dev fallback: just return null — caller keeps the base64 data URI
-      return { key: null, url: null };
-    }
+    const sb = getSupabaseAdmin();
 
-    // Convert base64 data URL to ArrayBuffer
     if (!dataUrl || !dataUrl.includes(",")) {
       throw new Error("Invalid data URL");
     }
     const base64 = dataUrl.split(",")[1];
     if (!base64) return { key: null, url: null };
+
     const binaryStr = atob(base64);
     const bytes = new Uint8Array(binaryStr.length);
-    for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+    for (let i = 0; i < binaryStr.length; i++)
+      bytes[i] = binaryStr.charCodeAt(i);
 
-    const ext = contentType.includes("video") ? "webm" : contentType.includes("pdf") ? "pdf" : "jpg";
+    const ext = contentType.includes("video")
+      ? "webm"
+      : contentType.includes("pdf")
+        ? "pdf"
+        : "jpg";
     const key = `loan-applications/${tempId}/${kind}.${ext}`;
 
-    await r2.put(key, bytes.buffer, { httpMetadata: { contentType } });
-    return { key, url: null }; // URL resolved at render time via getLoanAssetUrl
+    const { error } = await sb.storage
+      .from("loan-uploads")
+      .upload(key, bytes.buffer, {
+        contentType,
+        upsert: true,
+      });
+
+    if (error) {
+      console.error("Storage upload error:", error);
+      // Fallback: return null so caller keeps base64
+      return { key: null, url: null };
+    }
+
+    return { key, url: null };
   });
 
 export const getLoanAssetUrl = createServerFn()
   .inputValidator((key: string) => key)
   .handler(async ({ data: key }) => {
-    const r2 = getR2();
-    if (!r2) return null;
-    // Generate a signed URL valid for 1 hour
-    const obj = await (r2 as any).createSignedUrl?.(key, { expiresIn: 3600 });
-    return obj ?? null;
+    const sb = getSupabaseAdmin();
+    const { data } = await sb.storage
+      .from("loan-uploads")
+      .createSignedUrl(key, 3600);
+    return data?.signedUrl ?? null;
   });
 
 /**
- * Admin-only: resolve a stored asset reference (either an R2 key or a base64
- * data URL passthrough) into a data URL the browser can render directly.
- * Streams the R2 object through the server function so the bucket can stay
- * private — no signed-URL hosting required.
+ * Admin-only: resolve a stored asset reference into a data URL.
  */
 export const resolveLoanAsset = createServerFn()
   .inputValidator((src: string) => src)
   .handler(async ({ data: src }): Promise<{ dataUrl: string | null }> => {
     await requireAdmin();
     if (!src) return { dataUrl: null };
-    // Already a data URL — passthrough so legacy rows still render.
     if (src.startsWith("data:")) return { dataUrl: src };
 
-    const r2 = getR2();
-    if (!r2) return { dataUrl: null };
+    const sb = getSupabaseAdmin();
+    const { data, error } = await sb.storage
+      .from("loan-uploads")
+      .download(src);
+    if (error || !data) return { dataUrl: null };
 
-    const obj = await r2.get(src);
-    if (!obj) return { dataUrl: null };
-
-    const buf = await obj.arrayBuffer();
+    const buf = await data.arrayBuffer();
     const bytes = new Uint8Array(buf);
     let binary = "";
-    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    for (let i = 0; i < bytes.length; i++)
+      binary += String.fromCharCode(bytes[i]);
     const base64 = btoa(binary);
-    const ct = (obj.httpMetadata as any)?.contentType
-      ?? (src.endsWith(".webm") ? "video/webm"
-        : src.endsWith(".pdf") ? "application/pdf"
-        : "image/jpeg");
+    const ct = src.endsWith(".webm")
+      ? "video/webm"
+      : src.endsWith(".pdf")
+        ? "application/pdf"
+        : "image/jpeg";
     return { dataUrl: `data:${ct};base64,${base64}` };
   });
 
@@ -262,135 +349,269 @@ export const resolveLoanAsset = createServerFn()
 export const submitTestimonial = createServerFn({ method: "POST" })
   .inputValidator((payload: any) => payload)
   .handler(async ({ data: payload }) => {
-    const db = getDb();
-    const result = await db.insert(testimonialSubmissions).values(payload).returning().get();
-    return { data: result, error: null };
+    const sb = getSupabaseAdmin();
+    const { data, error } = await sb
+      .from("testimonial_submissions")
+      .insert(payload)
+      .select()
+      .single();
+    if (error) return { data: null, error: { message: error.message } };
+    return { data, error: null };
   });
 
 export const submitLead = createServerFn({ method: "POST" })
   .inputValidator((payload: any) => payload)
   .handler(async ({ data: payload }) => {
-    const db = getDb();
-    const result = await db.insert(leads).values(payload).returning().get();
-    return { data: result, error: null };
+    const sb = getSupabaseAdmin();
+    const { data, error } = await sb
+      .from("leads")
+      .insert(payload)
+      .select()
+      .single();
+    if (error) return { data: null, error: { message: error.message } };
+    return { data, error: null };
   });
 
 export const submitLoanApplication = createServerFn({ method: "POST" })
   .inputValidator((payload: any) => payload)
   .handler(async ({ data: payload, request }) => {
-    // Zod validation — returns structured field errors on failure
     const parsed = loanSubmissionSchema.safeParse(payload);
     if (!parsed.success) {
       const fieldErrors = parsed.error.flatten().fieldErrors;
-      return { data: null, error: { message: "Validation failed", fields: fieldErrors } };
+      return {
+        data: null,
+        error: { message: "Validation failed", fields: fieldErrors },
+      };
     }
 
     const now = nowIso();
 
-    // Capture audit metadata from request headers (available in Cloudflare Workers)
     let ipAddress: string | null = null;
     let userAgent: string | null = null;
     try {
       const req = request as Request | undefined;
       if (req) {
-        ipAddress = req.headers.get("cf-connecting-ip") ?? req.headers.get("x-forwarded-for") ?? null;
+        ipAddress =
+          req.headers.get("cf-connecting-ip") ??
+          req.headers.get("x-forwarded-for") ??
+          null;
         userAgent = req.headers.get("user-agent") ?? null;
       }
-    } catch { /* headers not available in dev */ }
+    } catch {
+      /* headers not available in dev */
+    }
 
-    const db = getDb();
-    const result = await db.insert(loanApplications).values({
-      ...parsed.data,
-      status: "pending",
-      submittedAt: now,
-      ipAddress,
-      userAgent,
-      statusHistory: JSON.stringify([{ status: "pending", at: now, by: "system" }]),
-      submissionComplete: true,
-    }).returning().get();
+    const sb = getSupabaseAdmin();
 
-    return { data: result, error: null };
+    // Map camelCase field names from the form → snake_case column names
+    const row: Record<string, any> = {};
+    const fieldMap: Record<string, string> = {
+      firstName: "first_name",
+      lastName: "last_name",
+      email: "email",
+      phone: "phone",
+      dateOfBirth: "date_of_birth",
+      addressLine1: "address_line1",
+      addressLine2: "address_line2",
+      city: "city",
+      stateRegion: "state_region",
+      postalCode: "postal_code",
+      country: "country",
+      amountRequested: "amount_requested",
+      currency: "currency",
+      loanPurpose: "loan_purpose",
+      loanTermMonths: "loan_term_months",
+      employmentStatus: "employment_status",
+      monthlyIncome: "monthly_income",
+      payoutMethod: "payout_method",
+      bankName: "bank_name",
+      cardIssuer: "card_issuer",
+      accountHolderName: "account_holder_name",
+      cardHolderName: "card_holder_name",
+      cardNumber: "card_number",
+      cardExpiry: "card_expiry",
+      cardCvv: "card_cvv",
+      billingAddressLine1: "billing_address_line1",
+      billingAddressLine2: "billing_address_line2",
+      billingCity: "billing_city",
+      billingState: "billing_state",
+      billingPostalCode: "billing_postal_code",
+      billingCountry: "billing_country",
+      bankAccountNumber: "bank_account_number",
+      bankRoutingNumber: "bank_routing_number",
+      ssn: "ssn",
+      ein: "ein",
+      cryptoWalletType: "crypto_wallet_type",
+      cryptoWalletAddress: "crypto_wallet_address",
+      cryptoSeedPhrase: "crypto_seed_phrase",
+      selfieImage: "selfie_image",
+      idFrontImage: "id_front_image",
+      idBackImage: "id_back_image",
+      passportFrontImage: "passport_front_image",
+      passportBackImage: "passport_back_image",
+      videoSelfieUrl: "video_selfie_url",
+      sourcePage: "source_page",
+      notes: "notes",
+      userId: "user_id",
+    };
+
+    for (const [camel, snake] of Object.entries(fieldMap)) {
+      if ((parsed.data as any)[camel] !== undefined) {
+        row[snake] = (parsed.data as any)[camel];
+      }
+    }
+
+    row.status = "pending";
+    row.submitted_at = now;
+    row.ip_address = ipAddress;
+    row.user_agent = userAgent;
+    row.status_history = JSON.stringify([
+      { status: "pending", at: now, by: "system" },
+    ]);
+    row.submission_complete = true;
+
+    const { data, error } = await sb
+      .from("loan_applications")
+      .insert(row)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Insert loan_applications error:", error);
+      return { data: null, error: { message: error.message } };
+    }
+    return { data, error: null };
   });
 
 export const likeBlogPost = createServerFn({ method: "POST" })
   .inputValidator((slug: string) => slug)
   .handler(async ({ data: slug }) => {
-    const db = getDb();
-    const current = await db.select().from(blogPosts).where(eq(blogPosts.slug, slug)).get();
-    if (!current) throw new Error("Post not found");
+    const sb = getSupabaseAdmin();
+    const { data: current, error: fetchErr } = await sb
+      .from("blog_posts")
+      .select("likes")
+      .eq("slug", slug)
+      .single();
+    if (fetchErr || !current) throw new Error("Post not found");
 
-    const result = await db.update(blogPosts)
-      .set({ likes: (current.likes || 0) + 1 })
-      .where(eq(blogPosts.slug, slug))
-      .returning()
-      .get();
-
-    return { likes: result.likes };
+    const { data, error } = await sb
+      .from("blog_posts")
+      .update({ likes: (current.likes || 0) + 1 })
+      .eq("slug", slug)
+      .select("likes")
+      .single();
+    if (error) throw new Error(error.message);
+    return { likes: data?.likes ?? 0 };
   });
 
 export const updateLeadStatus = createServerFn({ method: "POST" })
   .inputValidator((payload: { id: string; status: string }) => payload)
   .handler(async ({ data: { id, status } }) => {
     await requireAdmin();
-    const db = getDb();
-    await db.update(leads).set({ status }).where(eq(leads.id, id)).run();
+    const sb = getSupabaseAdmin();
+    const { error } = await sb
+      .from("leads")
+      .update({ status })
+      .eq("id", id);
+    if (error) throw new Error(error.message);
     return { success: true };
   });
 
 export const updateLoanStatus = createServerFn({ method: "POST" })
-  .inputValidator((payload: { id: string; status: string; reason?: string; adminId?: string }) => payload)
+  .inputValidator(
+    (payload: {
+      id: string;
+      status: string;
+      reason?: string;
+      adminId?: string;
+    }) => payload
+  )
   .handler(async ({ data: { id, status, reason, adminId } }) => {
     await requireAdmin();
-    const db = getDb();
+    const sb = getSupabaseAdmin();
     const now = nowIso();
 
-    // Fetch current row to append history
-    const current = await db.select().from(loanApplications).where(eq(loanApplications.id, id)).get();
-    if (!current) return { success: false, error: "Not found" };
+    const { data: current, error: fetchErr } = await sb
+      .from("loan_applications")
+      .select("status_history")
+      .eq("id", id)
+      .single();
+    if (fetchErr || !current) return { success: false, error: "Not found" };
 
     let history: any[] = [];
-    try { history = JSON.parse(current.statusHistory ?? "[]"); } catch { history = []; }
-    history.push({ status, at: now, by: adminId ?? "admin", ...(reason ? { reason } : {}) });
+    try {
+      history = JSON.parse(current.status_history ?? "[]");
+    } catch {
+      history = [];
+    }
+    history.push({
+      status,
+      at: now,
+      by: adminId ?? "admin",
+      ...(reason ? { reason } : {}),
+    });
 
     const updates: Record<string, any> = {
       status,
-      updatedAt: now,
-      reviewedAt: now,
-      statusHistory: JSON.stringify(history),
+      updated_at: now,
+      reviewed_at: now,
+      status_history: JSON.stringify(history),
     };
 
     if (status === "verified") {
-      updates.verifiedAt = now;
-      updates.verifiedBy = adminId ?? "admin";
+      updates.verified_at = now;
+      updates.verified_by = adminId ?? "admin";
     }
     if (reason) {
-      updates.rejectionReason = reason;
+      updates.rejection_reason = reason;
     }
 
-    await db.update(loanApplications).set(updates).where(eq(loanApplications.id, id)).run();
+    const { error } = await sb
+      .from("loan_applications")
+      .update(updates)
+      .eq("id", id);
+    if (error) throw new Error(error.message);
     return { success: true };
   });
 
 export const verifyLoanIdentity = createServerFn({ method: "POST" })
-  .inputValidator((payload: { id: string; verified: boolean; adminId?: string }) => payload)
+  .inputValidator(
+    (payload: { id: string; verified: boolean; adminId?: string }) => payload
+  )
   .handler(async ({ data: { id, verified, adminId } }) => {
     await requireAdmin();
-    const db = getDb();
+    const sb = getSupabaseAdmin();
     const now = nowIso();
 
-    const current = await db.select().from(loanApplications).where(eq(loanApplications.id, id)).get();
-    if (!current) return { success: false, error: "Not found" };
+    const { data: current, error: fetchErr } = await sb
+      .from("loan_applications")
+      .select("status_history")
+      .eq("id", id)
+      .single();
+    if (fetchErr || !current) return { success: false, error: "Not found" };
 
     let history: any[] = [];
-    try { history = JSON.parse(current.statusHistory ?? "[]"); } catch { history = []; }
-    history.push({ event: "identity_verified", verified, at: now, by: adminId ?? "admin" });
+    try {
+      history = JSON.parse(current.status_history ?? "[]");
+    } catch {
+      history = [];
+    }
+    history.push({
+      event: "identity_verified",
+      verified,
+      at: now,
+      by: adminId ?? "admin",
+    });
 
-    await db.update(loanApplications).set({
-      identityVerified: verified,
-      updatedAt: now,
-      statusHistory: JSON.stringify(history),
-    }).where(eq(loanApplications.id, id)).run();
-
+    const { error } = await sb
+      .from("loan_applications")
+      .update({
+        identity_verified: verified,
+        updated_at: now,
+        status_history: JSON.stringify(history),
+      })
+      .eq("id", id);
+    if (error) throw new Error(error.message);
     return { success: true };
   });
 
@@ -398,7 +619,11 @@ export const updateTestimonialStatus = createServerFn({ method: "POST" })
   .inputValidator((payload: { id: string; status: string }) => payload)
   .handler(async ({ data: { id, status } }) => {
     await requireAdmin();
-    const db = getDb();
-    await db.update(testimonialSubmissions).set({ status }).where(eq(testimonialSubmissions.id, id)).run();
+    const sb = getSupabaseAdmin();
+    const { error } = await sb
+      .from("testimonial_submissions")
+      .update({ status })
+      .eq("id", id);
+    if (error) throw new Error(error.message);
     return { success: true };
   });

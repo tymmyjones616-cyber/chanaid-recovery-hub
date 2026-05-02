@@ -3,9 +3,9 @@ import { useEffect, useState } from "react";
 import { Menu, X, ChevronDown, MessageCircle, Send } from "lucide-react";
 import { Logo } from "@/components/site/Logo";
 import { Button } from "@/components/ui/button";
-
-const WHATSAPP_LINK = "https://wa.me/19403779359";
-const TELEGRAM_LINK = "https://t.me/+M5J9C5mngShjODcx";
+import { useAuth } from "@/components/layout/AuthContext";
+import { AuthModal } from "@/components/layout/AuthModal";
+import { User, LogOut, LayoutDashboard } from "lucide-react";
 
 const services = [
   { slug: "crypto-recovery", name: "Cryptocurrency Recovery" },
@@ -17,8 +17,10 @@ const services = [
 ];
 
 export function Header() {
+  const { user, signOut, isAdmin } = useAuth();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -26,6 +28,14 @@ export function Header() {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  const handleAction = (to: string) => {
+    if (!user) {
+      setIsAuthModalOpen(true);
+      return;
+    }
+    window.location.href = to;
+  };
 
   return (
     <header
@@ -38,6 +48,7 @@ export function Header() {
 
         <nav className="hidden lg:flex items-center gap-7 text-sm font-medium">
           <Link to="/" className="hover:text-primary transition" activeProps={{ className: "text-primary" }} activeOptions={{ exact: true }}>Home</Link>
+          
           <div className="relative group">
             <button className="flex items-center gap-1 hover:text-primary transition">
               Recovery Services <ChevronDown className="w-4 h-4" />
@@ -57,30 +68,48 @@ export function Header() {
               </div>
             </div>
           </div>
+
           <Link to="/testimonials" className="hover:text-primary transition" activeProps={{ className: "text-primary" }}>Testimonials</Link>
           <Link to="/blog" className="hover:text-primary transition" activeProps={{ className: "text-primary" }}>Blog</Link>
           <Link to="/about" className="hover:text-primary transition" activeProps={{ className: "text-primary" }}>About</Link>
           <Link to="/success-calculator" className="hover:text-primary transition" activeProps={{ className: "text-primary" }}>Calculator</Link>
-          <Link to="/loans" className="bg-primary/10 text-primary px-4 py-1.5 rounded-full hover:bg-primary hover:text-white transition-all font-semibold">Get Loan</Link>
+          
+          <button 
+            onClick={() => handleAction("/loans")}
+            className="bg-primary/10 text-primary px-5 py-1.5 rounded-full hover:bg-primary hover:text-white transition-all font-bold tracking-tight"
+          >
+            Get Loan
+          </button>
+
+          {user && (
+            <Link to="/dashboard" className="flex items-center gap-2 hover:text-primary transition" activeProps={{ className: "text-primary" }}>
+              <LayoutDashboard className="w-4 h-4" /> Dashboard
+            </Link>
+          )}
         </nav>
 
-        <div className="hidden lg:flex items-center gap-3">
-          <a
-            href={TELEGRAM_LINK}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center justify-center bg-[#0088cc] text-white font-semibold px-4 py-2.5 rounded-full hover:bg-[#0077b5] transition-all gap-2"
-          >
-            <Send className="w-4 h-4" /> Telegram
-          </a>
-          <a
-            href={WHATSAPP_LINK}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center justify-center bg-[#25D366] text-white font-semibold px-5 py-2.5 rounded-full shadow-soft hover:shadow-elegant transition-all gap-2"
-          >
-            <MessageCircle className="w-4 h-4" /> WhatsApp
-          </a>
+        <div className="hidden lg:flex items-center gap-4">
+          {user ? (
+            <div className="flex items-center gap-4">
+              {isAdmin && (
+                <Link to="/admin" className="text-xs font-black uppercase tracking-[0.15em] text-slate-400 hover:text-primary transition-all">Dashboard ADMIN</Link>
+              )}
+              <div className="h-6 w-px bg-slate-200"></div>
+              <button 
+                onClick={() => signOut()}
+                className="flex items-center gap-2 text-slate-500 hover:text-red-500 transition-all font-bold text-xs uppercase tracking-widest"
+              >
+                <LogOut className="w-4 h-4" /> Sign Out
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setIsAuthModalOpen(true)}
+              className="inline-flex items-center justify-center bg-slate-900 text-white font-black px-8 py-2.5 rounded-full hover:bg-slate-800 transition-all gap-2 shadow-lg shadow-slate-900/10"
+            >
+              <User className="w-4 h-4" /> Sign In
+            </button>
+          )}
         </div>
 
         <button
@@ -91,6 +120,8 @@ export function Header() {
           {open ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
         </button>
       </div>
+
+      <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
 
       {open && (
         <div className="lg:hidden border-t border-border bg-white">
@@ -110,13 +141,7 @@ export function Header() {
             <Link to="/blog" onClick={() => setOpen(false)} className="block py-2">Blog</Link>
             <Link to="/about" onClick={() => setOpen(false)} className="block py-2">About</Link>
             <Link to="/success-calculator" onClick={() => setOpen(false)} className="block py-2">Calculator</Link>
-            <Link to="/loans" onClick={() => setOpen(false)} className="block py-2 font-bold text-primary">Get Loan</Link>
-            <a href={TELEGRAM_LINK} target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)} className="block mt-3 text-center bg-[#0088cc] text-white font-semibold px-5 py-2.5 rounded-full">
-              Join Telegram
-            </a>
-            <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)} className="block mt-2 text-center bg-[#25D366] text-white font-semibold px-5 py-2.5 rounded-full">
-              Chat on WhatsApp
-            </a>
+            <button onClick={() => { setOpen(false); handleAction("/loans"); }} className="block w-full text-left py-2 font-bold text-primary">Get Loan</button>
           </div>
         </div>
       )}
