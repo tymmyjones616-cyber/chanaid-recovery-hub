@@ -54,7 +54,7 @@ function UserDashboard() {
 
   async function loadLoans() {
     try {
-      const data = await fetchUserLoans({ data: user!.id });
+      const data = await fetchUserLoans(user!.id);
       setLoans(data);
     } catch (error) {
       toast.error("Failed to load your applications");

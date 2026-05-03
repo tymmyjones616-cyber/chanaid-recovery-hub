@@ -47,26 +47,26 @@ function getEnv(key: string): string {
 export function getSupabaseAdmin(): SupabaseClient {
   if (_adminClient) return _adminClient;
 
+  console.log("[Supabase] Initializing Admin Client...");
   const url = getEnv("SUPABASE_URL");
   const key = getEnv("SUPABASE_SERVICE_ROLE_KEY");
 
-  console.log("Supabase Admin Init attempt:", { 
-    url: url ? "FOUND" : "MISSING", 
-    key: key ? "FOUND" : "MISSING",
-    globalKeys: Object.keys(globalThis).filter(k => k.includes("SUPABASE"))
-  });
-
   if (!url || !key) {
-    throw new Error(
-      "Supabase admin client: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY not set. " +
-      `url=${url ? "✓" : "✗"}, key=${key ? "✓" : "✗"}`
-    );
+    const msg = `Supabase admin client: URL or SERVICE_ROLE_KEY missing. url=${!!url}, key=${!!key}`;
+    console.error(`[Supabase] ${msg}`);
+    throw new Error(msg);
   }
 
-  _adminClient = createClient(url, key, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-  return _adminClient;
+  try {
+    _adminClient = createClient(url, key, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+    console.log("[Supabase] Admin Client initialized successfully.");
+    return _adminClient;
+  } catch (err: any) {
+    console.error("[Supabase] Failed to create Admin Client:", err);
+    throw new Error(`Supabase client creation failed: ${err?.message || "Unknown error"}`);
+  }
 }
 
 /**

@@ -84,8 +84,8 @@ export const Route = createFileRoute("/")({
   loader: async () => {
     const [servicesData, testimonialsData, faqsData] = await Promise.all([
       fetchServices().catch(() => []),
-      fetchTestimonials({ data: {} }).catch(() => []),
-      fetchFaqs({ data: undefined }).catch(() => []),
+      fetchTestimonials({ featuredOnly: true }).catch(() => []),
+      fetchFaqs().catch(() => []),
     ]);
 
     // De-duplicate services by slug

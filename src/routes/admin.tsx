@@ -252,7 +252,10 @@ function AdminPage() {
             </button>
             <div>
               <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Control Panel</div>
-              <h1 className="font-black text-slate-900 tracking-tight italic text-xl">{NAV.find(n => n.id === tab)?.label}</h1>
+              <h1 className="font-black text-slate-900 tracking-tight italic text-xl">
+                {NAV.find(n => n.id === tab)?.label}
+                <span className="ml-2 text-[8px] font-mono text-slate-300 not-italic uppercase tracking-widest">v1.2.0-secure</span>
+              </h1>
             </div>
           </div>
           

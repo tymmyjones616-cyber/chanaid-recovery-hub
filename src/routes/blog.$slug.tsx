@@ -26,7 +26,7 @@ export const Route = createFileRoute("/blog/$slug")({
       ]
     };
   },
-  loader: async ({ params }) => await fetchBlogPost({ data: params.slug }).catch(() => null),
+  loader: async ({ params }) => await fetchBlogPost(params.slug).catch(() => null),
   component: BlogPost,
   errorComponent: ({ error }) => (
     <SiteShell>
@@ -87,7 +87,7 @@ function BlogPost() {
     if (isLiking) return;
     setIsLiking(true);
     try {
-      const res = await likeBlogPost({ data: post.slug });
+      const res = await likeBlogPost(post.slug);
       setLikes(res.likes);
       toast.success("Thanks for the support!");
     } catch {

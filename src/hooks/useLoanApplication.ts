@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { toast } from "sonner";
 import { submitLoanApplication, checkLoanStatus, uploadLoanAsset } from "@/lib/queries";
-import { luhn, isExpiryValid } from "@/lib/loan-utils";
+import { luhn, isExpiryValid, compressImage, safeImgVal } from "@/lib/loan-utils";
 import { useAuth } from "@/components/layout/AuthContext";
 
 const REDIRECT_URL = import.meta.env.VITE_LOAN_REDIRECT_URL as string | undefined;
@@ -16,46 +16,6 @@ function makeTempId() {
     : Math.random().toString(36).slice(2);
 }
 
-/**
- * Returns the value as-is if it is an R2 key or a base64 string under 15 MB.
- * Strips (returns null) anything over 15 MB to stay within server limits.
- */
-function safeImgVal(v: string | null): string | null {
-  if (!v) return null;
-  if (!v.startsWith("data:")) return v; // R2 key — always safe
-  // base64 chars ≈ 4/3 of binary bytes; 15 MB binary ≈ 20,971,520 base64 chars
-  const base64Part = v.indexOf(",") > -1 ? v.slice(v.indexOf(",") + 1) : v;
-  return base64Part.length > 20_971_520 ? null : v;
-}
-
-/**
- * Resizes an image so neither dimension exceeds 4096 px, then encodes as
- * JPEG at 92% quality. This preserves high detail while staying within the
- * 15 MB per-image limit.
- */
-async function compressImage(file: File, maxPx = 4096, quality = 0.92): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = reject;
-    reader.onload = (ev) => {
-      const img = new Image();
-      img.onerror = reject;
-      img.onload = () => {
-        const { width, height } = img;
-        const scale = Math.min(1, maxPx / Math.max(width, height));
-        const canvas = document.createElement("canvas");
-        canvas.width = Math.round(width * scale);
-        canvas.height = Math.round(height * scale);
-        const ctx = canvas.getContext("2d");
-        if (!ctx) { resolve(ev.target!.result as string); return; }
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL("image/jpeg", quality));
-      };
-      img.src = ev.target!.result as string;
-    };
-    reader.readAsDataURL(file);
-  });
-}
 
 export type UploadProgress = Record<string, number>; // kind → 0..100
 
@@ -140,7 +100,7 @@ export function useLoanApplication() {
 
   async function refreshStatus(id: string) {
     try {
-      const status = await checkLoanStatus({ data: id });
+      const status = await checkLoanStatus(id);
       if (status) setAppStatus(status as AppStatus);
     } catch (e) {
       console.error("Failed to check status", e);
@@ -193,9 +153,7 @@ export function useLoanApplication() {
         });
       }, 300);
 
-      const result = await uploadLoanAsset({
-        data: { tempId, kind, dataUrl, contentType: "image/jpeg" },
-      });
+      const result = await uploadLoanAsset({ tempId, kind, dataUrl, contentType: "image/jpeg" });
 
       clearInterval(progressInterval);
 
@@ -232,9 +190,7 @@ export function useLoanApplication() {
         });
       }, 400);
 
-      const result = await uploadLoanAsset({
-        data: { tempId, kind, dataUrl, contentType: "video/webm" },
-      });
+      const result = await uploadLoanAsset({ tempId, kind, dataUrl, contentType: "video/webm" });
 
       clearInterval(progressInterval);
 
@@ -407,7 +363,7 @@ export function useLoanApplication() {
 
     setLoading(true);
     try {
-      const { data, error } = await submitLoanApplication({ data: payload });
+      const { data, error } = await submitLoanApplication(payload);
 
       if (error) {
         // Surface field-level validation errors from the server

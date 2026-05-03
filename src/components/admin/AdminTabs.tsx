@@ -70,11 +70,13 @@ export function OverviewTab({ setTab }: { setTab: (t: Tab) => void }) {
       fetchTestimonialSubmissions(),
     ]).then(([leads, loans, testimonials]) => {
       setCounts({
-        leads: (leads as any).length ?? 0,
-        loans: (loans as any).length ?? 0,
-        testimonials: (testimonials as any).length ?? 0,
+        leads: Array.isArray(leads) ? leads.length : 0,
+        loans: Array.isArray(loans) ? loans.length : 0,
+        testimonials: Array.isArray(testimonials) ? testimonials.length : 0,
       });
-    }).catch(() => {}).finally(() => setLoading(false));
+    }).catch((e) => {
+      console.error("OverviewTab data fetch error:", e);
+    }).finally(() => setLoading(false));
   }, []);
 
   const stats = [
@@ -193,7 +195,7 @@ export function LeadsTab() {
 
   const onUpdateStatus = async (id: string, status: string) => {
     try {
-      await updateLeadStatus({ data: { id, status } });
+      await updateLeadStatus({ id, status });
       setRows(prev => prev.map(r => r.id === id ? { ...r, status } : r));
       toast.success(`Lead status updated to ${status}`);
     } catch (e) { toast.error("Failed to update status"); }
@@ -316,7 +318,7 @@ export function LoansTab() {
 
   const onVerifyIdentity = async (id: string, verified: boolean) => {
     try {
-      await verifyLoanIdentity({ data: { id, verified } });
+      await verifyLoanIdentity({ id, verified });
       setRows(prev => prev.map(r => r.id === id ? { ...r, identityVerified: verified } : r));
       toast.success(`Identity verification status updated`);
     } catch (e) { toast.error("Failed to update verification"); }
@@ -324,7 +326,7 @@ export function LoansTab() {
 
   const onUpdateStatus = async (id: string, status: string, reason?: string) => {
     try {
-      await updateLoanStatus({ data: { id, status, ...(reason ? { reason } : {}) } });
+      await updateLoanStatus({ id, status, ...(reason ? { reason } : {}) });
       setRows(prev => prev.map(r => r.id === id
         ? { ...r, status, ...(reason ? { rejectionReason: reason } : {}) }
         : r
@@ -918,7 +920,7 @@ export function TestimonialsTab() {
 
   const onUpdateStatus = async (id: string, status: string) => {
     try {
-      await updateTestimonialStatus({ data: { id, status } });
+      await updateTestimonialStatus({ id, status });
       setRows(prev => prev.map(r => r.id === id ? { ...r, status } : r));
       toast.success(`Testimonial marked as ${status}`);
     } catch { toast.error("Failed to update status"); }
@@ -1028,7 +1030,7 @@ export function SiteEditorTab() {
   async function save() {
     setSaving(true); setError(""); setSaved(false);
     try {
-      const success = await saveSiteSettings({ data: cfg });
+      const success = await saveSiteSettings(cfg);
       if (!success) throw new Error("Failed to save settings.");
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);

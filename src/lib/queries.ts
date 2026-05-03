@@ -207,14 +207,27 @@ export const fetchUserLoans = createServerFn()
     return camelizeRows(data ?? []);
   });
 
-export const fetchLoanApplications = createServerFn().handler(async () => {
-  await requireAdmin();
-  const sb = getSupabaseAdmin();
-  const { data } = await sb
-    .from("loan_applications")
-    .select("*")
-    .order("created_at", { ascending: false });
-  return camelizeRows(data ?? []);
+export const fetchLoanApplications = createServerFn({ method: "GET" }).handler(async () => {
+  try {
+    console.log("[ServerFn] fetchLoanApplications started");
+    await requireAdmin();
+    const sb = getSupabaseAdmin();
+    const { data, error } = await sb
+      .from("loan_applications")
+      .select("*")
+      .order("created_at", { ascending: false });
+    
+    if (error) {
+      console.error("[ServerFn] fetchLoanApplications DB error:", error);
+      throw error;
+    }
+    
+    console.log(`[ServerFn] fetchLoanApplications success: ${data?.length || 0} rows`);
+    return camelizeRows(data ?? []);
+  } catch (err: any) {
+    console.error("[ServerFn] fetchLoanApplications unhandled error:", err);
+    throw new Error(err?.message || "Failed to fetch loan applications");
+  }
 });
 
 export const checkLoanStatus = createServerFn()

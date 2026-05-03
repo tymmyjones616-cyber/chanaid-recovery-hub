@@ -160,7 +160,7 @@ function SubmitTestimonialForm() {
     if (!payload.consentToPublish) return toast.error("Please confirm we may publish your story.");
 
     setSubmitting(true);
-    const { error } = await submitTestimonial({ data: payload });
+    const { error } = await submitTestimonial(payload);
     setSubmitting(false);
 
     if (error) {

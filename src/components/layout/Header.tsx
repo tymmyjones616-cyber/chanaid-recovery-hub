@@ -91,9 +91,6 @@ export function Header() {
         <div className="hidden lg:flex items-center gap-4">
           {user ? (
             <div className="flex items-center gap-4">
-              {isAdmin && (
-                <Link to="/admin" className="text-xs font-black uppercase tracking-[0.15em] text-slate-400 hover:text-primary transition-all">Dashboard ADMIN</Link>
-              )}
               <div className="h-6 w-px bg-slate-200"></div>
               <button 
                 onClick={() => signOut()}

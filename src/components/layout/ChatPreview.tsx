@@ -1,6 +1,13 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Send, CheckCheck, Smile, Paperclip } from "lucide-react";
+import { X, Send, CheckCheck, Smile, Paperclip, Loader2 } from "lucide-react";
+
+interface Message {
+  id: string;
+  text: string;
+  sender: "user" | "bot";
+  timestamp: string;
+}
 
 interface ChatPreviewProps {
   type: "whatsapp" | "telegram";
@@ -19,22 +26,79 @@ export function ChatPreview({
   subtitle, 
   avatar, 
   agentName, 
-  message, 
+  message: initialMessage, 
   actionUrl, 
   onClose 
 }: ChatPreviewProps) {
+  const [input, setInput] = useState("");
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: "1",
+      text: initialMessage,
+      sender: "bot",
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    }
+  ]);
+  const [isTyping, setIsTyping] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
   const brandColor = type === "whatsapp" ? "#25D366" : "#229ED9";
-  
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages, isTyping]);
+
+  const handleSend = () => {
+    if (!input.trim()) return;
+
+    const userMsg: Message = {
+      id: Date.now().toString(),
+      text: input,
+      sender: "user",
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+
+    setMessages(prev => [...prev, userMsg]);
+    setInput("");
+
+    // Simulate bot response
+    setIsTyping(true);
+    setTimeout(() => {
+      setIsTyping(false);
+      
+      let responseText = "Thank you for your message! Our recovery specialists are currently reviewing your forensics. For immediate priority support, please click the 'Start Conversation' button below to connect with us directly.";
+      
+      const lower = input.toLowerCase();
+      if (lower.includes("hello") || lower.includes("hi")) {
+        responseText = "Hello! I'm the ChanAid automated assistant. How can I help you with your recovery today? Have you already submitted a case review?";
+      } else if (lower.includes("lost") || lower.includes("scam") || lower.includes("stolen")) {
+        responseText = "I'm very sorry to hear about your loss. Time is critical in blockchain forensics. Please ensure you've filled out our case review form so our investigators can start tracing the txid immediately.";
+      } else if (lower.includes("cost") || lower.includes("fee") || lower.includes("price")) {
+        responseText = "We offer a free initial consultation and forensic audit. Further costs depend on the complexity of the asset tracing required. You can also apply for a recovery loan on our 'Loans' page.";
+      }
+
+      const botResponse: Message = {
+        id: (Date.now() + 1).toString(),
+        text: responseText,
+        sender: "bot",
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      setMessages(prev => [...prev, botResponse]);
+    }, 1500);
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.9, y: 20, transformOrigin: "bottom right" }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.9, y: 20 }}
-      className="absolute bottom-20 right-0 w-[320px] sm:w-[360px] bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden z-[60]"
+      className="absolute bottom-20 right-0 w-[320px] sm:w-[380px] bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden z-[60] flex flex-col"
     >
       {/* Header */}
       <div 
-        className="px-5 py-4 flex items-center justify-between text-white"
+        className="px-5 py-4 flex items-center justify-between text-white shrink-0"
         style={{ backgroundColor: brandColor }}
       >
         <div className="flex items-center gap-3">
@@ -46,7 +110,7 @@ export function ChatPreview({
           </div>
           <div>
             <div className="font-bold text-sm leading-none">{title}</div>
-            <div className="text-[10px] opacity-90 mt-1 uppercase tracking-widest font-bold">{subtitle}</div>
+            <div className="text-[10px] opacity-90 mt-1 uppercase tracking-widest font-bold">{isTyping ? "Typing..." : subtitle}</div>
           </div>
         </div>
         <button 
@@ -58,58 +122,86 @@ export function ChatPreview({
       </div>
 
       {/* Chat Area */}
-      <div className="p-4 bg-[#f0f2f5] min-h-[180px] flex flex-col gap-4">
+      <div 
+        ref={scrollRef}
+        className="p-4 bg-[#f0f2f5] h-[300px] overflow-y-auto flex flex-col gap-4 scroll-smooth"
+      >
         <div className="self-center bg-white/60 backdrop-blur-sm px-3 py-1 rounded-full text-[9px] font-bold text-slate-400 uppercase tracking-widest">
           Today
         </div>
 
-        {/* Message Bubble */}
-        <div className="flex flex-col gap-1 max-w-[85%]">
-          <div className="bg-white p-3 rounded-2xl rounded-tl-none shadow-sm relative">
-            <div className="text-[10px] font-bold text-slate-400 mb-1">{agentName}</div>
-            <p className="text-sm text-slate-700 leading-relaxed">
-              {message}
-            </p>
-            <div className="flex justify-end mt-1 items-center gap-1">
-              <span className="text-[9px] text-slate-400">
-                {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </span>
-              <CheckCheck className="w-3 h-3 text-sky-400" />
+        {messages.map((msg) => (
+          <div 
+            key={msg.id} 
+            className={`flex flex-col gap-1 max-w-[85%] ${msg.sender === "user" ? "self-end" : "self-start"}`}
+          >
+            <div 
+              className={`p-3 rounded-2xl shadow-sm relative ${
+                msg.sender === "user" 
+                  ? "bg-[#dcf8c6] rounded-tr-none" 
+                  : "bg-white rounded-tl-none"
+              }`}
+            >
+              {msg.sender === "bot" && (
+                <div className="text-[10px] font-bold text-slate-400 mb-1">{agentName}</div>
+              )}
+              <p className="text-sm text-slate-700 leading-relaxed">
+                {msg.text}
+              </p>
+              <div className="flex justify-end mt-1 items-center gap-1">
+                <span className="text-[9px] text-slate-400">{msg.timestamp}</span>
+                {msg.sender === "user" && <CheckCheck className="w-3 h-3 text-sky-400" />}
+              </div>
+              
+              {/* Bubble Tail */}
+              {msg.sender === "bot" ? (
+                <div className="absolute -left-2 top-0 w-3 h-3 bg-white" style={{ clipPath: "polygon(100% 0, 0 0, 100% 100%)" }} />
+              ) : (
+                <div className="absolute -right-2 top-0 w-3 h-3 bg-[#dcf8c6]" style={{ clipPath: "polygon(0 0, 100% 0, 0 100%)" }} />
+              )}
             </div>
-            
-            {/* Bubble Tail */}
-            <div className="absolute -left-2 top-0 w-3 h-3 bg-white" style={{ clipPath: "polygon(100% 0, 0 0, 100% 100%)" }} />
           </div>
-        </div>
+        ))}
+
+        {isTyping && (
+          <div className="self-start bg-white px-4 py-2 rounded-2xl rounded-tl-none shadow-sm flex items-center gap-1">
+            <span className="w-1.5 h-1.5 bg-slate-300 rounded-full animate-bounce [animation-delay:-0.3s]" />
+            <span className="w-1.5 h-1.5 bg-slate-300 rounded-full animate-bounce [animation-delay:-0.15s]" />
+            <span className="w-1.5 h-1.5 bg-slate-300 rounded-full animate-bounce" />
+          </div>
+        )}
       </div>
 
-      {/* Input Area (Fake) */}
-      <div className="p-3 bg-white border-t border-slate-100 flex items-center gap-3">
+      {/* Input Area */}
+      <div className="p-3 bg-white border-t border-slate-100 flex items-center gap-3 shrink-0">
         <div className="flex gap-2 text-slate-400">
           <Smile className="w-5 h-5 cursor-pointer hover:text-slate-600 transition-colors" />
-          <Paperclip className="w-5 h-5 cursor-pointer hover:text-slate-600 transition-colors" />
         </div>
-        <div className="flex-1 h-9 bg-slate-50 border border-slate-100 rounded-full px-4 flex items-center text-slate-400 text-xs">
-          Type your message...
-        </div>
-        <a 
-          href={actionUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="h-9 w-9 rounded-full flex items-center justify-center text-white transition-transform hover:scale-110 active:scale-95 shadow-lg"
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleSend()}
+          placeholder="Type your message..."
+          className="flex-1 h-9 bg-slate-50 border border-slate-100 rounded-full px-4 text-slate-700 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+        />
+        <button 
+          onClick={handleSend}
+          disabled={!input.trim() || isTyping}
+          className="h-9 w-9 rounded-full flex items-center justify-center text-white transition-all hover:scale-110 active:scale-95 shadow-lg disabled:opacity-50 disabled:scale-100"
           style={{ backgroundColor: brandColor }}
         >
           <Send className="w-4 h-4 ml-0.5" />
-        </a>
+        </button>
       </div>
 
       {/* Call to Action */}
-      <div className="px-5 py-3 bg-slate-50 border-t border-slate-100">
+      <div className="px-5 py-3 bg-slate-50 border-t border-slate-100 shrink-0">
         <a 
           href={actionUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center justify-center w-full py-2.5 rounded-xl font-bold text-sm text-white transition-all hover:brightness-110 shadow-md"
+          className="flex items-center justify-center w-full py-2.5 rounded-xl font-bold text-sm text-white transition-all hover:brightness-110 shadow-md active:scale-[0.98]"
           style={{ backgroundColor: brandColor }}
         >
           Start Conversation

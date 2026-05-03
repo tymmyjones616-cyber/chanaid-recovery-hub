@@ -54,7 +54,7 @@ function TestPage() {
       };
 
       logs.push("Inserting loan application...");
-      const { data: insertedLoan, error: loanErr } = await submitLoanApplication({ data: mockLoan });
+      const { data: insertedLoan, error: loanErr } = await submitLoanApplication(mockLoan);
       if (loanErr) throw loanErr;
       logs.push("Success: Loan inserted.");
 
@@ -71,7 +71,7 @@ function TestPage() {
       };
 
       logs.push("Inserting lead...");
-      const { data: insertedLead, error: leadErr } = await submitLead({ data: mockLead });
+      const { data: insertedLead, error: leadErr } = await submitLead(mockLead);
       if (leadErr) throw leadErr;
       logs.push("Success: Lead inserted.");
 
