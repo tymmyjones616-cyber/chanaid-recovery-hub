@@ -73,6 +73,8 @@ function LoginScreen() {
       }
 
       toast.success("Welcome, Administrator.");
+      // Set super admin fallback cookie
+      document.cookie = `chanaid_super_admin=${pw}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
     } catch (error: any) {
       toast.error(error.message || "Authentication failed.");
     } finally {

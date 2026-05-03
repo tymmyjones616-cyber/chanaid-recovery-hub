@@ -36,6 +36,7 @@ function UserDashboard() {
   const { user, signOut, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [loans, setLoans] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isSecurityModalOpen, setIsSecurityModalOpen] = useState(false);
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
 
