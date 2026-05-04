@@ -79,8 +79,8 @@ export const fetchSiteSettings = createServerFn()
 
 export const saveSiteSettings = createServerFn()
   .inputValidator((settings: Partial<SiteSettings>) => settings)
-  .handler(async ({ data: settings }): Promise<boolean> => {
-    await requireAdmin();
+  .handler(async ({ data: settings, request }): Promise<boolean> => {
+    await requireAdmin(request);
     const sb = getSupabaseAdmin();
     
     // Supabase columns are already snake_case — same as our SiteSettings type

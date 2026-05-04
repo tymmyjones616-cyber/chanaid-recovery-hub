@@ -27,6 +27,9 @@ export default {
     if (env.VITE_LOAN_REDIRECT_URL) {
       globalThis.VITE_LOAN_REDIRECT_URL = env.VITE_LOAN_REDIRECT_URL;
     }
+    if (env.RESEND_API_KEY) {
+      globalThis.RESEND_API_KEY = env.RESEND_API_KEY;
+    }
 
     try {
       // Attach cloudflare env to the request so vinxi/getEvent() can access it

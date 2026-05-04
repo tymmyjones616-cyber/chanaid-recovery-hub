@@ -54,7 +54,6 @@ export function FloatingButtons() {
             aria-label="Chat on Telegram"
             className="relative h-14 w-14 flex items-center justify-center group"
           >
-            <span className="absolute inset-0 rounded-full bg-[#229ED9] animate-ping opacity-20 pointer-events-none" />
             <span className={`relative h-14 w-14 rounded-full bg-[#229ED9] text-white flex items-center justify-center shadow-elegant transition-all duration-300 ${activeChat === "telegram" ? "scale-110 rotate-12" : "group-hover:scale-110"}`}>
               <Send className="w-6 h-6" />
             </span>
@@ -66,7 +65,6 @@ export function FloatingButtons() {
             aria-label="Chat on WhatsApp"
             className="relative h-14 w-14 flex items-center justify-center group"
           >
-            <span className="absolute inset-0 rounded-full bg-[#25D366] animate-ping opacity-20 pointer-events-none" />
             <span className={`relative h-14 w-14 rounded-full bg-[#25D366] text-white flex items-center justify-center shadow-elegant transition-all duration-300 ${activeChat === "whatsapp" ? "scale-110 -rotate-12" : "group-hover:scale-110"}`}>
               <MessageCircle className="w-6 h-6" />
             </span>

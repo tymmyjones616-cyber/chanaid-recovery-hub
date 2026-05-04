@@ -4,7 +4,7 @@ import { SiteShell } from "@/components/layout/SiteShell";
 import { LeadForm } from "@/components/site/LeadForm";
 import { fetchServices, fetchTestimonials, fetchFaqs } from "@/lib/queries";
 import { SERVICES_DATA } from "@/lib/services-data";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight, Sparkles, Calculator } from "lucide-react";
 import { Reveal } from "@/components/effects/Reveal";
 import { TiltCard } from "@/components/effects/TiltCard";
 import { ServiceIcon } from "@/components/site/ServiceIcon";
@@ -168,12 +168,18 @@ function Index() {
               >
                 Free consultation <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition" />
               </button>
-              <button 
+              <button
                 onClick={() => handleAction("/loans")}
                 className="group inline-flex items-center gap-2 bg-white text-primary font-semibold px-8 h-12 rounded-full border-2 border-primary hover:bg-primary hover:text-white transition-all shadow-soft"
               >
                 Apply for a loan <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition" />
               </button>
+              <Link
+                to="/success-calculator"
+                className="group inline-flex items-center gap-2 bg-white/80 backdrop-blur text-slate-700 font-semibold px-6 h-12 rounded-full border border-slate-200 hover:border-primary hover:text-primary transition-all shadow-soft"
+              >
+                <Calculator className="w-4 h-4" /> Recovery Calculator
+              </Link>
             </div>
 
             <Reveal direction="up" delay={200}>
@@ -281,7 +287,7 @@ function Index() {
           </div>
         </Reveal>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 perspective-1000">
-          {services.map((s: any, idx: number) => (
+          {services.slice(0, 4).map((s: any, idx: number) => (
             <Reveal key={s.id} direction="up" delay={idx * 70}>
               <TiltCard className="rounded-2xl h-full" intensity={9}>
                 <Link

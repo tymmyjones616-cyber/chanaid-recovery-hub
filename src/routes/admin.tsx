@@ -52,6 +52,24 @@ function LoginScreen() {
   const [pw, setPw] = useState("");
   const [busy, setBusy] = useState(false);
 
+  async function handleAdminForgotPassword() {
+    if (!email) {
+      toast.error("Enter your admin email above first");
+      return;
+    }
+    const supabase = getSupabaseBrowser();
+    try {
+      const redirectTo = typeof window !== "undefined"
+        ? `${window.location.origin}/auth/reset`
+        : undefined;
+      const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+      if (error) throw error;
+      toast.success("Password reset email sent. Check your inbox.");
+    } catch (error: any) {
+      toast.error(error.message || "Could not send reset email");
+    }
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
@@ -129,9 +147,19 @@ function LoginScreen() {
               </div>
             </div>
 
-            <button 
-              type="submit" 
-              disabled={busy} 
+            <div className="flex justify-end -mt-2">
+              <button
+                type="button"
+                onClick={handleAdminForgotPassword}
+                className="text-[10px] font-bold text-primary hover:underline"
+              >
+                Forgot Password?
+              </button>
+            </div>
+
+            <button
+              type="submit"
+              disabled={busy}
               className="w-full h-14 bg-primary text-white font-black rounded-2xl hover:bg-primary/90 transition-all shadow-xl shadow-primary/20 disabled:opacity-60 flex items-center justify-center gap-3 active:scale-[0.98]"
             >
               {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : <ChevronRight className="w-5 h-5" />}

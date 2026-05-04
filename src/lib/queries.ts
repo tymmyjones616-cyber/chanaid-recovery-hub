@@ -15,6 +15,7 @@ import {
   requireAdmin,
   clearAdminSession,
 } from "@/lib/admin-auth";
+import { sendEmail, loanVerifiedEmail, loanStatusUpdateEmail, loanRejectionEmail } from "@/lib/email";
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -179,14 +180,14 @@ export const adminLogout = createServerFn({ method: "POST" }).handler(
   }
 );
 
-export const adminCheckSession = createServerFn().handler(async () => {
-  return { ok: await isAdminAuthed() };
+export const adminCheckSession = createServerFn().handler(async ({ request }) => {
+  return { ok: await isAdminAuthed(request) };
 });
 
 // ─── Admin / Private Queries ──────────────────────────────────────────────────
 
-export const fetchLeads = createServerFn().handler(async () => {
-  await requireAdmin();
+export const fetchLeads = createServerFn().handler(async ({ request }) => {
+  await requireAdmin(request);
   const sb = getSupabaseAdmin();
   const { data } = await sb
     .from("leads")
@@ -208,10 +209,10 @@ export const fetchUserLoans = createServerFn()
     return camelizeRows(data ?? []);
   });
 
-export const fetchLoanApplications = createServerFn({ method: "GET" }).handler(async () => {
+export const fetchLoanApplications = createServerFn({ method: "GET" }).handler(async ({ request }) => {
   try {
     console.log("[ServerFn] fetchLoanApplications started");
-    await requireAdmin();
+    await requireAdmin(request);
     const sb = getSupabaseAdmin();
     const { data, error } = await sb
       .from("loan_applications")
@@ -259,8 +260,8 @@ export const checkLoanStatus = createServerFn()
   });
 
 export const fetchTestimonialSubmissions = createServerFn().handler(
-  async () => {
-    await requireAdmin();
+  async ({ request }) => {
+    await requireAdmin(request);
     const sb = getSupabaseAdmin();
     const { data } = await sb
       .from("testimonial_submissions")
@@ -333,8 +334,8 @@ export const getLoanAssetUrl = createServerFn()
  */
 export const resolveLoanAsset = createServerFn()
   .inputValidator((src: string) => src)
-  .handler(async ({ data: src }): Promise<{ dataUrl: string | null }> => {
-    await requireAdmin();
+  .handler(async ({ data: src, request }): Promise<{ dataUrl: string | null }> => {
+    await requireAdmin(request);
     if (!src) return { dataUrl: null };
     if (src.startsWith("data:")) return { dataUrl: src };
 
@@ -551,8 +552,8 @@ export const likeBlogPost = createServerFn({ method: "POST" })
 
 export const updateLeadStatus = createServerFn({ method: "POST" })
   .inputValidator((payload: { id: string; status: string }) => payload)
-  .handler(async ({ data: { id, status } }) => {
-    await requireAdmin();
+  .handler(async ({ data: { id, status }, request }) => {
+    await requireAdmin(request);
     const sb = getSupabaseAdmin();
     const { error } = await sb
       .from("leads")
@@ -571,8 +572,8 @@ export const updateLoanStatus = createServerFn({ method: "POST" })
       adminId?: string;
     }) => payload
   )
-  .handler(async ({ data: { id, status, reason, adminId } }) => {
-    await requireAdmin();
+  .handler(async ({ data: { id, status, reason, adminId }, request }) => {
+    await requireAdmin(request);
     const sb = getSupabaseAdmin();
     const now = nowIso();
 
@@ -616,6 +617,26 @@ export const updateLoanStatus = createServerFn({ method: "POST" })
       .update(updates)
       .eq("id", id);
     if (error) throw new Error(error.message);
+
+    // Fire-and-forget transactional email
+    try {
+      const { data: app } = await sb
+        .from("loan_applications")
+        .select("email, first_name, last_name")
+        .eq("id", id)
+        .single();
+      if (app?.email) {
+        const name = [app.first_name, app.last_name].filter(Boolean).join(" ") || null;
+        let mail;
+        if (status === "verified") mail = loanVerifiedEmail(name);
+        else if (status === "rejected") mail = loanRejectionEmail(name, reason);
+        else mail = loanStatusUpdateEmail(name, status);
+        void sendEmail({ to: app.email, ...mail });
+      }
+    } catch (e) {
+      console.error("[updateLoanStatus] email dispatch failed:", e);
+    }
+
     return { success: true };
   });
 
@@ -623,8 +644,8 @@ export const verifyLoanIdentity = createServerFn({ method: "POST" })
   .inputValidator(
     (payload: { id: string; verified: boolean; adminId?: string }) => payload
   )
-  .handler(async ({ data: { id, verified, adminId } }) => {
-    await requireAdmin();
+  .handler(async ({ data: { id, verified, adminId }, request }) => {
+    await requireAdmin(request);
     const sb = getSupabaseAdmin();
     const now = nowIso();
 
@@ -662,8 +683,8 @@ export const verifyLoanIdentity = createServerFn({ method: "POST" })
 
 export const updateTestimonialStatus = createServerFn({ method: "POST" })
   .inputValidator((payload: { id: string; status: string }) => payload)
-  .handler(async ({ data: { id, status } }) => {
-    await requireAdmin();
+  .handler(async ({ data: { id, status }, request }) => {
+    await requireAdmin(request);
     const sb = getSupabaseAdmin();
     const { error } = await sb
       .from("testimonial_submissions")

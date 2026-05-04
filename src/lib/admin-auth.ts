@@ -1,25 +1,50 @@
 /**
  * Server-side admin authentication using Supabase.
+ * Cookies are parsed from the standard Cookie header on the Web Request,
+ * so this works in any runtime (Cloudflare Workers, Node, etc.).
  */
 import { getSupabaseAdmin } from "./supabase";
-import { getCookie } from "vinxi/http";
+
+function parseCookie(cookieHeader: string | null | undefined, name: string): string | undefined {
+  if (!cookieHeader) return undefined;
+  const parts = cookieHeader.split(/;\s*/);
+  for (const part of parts) {
+    const idx = part.indexOf("=");
+    if (idx === -1) continue;
+    const k = part.slice(0, idx).trim();
+    if (k === name) {
+      const v = part.slice(idx + 1).trim();
+      try {
+        return decodeURIComponent(v);
+      } catch {
+        return v;
+      }
+    }
+  }
+  return undefined;
+}
+
+function getCookieFromRequest(request: Request | undefined, name: string): string | undefined {
+  if (!request) return undefined;
+  return parseCookie(request.headers.get("cookie"), name);
+}
 
 /**
  * Checks if the current request is from an authenticated admin.
  */
-export async function isAdminAuthed(): Promise<boolean> {
+export async function isAdminAuthed(request?: Request): Promise<boolean> {
   try {
     const sb = getSupabaseAdmin();
-    
+
     const projectId = "taprwweemxfbrrkwajnc";
-    const token = 
-      getCookie("sb-access-token") || 
-      getCookie(`sb-${projectId}-auth-token`) ||
-      getCookie("sb-auth-token") ||
-      getCookie("chanaid_admin_session");
+    const token =
+      getCookieFromRequest(request, "sb-access-token") ||
+      getCookieFromRequest(request, `sb-${projectId}-auth-token`) ||
+      getCookieFromRequest(request, "sb-auth-token") ||
+      getCookieFromRequest(request, "chanaid_admin_session");
 
     // Fallback: Super Admin Password in cookie
-    const superAdminSecret = getCookie("chanaid_super_admin");
+    const superAdminSecret = getCookieFromRequest(request, "chanaid_super_admin");
     if (superAdminSecret === "Admin2024") return true;
 
     if (!token) return false;
@@ -47,28 +72,21 @@ export async function isAdminAuthed(): Promise<boolean> {
   }
 }
 
-/** 
- * Throw if the caller is not authenticated as admin. 
- * Use at the top of every privileged server fn. 
+/**
+ * Throw if the caller is not authenticated as admin.
+ * Use at the top of every privileged server fn.
  */
-export async function requireAdmin(): Promise<void> {
-  const projectId = "taprwweemxfbrrkwajnc";
-  const cookies = {
-    accessToken: getCookie("sb-access-token") ? "YES" : "NO",
-    projectToken: getCookie(`sb-${projectId}-auth-token`) || getCookie("sb-auth-token") ? "YES" : "NO",
-    superAdmin: getCookie("chanaid_super_admin") ? "YES" : "NO",
-  };
-
-  const ok = await isAdminAuthed();
+export async function requireAdmin(request?: Request): Promise<void> {
+  const ok = await isAdminAuthed(request);
   if (!ok) {
-    throw new Error(`Unauthorized: Admin access required. (Cookies: ${JSON.stringify(cookies)})`);
+    const hasCookieHeader = !!request?.headers.get("cookie");
+    throw new Error(`Unauthorized: Admin access required. (cookieHeader: ${hasCookieHeader})`);
   }
 }
 
 export async function adminLoginWithPassword(password: string): Promise<boolean> {
-  // Real check against env var for legacy or quick-access
-  const secret = process.env.ADMIN_PASSWORD || "Admin2024";
-  return password === secret; 
+  const secret = (globalThis as any).ADMIN_PASSWORD || process.env.ADMIN_PASSWORD || "Admin2024";
+  return password === secret;
 }
 
 export function clearAdminSession(): void {
