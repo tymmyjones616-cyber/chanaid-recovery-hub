@@ -114,17 +114,21 @@ export function DField({ label, value, mono = false, icon, className = "", dark 
         <p className={`text-[9px] font-bold uppercase tracking-wider flex items-center gap-1 ${dark ? "text-slate-500" : "text-gray-400"}`}>
           {icon} {label}
         </p>
-        {value && (
-          <button 
+        {value !== null && value !== undefined && value !== "" && (
+          <button
             onClick={handleCopy}
-            className={`opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded ${dark ? "hover:bg-white/10" : "hover:bg-gray-100"}`}
+            className={`inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded transition ${dark ? "bg-white/10 hover:bg-white/20 text-slate-200" : "bg-purple-50 hover:bg-purple-100 text-purple-700"}`}
             title="Copy to clipboard"
           >
-            {copied ? <Check className={`w-3 h-3 ${dark ? "text-emerald-400" : "text-emerald-500"}`} /> : <Copy className={`w-3 h-3 ${dark ? "text-slate-500" : "text-gray-400"}`} />}
+            {copied ? <><Check className={`w-3 h-3 ${dark ? "text-emerald-400" : "text-emerald-600"}`} /> Copied</> : <><Copy className="w-3 h-3" /> Copy</>}
           </button>
         )}
       </div>
-      <p className={`text-sm font-semibold break-all leading-tight ${mono ? "font-mono text-[14px] tracking-tight" : ""} ${dark ? "text-slate-100" : "text-gray-900"} ${className}`}>
+      <p
+        onClick={handleCopy}
+        className={`text-sm font-semibold break-all leading-tight cursor-copy select-all ${mono ? "font-mono text-[14px] tracking-tight" : ""} ${dark ? "text-slate-100" : "text-gray-900"} ${className}`}
+        title="Click to copy"
+      >
         {value ?? "—"}
       </p>
       {copied && (

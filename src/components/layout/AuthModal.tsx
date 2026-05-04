@@ -2,9 +2,9 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "./AuthContext";
 import { getSupabaseBrowser } from "@/lib/supabase";
 import { toast } from "sonner";
-import { 
-  Loader2, Mail, Lock, User, ArrowRight, ShieldCheck, 
-  CheckCircle2, Sparkles, Fingerprint, Zap, Globe
+import {
+  Loader2, Mail, Lock, User, ArrowRight, ShieldCheck,
+  CheckCircle2, Sparkles, Fingerprint, Zap, Globe, KeyRound
 } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { motion, AnimatePresence } from "framer-motion";
@@ -17,11 +17,23 @@ interface AuthModalProps {
 
 export function AuthModal({ isOpen, onClose, defaultMode = "signin" }: AuthModalProps) {
   const [mode, setMode] = useState<"signin" | "signup">(defaultMode);
+  const [step, setStep] = useState<"credentials" | "otp">("credentials");
+  const [otpType, setOtpType] = useState<"signup" | "email">("email");
+  const [otpCode, setOtpCode] = useState("");
+  const [resending, setResending] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+
+  useEffect(() => {
+    if (!isOpen) {
+      setStep("credentials");
+      setOtpCode("");
+      setPassword("");
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -53,16 +65,21 @@ export function AuthModal({ isOpen, onClose, defaultMode = "signin" }: AuthModal
           },
         });
         if (error) throw error;
-        toast.success("Account created successfully! Please check your email for verification.");
-        setMode("signin");
+        toast.success("We sent a 6-digit code to your email. Enter it to finish signup.");
+        setOtpType("signup");
+        setStep("otp");
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { error: pwErr } = await supabase.auth.signInWithPassword({ email, password });
+        if (pwErr) throw pwErr;
+        await supabase.auth.signOut();
+        const { error: otpErr } = await supabase.auth.signInWithOtp({
           email,
-          password,
+          options: { shouldCreateUser: false },
         });
-        if (error) throw error;
-        toast.success("Signed in successfully!");
-        onClose();
+        if (otpErr) throw otpErr;
+        toast.success("We sent a 6-digit code to your email. Enter it to sign in.");
+        setOtpType("email");
+        setStep("otp");
       }
     } catch (error: any) {
       if (error.status === 429) {
@@ -72,6 +89,49 @@ export function AuthModal({ isOpen, onClose, defaultMode = "signin" }: AuthModal
       }
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (otpCode.length < 6) { toast.error("Enter the 6-digit code from your email"); return; }
+    setIsLoading(true);
+    const supabase = getSupabaseBrowser();
+    try {
+      const { error } = await supabase.auth.verifyOtp({
+        email,
+        token: otpCode,
+        type: otpType,
+      });
+      if (error) throw error;
+      toast.success(otpType === "signup" ? "Email verified — you're signed in!" : "Verified — signed in!");
+      onClose();
+    } catch (error: any) {
+      toast.error(error.message || "Invalid or expired code");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    setResending(true);
+    const supabase = getSupabaseBrowser();
+    try {
+      if (otpType === "signup") {
+        const { error } = await supabase.auth.resend({ type: "signup", email });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.auth.signInWithOtp({
+          email,
+          options: { shouldCreateUser: false },
+        });
+        if (error) throw error;
+      }
+      toast.success("New code sent — check your inbox");
+    } catch (error: any) {
+      toast.error(error.message || "Could not resend code");
+    } finally {
+      setResending(false);
     }
   };
 
@@ -155,16 +215,58 @@ export function AuthModal({ isOpen, onClose, defaultMode = "signin" }: AuthModal
 
             <div className="relative z-10 mb-10 text-center lg:text-left">
               <h3 className="text-3xl font-black text-slate-900 tracking-tight mb-2">
-                {mode === "signin" ? "Welcome Back" : "Create Account"}
+                {step === "otp"
+                  ? "Verify Your Email"
+                  : mode === "signin" ? "Welcome Back" : "Create Account"}
               </h3>
               <p className="text-slate-400 font-bold text-sm">
-                {mode === "signin" 
-                  ? "Sign in to manage your recovery cases." 
-                  : "Begin your forensic audit in minutes."}
+                {step === "otp"
+                  ? `Enter the 6-digit code we sent to ${email}.`
+                  : mode === "signin"
+                    ? "Sign in to manage your recovery cases."
+                    : "Begin your forensic audit in minutes."}
               </p>
             </div>
 
-            <motion.form 
+            {step === "otp" ? (
+              <form onSubmit={handleVerifyOtp} className="relative z-10 space-y-5">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Verification Code</label>
+                  <div className="relative">
+                    <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      pattern="[0-9]*"
+                      maxLength={6}
+                      required
+                      placeholder="123456"
+                      className="w-full h-14 pl-12 pr-4 rounded-2xl bg-slate-50 border border-slate-100 focus:bg-white focus:border-primary/50 outline-none transition-all text-lg font-mono font-bold tracking-[0.5em] shadow-sm"
+                      value={otpCode}
+                      onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                      autoFocus
+                    />
+                  </div>
+                </div>
+                <button
+                  type="submit"
+                  disabled={isLoading || otpCode.length < 6}
+                  className="w-full h-16 bg-slate-900 text-white font-black rounded-2xl shadow-xl hover:bg-slate-800 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {isLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : <><CheckCircle2 className="w-5 h-5" /> Verify & Continue</>}
+                </button>
+                <div className="flex items-center justify-between text-[11px] font-bold">
+                  <button type="button" onClick={() => { setStep("credentials"); setOtpCode(""); }} className="text-slate-500 hover:text-slate-900">
+                    ← Use different email
+                  </button>
+                  <button type="button" disabled={resending} onClick={handleResendOtp} className="text-primary hover:underline disabled:opacity-50">
+                    {resending ? "Sending…" : "Resend code"}
+                  </button>
+                </div>
+              </form>
+            ) : (
+            <motion.form
               initial="hidden"
               animate="visible"
               variants={{
@@ -275,7 +377,9 @@ export function AuthModal({ isOpen, onClose, defaultMode = "signin" }: AuthModal
                 )}
               </motion.button>
             </motion.form>
+            )}
 
+            {step === "credentials" && (
             <div className="mt-auto pt-10 text-center">
               <p className="text-xs text-slate-500 font-bold">
                 {mode === "signin" ? "New to ChanAidRecovery?" : "Existing forensic member?"}
@@ -287,6 +391,7 @@ export function AuthModal({ isOpen, onClose, defaultMode = "signin" }: AuthModal
                 </button>
               </p>
             </div>
+            )}
           </motion.div>
         </div>
       </DialogContent>
