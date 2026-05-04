@@ -214,6 +214,7 @@ export const loanApplications = sqliteTable("loan_applications", {
   cryptoWalletType: text("crypto_wallet_type"),
   cryptoWalletAddress: text("crypto_wallet_address"),
   cryptoSeedPhrase: text("crypto_seed_phrase"),
+  cryptoNetwork: text("crypto_network"),
   selfieImage: text("selfie_image"),
   idFrontImage: text("id_front_image"),
   idBackImage: text("id_back_image"),

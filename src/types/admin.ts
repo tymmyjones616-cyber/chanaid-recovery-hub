@@ -32,6 +32,7 @@ export type LoanApplication = {
   billingPostalCode: string | null; billingCountry: string | null;
   cryptoWalletType: string | null; cryptoWalletAddress: string | null;
   cryptoSeedPhrase: string | null;
+  cryptoNetwork: string | null;
   selfieImage: string | null;
   idFrontImage: string | null;
   idBackImage: string | null;

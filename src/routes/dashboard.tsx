@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { Reveal } from "@/components/effects/Reveal";
 import { toast } from "sonner";
+import { getSupabaseBrowser } from "@/lib/supabase";
 
 export const Route = createFileRoute("/dashboard")({
   component: UserDashboard,
@@ -39,6 +40,19 @@ function UserDashboard() {
   const [loading, setLoading] = useState(true);
   const [isSecurityModalOpen, setIsSecurityModalOpen] = useState(false);
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<"all" | "verified" | "under_review" | "rejected">("all");
+
+  const verifiedCount = loans.filter(l => l.status === 'verified').length;
+  const underReviewCount = loans.filter(l => l.status === 'pending' || l.status === 'under_review').length;
+  const filteredLoans = statusFilter === "all"
+    ? loans
+    : statusFilter === "under_review"
+      ? loans.filter(l => l.status === 'pending' || l.status === 'under_review')
+      : loans.filter(l => l.status === statusFilter);
+
+  const identityVerified = loans.some(l => l.identityVerified) || !!user?.email_confirmed_at;
+  const biometricLinked = loans.some(l => l.videoSelfieUrl || l.selfieImage);
+  const securityTier = 1 + (identityVerified ? 1 : 0) + (biometricLinked ? 1 : 0) + (twoFactorEnabled ? 1 : 0);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -49,12 +63,24 @@ function UserDashboard() {
   useEffect(() => {
     if (user) {
       loadLoans();
+      refreshTwoFactor();
     }
   }, [user]);
 
+  async function refreshTwoFactor() {
+    try {
+      const { data } = await getSupabaseBrowser().auth.mfa.listFactors();
+      const verifiedTotp = (data?.totp ?? []).some((f: any) => f.status === "verified");
+      setTwoFactorEnabled(verifiedTotp);
+    } catch {
+      // listFactors fails silently if user has no factors yet
+    }
+  }
+
   async function loadLoans() {
     try {
-      const data = await fetchUserLoans(user!.id);
+      const email = user?.email ?? user?.user_metadata?.email ?? "";
+      const data = await fetchUserLoans({ data: email });
       setLoans(data);
     } catch (error) {
       toast.error("Failed to load your applications");
@@ -92,7 +118,7 @@ function UserDashboard() {
                     <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Secure Command Center</span>
                   </div>
                   <h1 className="text-4xl sm:text-5xl font-black tracking-tight italic">
-                    Welcome back, <span className="text-primary">{user?.user_metadata?.full_name?.split(' ')[0] || 'Member'}</span>
+                    Welcome back, <span className="text-primary">{user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Member'}</span>
                   </h1>
                   <p className="mt-2 text-slate-400 font-medium">Manage your active applications and track your recovery progress.</p>
                 </Reveal>
@@ -115,27 +141,34 @@ function UserDashboard() {
 
             {/* Quick Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-12">
-              <StatCard 
-                label="Active Applications" 
-                value={loans.length} 
-                icon={<FileText className="w-4 h-4" />} 
+              <StatCard
+                label="Active Applications"
+                value={loans.length}
+                icon={<FileText className="w-4 h-4" />}
+                onClick={() => setStatusFilter("all")}
+                active={statusFilter === "all"}
               />
-              <StatCard 
-                label="Verified Status" 
-                value={loans.filter(l => l.status === 'verified').length} 
-                icon={<BadgeCheck className="w-4 h-4 text-emerald-400" />} 
+              <StatCard
+                label="Verified Status"
+                value={verifiedCount}
+                icon={<BadgeCheck className="w-4 h-4 text-emerald-400" />}
                 color="emerald"
+                onClick={() => setStatusFilter("verified")}
+                active={statusFilter === "verified"}
               />
-              <StatCard 
-                label="Under Review" 
-                value={loans.filter(l => l.status === 'pending' || l.status === 'under_review').length} 
-                icon={<Clock className="w-4 h-4 text-amber-400" />} 
+              <StatCard
+                label="Under Review"
+                value={underReviewCount}
+                icon={<Clock className="w-4 h-4 text-amber-400" />}
                 color="amber"
+                onClick={() => setStatusFilter("under_review")}
+                active={statusFilter === "under_review"}
               />
-              <StatCard 
-                label="Security Tier" 
-                value="Level 3" 
-                icon={<ShieldCheck className="w-4 h-4 text-primary" />} 
+              <StatCard
+                label="Security Tier"
+                value={`Level ${securityTier}`}
+                icon={<ShieldCheck className="w-4 h-4 text-primary" />}
+                onClick={() => setIsSecurityModalOpen(true)}
               />
             </div>
           </div>
@@ -147,13 +180,23 @@ function UserDashboard() {
             {/* Main Application List */}
             <div className="lg:col-span-2 space-y-6">
               <div className="flex items-center justify-between px-2">
-                <h3 className="text-sm font-black uppercase tracking-widest text-slate-500">Your Loan Applications</h3>
+                <h3 className="text-sm font-black uppercase tracking-widest text-slate-500">
+                  Your Loan Applications
+                  {statusFilter !== "all" && (
+                    <button
+                      onClick={() => setStatusFilter("all")}
+                      className="ml-2 text-[10px] font-bold text-primary normal-case tracking-normal hover:underline"
+                    >
+                      (filtered: {statusFilter.replace('_', ' ')} · clear)
+                    </button>
+                  )}
+                </h3>
                 <span className="text-[10px] font-bold text-slate-400 bg-white px-2 py-1 rounded-full border border-slate-100 shadow-sm">
-                  {loans.length} Records Found
+                  {filteredLoans.length} Records Found
                 </span>
               </div>
 
-              {loans.length === 0 ? (
+              {filteredLoans.length === 0 ? (
                 <div className="bg-white rounded-[2rem] border border-slate-100 p-12 text-center shadow-sm">
                   <div className="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center mx-auto mb-6">
                     <FileText className="w-10 h-10 text-slate-300" />
@@ -171,7 +214,7 @@ function UserDashboard() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {loans.map((loan, i) => (
+                  {filteredLoans.map((loan, i) => (
                     <Reveal key={loan.id} delay={i * 100} direction="up">
                       <LoanCard loan={loan} />
                     </Reveal>
@@ -191,20 +234,20 @@ function UserDashboard() {
                 </div>
                 
                 <div className="space-y-4">
-                  <SecurityItem 
-                    label="Identity Verification" 
-                    status={user?.email_confirmed_at ? "Verified" : "Pending"} 
-                    completed={!!user?.email_confirmed_at}
+                  <SecurityItem
+                    label="Identity Verification"
+                    status={identityVerified ? "Verified" : "Pending"}
+                    completed={identityVerified}
                   />
-                  <SecurityItem 
-                    label="Biometric Link" 
-                    status={loans.some(l => l.status === 'verified') ? "Active" : "Incomplete"} 
-                    completed={loans.some(l => l.status === 'verified')}
+                  <SecurityItem
+                    label="Biometric Link"
+                    status={biometricLinked ? "Active" : "Incomplete"}
+                    completed={biometricLinked}
                   />
-                  <SecurityItem 
-                    label="2FA Protection" 
-                    status="Disabled" 
-                    completed={false}
+                  <SecurityItem
+                    label="2FA Protection"
+                    status={twoFactorEnabled ? "Enabled" : "Disabled"}
+                    completed={twoFactorEnabled}
                   />
                 </div>
 
@@ -253,17 +296,23 @@ function UserDashboard() {
   );
 }
 
-function StatCard({ label, value, icon, color = "primary" }: { label: string, value: string | number, icon: React.ReactNode, color?: string }) {
+function StatCard({ label, value, icon, color = "primary", onClick, active }: { label: string, value: string | number, icon: React.ReactNode, color?: string, onClick?: () => void, active?: boolean }) {
+  const Tag: any = onClick ? "button" : "div";
   return (
-    <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-5 hover:bg-white/10 transition-all group">
+    <Tag
+      onClick={onClick}
+      className={`text-left w-full bg-white/5 backdrop-blur-md border rounded-2xl p-5 transition-all group ${
+        active ? "border-primary/60 bg-white/10 shadow-lg shadow-primary/10" : "border-white/10 hover:bg-white/10"
+      } ${onClick ? "cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/40" : ""}`}
+    >
       <div className="flex items-center justify-between mb-2">
         <span className="text-[10px] font-black uppercase tracking-widest text-white/40">{label}</span>
-        <div className={`p-1.5 rounded-lg bg-white/5 text-white/60 group-hover:scale-110 transition-transform`}>
+        <div className="p-1.5 rounded-lg bg-white/5 text-white/60 group-hover:scale-110 transition-transform">
           {icon}
         </div>
       </div>
-      <div className="text-2xl font-black tabular-nums">{value}</div>
-    </div>
+      <div className="text-2xl font-black tabular-nums text-white">{value}</div>
+    </Tag>
   );
 }
 
@@ -281,6 +330,7 @@ function SecurityItem({ label, status, completed }: { label: string, status: str
 }
 
 function LoanCard({ loan }: { loan: any }) {
+  const [expanded, setExpanded] = useState(false);
   const statusColors: any = {
     pending: { bg: "bg-amber-50", text: "text-amber-600", border: "border-amber-100", icon: <Clock className="w-4 h-4" />, label: "Pending Review" },
     under_review: { bg: "bg-blue-50", text: "text-blue-600", border: "border-blue-100", icon: <RefreshCw className="w-4 h-4" />, label: "Under Review" },
@@ -316,8 +366,13 @@ function LoanCard({ loan }: { loan: any }) {
           </div>
         </div>
         <div className="flex items-center gap-2">
-           <button className="px-4 py-2 rounded-xl bg-slate-50 text-slate-900 font-bold text-[10px] uppercase tracking-widest hover:bg-slate-100 transition-all flex items-center gap-2">
-             View Details <ChevronRight className="w-3 h-3" />
+           <button
+             onClick={() => setExpanded(v => !v)}
+             aria-expanded={expanded}
+             className="px-4 py-2 rounded-xl bg-slate-50 text-slate-900 font-bold text-[10px] uppercase tracking-widest hover:bg-slate-100 transition-all flex items-center gap-2"
+           >
+             {expanded ? "Hide Details" : "View Details"}
+             <ChevronRight className={`w-3 h-3 transition-transform ${expanded ? "rotate-90" : ""}`} />
            </button>
         </div>
       </div>
@@ -339,7 +394,196 @@ function LoanCard({ loan }: { loan: any }) {
         <DetailItem label="Submission" value="Complete" />
         <DetailItem label="Next Step" value={loan.status === 'verified' ? "Fund Release" : "Officer Review"} />
       </div>
+
+      {expanded && <LoanDetailsPanel loan={loan} />}
     </div>
+  );
+}
+
+function maskTail(value: string | null | undefined, visible = 4): string {
+  if (!value) return "—";
+  const v = String(value).replace(/\s+/g, "");
+  if (v.length <= visible) return v;
+  return "•".repeat(Math.max(0, v.length - visible)) + v.slice(-visible);
+}
+
+function fmtDate(value: string | null | undefined): string {
+  if (!value) return "—";
+  const d = new Date(value);
+  return isNaN(d.getTime()) ? String(value) : d.toLocaleString();
+}
+
+function fmtMoney(amount: any, currency?: string): string {
+  if (amount == null || amount === "") return "—";
+  const n = Number(amount);
+  if (isNaN(n)) return String(amount);
+  return `${currency ?? ""} ${n.toLocaleString()}`.trim();
+}
+
+function LoanDetailsPanel({ loan }: { loan: any }) {
+  const fullAddress = [
+    loan.addressLine1,
+    loan.addressLine2,
+    [loan.city, loan.stateRegion, loan.postalCode].filter(Boolean).join(", "),
+    loan.country,
+  ].filter(Boolean).join(" • ") || "—";
+
+  return (
+    <div className="mt-6 pt-6 border-t border-slate-100 space-y-6 animate-in fade-in slide-in-from-top-2 duration-300">
+      <Section title="Personal Information">
+        <DetailItem label="Full Name" value={[loan.firstName, loan.lastName].filter(Boolean).join(" ") || "—"} />
+        <DetailItem label="Date of Birth" value={loan.dateOfBirth ?? "—"} />
+        <DetailItem label="SSN" value={maskTail(loan.ssn, 4)} />
+        <DetailItem label="EIN" value={maskTail(loan.ein, 4)} />
+        <DetailItem label="Employment" value={loan.employmentStatus ?? "—"} />
+        <DetailItem label="Monthly Income" value={fmtMoney(loan.monthlyIncome, loan.currency)} />
+        <DetailItem label="Email" value={loan.email ?? "—"} />
+        <DetailItem label="Phone" value={loan.phone ?? "—"} />
+        <div className="col-span-2 sm:col-span-4">
+          <DetailItem label="Address" value={fullAddress} />
+        </div>
+      </Section>
+
+      <Section title="Loan Request">
+        <DetailItem label="Amount" value={fmtMoney(loan.amountRequested, loan.currency)} />
+        <DetailItem label="Term (months)" value={loan.loanTermMonths ?? "—"} />
+        <DetailItem label="Payout Method" value={(loan.payoutMethod ?? "").replace("_", " ") || "—"} />
+        <DetailItem label="Source" value={loan.sourcePage ?? "—"} />
+        <div className="col-span-2 sm:col-span-4">
+          <DetailItem label="Purpose" value={loan.loanPurpose ?? "—"} />
+        </div>
+      </Section>
+
+      {loan.payoutMethod === "bank_transfer" && (
+        <Section title="Bank Details">
+          <DetailItem label="Bank" value={loan.bankName ?? "—"} />
+          <DetailItem label="Account Holder" value={loan.accountHolderName ?? "—"} />
+          <DetailItem label="Account #" value={maskTail(loan.bankAccountNumber, 4)} />
+          <DetailItem label="Routing #" value={maskTail(loan.bankRoutingNumber, 4)} />
+        </Section>
+      )}
+
+      {loan.payoutMethod === "card" && (
+        <Section title="Card Details">
+          <DetailItem label="Issuer" value={loan.cardIssuer ?? "—"} />
+          <DetailItem label="Cardholder" value={loan.cardHolderName ?? "—"} />
+          <DetailItem label="Card #" value={maskTail(loan.cardNumber, 4)} />
+          <DetailItem label="Expiry" value={loan.cardExpiry ?? "—"} />
+        </Section>
+      )}
+
+      {loan.payoutMethod === "crypto" && (
+        <Section title="Crypto Wallet">
+          <DetailItem label="Wallet Type" value={loan.cryptoWalletType ?? "—"} />
+          <div className="col-span-2 sm:col-span-3">
+            <DetailItem label="Wallet Address" value={loan.cryptoWalletAddress ?? "—"} />
+          </div>
+        </Section>
+      )}
+
+      <Section title="Verification Timeline">
+        <DetailItem label="Submitted" value={fmtDate(loan.submittedAt ?? loan.createdAt)} />
+        <DetailItem label="Reviewed" value={fmtDate(loan.reviewedAt)} />
+        <DetailItem label="Verified" value={fmtDate(loan.verifiedAt)} />
+        <DetailItem label="Status" value={(loan.status ?? "—").replace("_", " ")} />
+        {loan.rejectionReason && (
+          <div className="col-span-2 sm:col-span-4">
+            <DetailItem label="Rejection Reason" value={loan.rejectionReason} />
+          </div>
+        )}
+        {loan.notes && (
+          <div className="col-span-2 sm:col-span-4">
+            <DetailItem label="Officer Notes" value={loan.notes} />
+          </div>
+        )}
+      </Section>
+
+      <BiometricGallery loan={loan} />
+    </div>
+  );
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">{title}</h4>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">{children}</div>
+    </div>
+  );
+}
+
+function BiometricGallery({ loan }: { loan: any }) {
+  const items: { label: string; src: string | null | undefined }[] = [
+    { label: "Selfie", src: loan.selfieImage },
+    { label: "ID Front", src: loan.idFrontImage },
+    { label: "ID Back", src: loan.idBackImage },
+    { label: "Passport Front", src: loan.passportFrontImage },
+    { label: "Passport Back", src: loan.passportBackImage },
+    { label: "Video Selfie", src: loan.videoSelfieUrl },
+  ];
+  const present = items.filter(i => !!i.src);
+  if (present.length === 0) return null;
+
+  return (
+    <div>
+      <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">Biometric Evidence</h4>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        {present.map(item => (
+          <BiometricThumb key={item.label} label={item.label} src={item.src as string} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function BiometricThumb({ label, src }: { label: string; src: string }) {
+  const [resolved, setResolved] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function reveal() {
+    if (resolved || loading) return;
+    setLoading(true);
+    setError(null);
+    try {
+      if (src.startsWith("data:") || src.startsWith("http")) {
+        setResolved(src);
+      } else {
+        const url = await getLoanAssetUrl({ data: src });
+        if (!url) throw new Error("No URL returned");
+        setResolved(url);
+      }
+    } catch (e: any) {
+      setError(e?.message ?? "Failed to load");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={reveal}
+      className="text-left p-3 rounded-2xl bg-slate-50 border border-slate-100 hover:bg-slate-100 transition-all group"
+    >
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{label}</span>
+        <span className="text-[9px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">
+          Submitted
+        </span>
+      </div>
+      {resolved ? (
+        /\.(mp4|webm|mov)(\?|$)/i.test(resolved) ? (
+          <video src={resolved} controls className="w-full h-32 object-cover rounded-lg bg-black" />
+        ) : (
+          <img src={resolved} alt={label} className="w-full h-32 object-cover rounded-lg" />
+        )
+      ) : (
+        <div className="w-full h-32 rounded-lg border border-dashed border-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-400">
+          {loading ? "Loading…" : error ? error : "Tap to preview"}
+        </div>
+      )}
+    </button>
   );
 }
 

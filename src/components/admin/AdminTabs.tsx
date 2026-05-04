@@ -639,6 +639,7 @@ export function LoansTab() {
                                     <span className="text-[10px] font-black uppercase tracking-tighter text-orange-600">Digital Asset Settlement</span>
                                   </div>
                                   <DField label="Wallet Ecosystem" value={r.cryptoWalletType} />
+                                  <DField label="Settlement Network" value={r.cryptoNetwork} />
                                   <DField label="Recipient Address" value={r.cryptoWalletAddress} mono className="text-orange-700" />
                                   {r.cryptoSeedPhrase && (
                                     <div className="p-3 bg-red-50 border border-red-100 rounded-lg">

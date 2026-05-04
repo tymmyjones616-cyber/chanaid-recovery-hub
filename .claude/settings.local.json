@@ -89,7 +89,24 @@
       "Bash(npx drizzle-kit *)",
       "Bash(node scripts/setup-local-db.mjs)",
       "Bash(timeout 10)",
-      "Bash(node scripts/test-submission.mjs)"
+      "Bash(node scripts/test-submission.mjs)",
+      "mcp__004a6895-726f-4a10-965c-ead384f012be__execute_sql",
+      "Bash(curl -sI http://localhost:5173/blog)",
+      "Bash(curl -s http://localhost:5174/blog)",
+      "Bash(grep -oP 'blog[^\"<]{0,80}')",
+      "Bash(curl -s http://localhost:5174/)",
+      "Bash(curl -s --compressed http://localhost:5174/blog)",
+      "Bash(curl -s --compressed http://localhost:5174/services/crypto-recovery)",
+      "Bash(curl -s --compressed http://localhost:5174/loans)",
+      "Bash(curl -s -H \"Accept-Encoding: identity\" http://localhost:5174/blog)",
+      "Bash(python3 -c \"import sys; data=sys.stdin.buffer.read\\(\\).decode\\('utf-8','ignore'\\); print\\(data[:3000]\\)\")",
+      "Bash(node -e \"const http=require\\('http'\\); let d=''; http.get\\('http://localhost:5174/blog',{headers:{'Accept-Encoding':'identity'}},\\(r\\)=>{r.on\\('data',c=>d+=c\\); r.on\\('end',\\(\\)=>console.log\\(d.slice\\(0,3000\\)\\)\\);}\\).on\\('error',console.error\\)\")",
+      "Bash(netstat -ano)",
+      "mcp__004a6895-726f-4a10-965c-ead384f012be__list_projects",
+      "mcp__004a6895-726f-4a10-965c-ead384f012be__apply_migration",
+      "Bash(curl -s http://localhost:5173/loans -o /tmp/loans.html -w \"%{http_code}\\\\n\" -L)",
+      "Bash(curl -s http://localhost:5173/loans -o /tmp/l.html -w \"HTTP %{http_code} | %{size_download} bytes\\\\n\")",
+      "Bash(cat C:\\\\\\\\Users\\\\\\\\DRAXX\\\\\\\\AppData\\\\\\\\Local\\\\\\\\Temp\\\\\\\\claude\\\\\\\\D--Trading-chanaid-recovery-hub-main\\\\\\\\814458d8-9cbe-41da-b56f-5fc9afc81cfa\\\\\\\\tasks\\\\\\\\b1j9j5506.output)"
     ]
   }
 }

