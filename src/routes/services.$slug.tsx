@@ -26,7 +26,7 @@ export const Route = createFileRoute("/services/$slug")({
     };
   },
   loader: async ({ params }) => {
-    const dbRow: any = await fetchService(params.slug).catch(() => null);
+    const dbRow: any = await fetchService({ data: params.slug }).catch(() => null);
     const fallback = SERVICES_DATA.find(item => item.slug === params.slug);
 
     // If the DB row is present but missing the headline/body (legacy seeds),

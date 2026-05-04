@@ -26,7 +26,7 @@ export const Route = createFileRoute("/blog/$slug")({
       ]
     };
   },
-  loader: async ({ params }) => await fetchBlogPost(params.slug).catch(() => null),
+  loader: async ({ params }) => await fetchBlogPost({ data: params.slug }).catch(() => null),
   component: BlogPost,
   errorComponent: ({ error }) => (
     <SiteShell>
