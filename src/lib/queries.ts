@@ -545,10 +545,19 @@ export const submitLoanApplication = createServerFn({ method: "POST" })
   .handler(async ({ data: payload, request }) => {
     const parsed = loanSubmissionSchema.safeParse(payload);
     if (!parsed.success) {
-      const fieldErrors = parsed.error.flatten().fieldErrors;
+      const flattened = parsed.error.flatten();
+      const fieldErrors = flattened.fieldErrors as Record<string, string[] | undefined>;
+      // Return the first specific Zod error so the client can show it directly
+      const firstMsg =
+        Object.values(fieldErrors)
+          .flat()
+          .find((m): m is string => typeof m === "string" && m.length > 0) ||
+        flattened.formErrors[0] ||
+        "Please check your details and try again.";
+      console.error("[submitLoan] validation errors:", JSON.stringify(flattened));
       return {
         data: null,
-        error: { message: "Validation failed", fields: fieldErrors },
+        error: { message: firstMsg, fields: fieldErrors },
       };
     }
 

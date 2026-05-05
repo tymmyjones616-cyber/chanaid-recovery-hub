@@ -174,7 +174,8 @@ function LoansPage() {
     onSelfieChange, onIdFrontChange, onIdBackChange, onPassportFrontChange, onPassportBackChange,
     onVideoSelfieChange, handleSubmit,
     appStatus, appId, clearSession,
-    currentStep, totalSteps, nextStep, prevStep, setCurrentStep
+    currentStep, totalSteps, nextStep, prevStep, setCurrentStep,
+    formRef,
   } = useLoanApplication();
 
   return (
@@ -486,7 +487,7 @@ function LoansPage() {
             </div>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="max-w-4xl mx-auto">
+          <form ref={formRef} onSubmit={handleSubmit} className="max-w-4xl mx-auto">
             <Reveal direction="up">
               <div className="bg-white rounded-3xl shadow-elegant border border-slate-100 overflow-hidden mb-8">
                 <div className="p-8 sm:p-10">

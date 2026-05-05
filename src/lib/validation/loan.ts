@@ -52,6 +52,8 @@ export const loanSubmissionSchema = z.object({
   passportBackImage: z.string().max(14_000_000).nullable().optional(),
   videoSelfieUrl: z.string().max(14_000_000).nullable().optional(),
   sourcePage: z.string().max(200).nullable().optional(),
+  notes: z.string().max(5000).nullable().optional(),
+  userId: z.string().nullable().optional(),
   status: z.enum(loanStatuses).default("pending"),
 });
 

