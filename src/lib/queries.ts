@@ -15,7 +15,7 @@ import {
   requireAdmin,
   clearAdminSession,
 } from "@/lib/admin-auth";
-import { sendEmail, loanVerifiedEmail, loanStatusUpdateEmail, loanRejectionEmail, welcomeEmail } from "@/lib/email";
+import { sendEmail, loanVerifiedEmail, loanStatusUpdateEmail, loanRejectionEmail, welcomeEmail, loanSubmittedEmail } from "@/lib/email";
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -649,6 +649,23 @@ export const submitLoanApplication = createServerFn({ method: "POST" })
       console.error("Insert loan_applications error:", error);
       return { data: null, error: { message: error.message } };
     }
+
+    // Fire-and-forget submission confirmation email
+    const applicantEmail: string = (parsed.data as any).email || "";
+    const applicantName: string =
+      [(parsed.data as any).firstName, (parsed.data as any).lastName].filter(Boolean).join(" ") || null;
+    if (applicantEmail) {
+      void sendEmail({
+        to: applicantEmail,
+        ...loanSubmittedEmail({
+          name: applicantName,
+          amount: (parsed.data as any).amountRequested,
+          currency: (parsed.data as any).currency,
+          refId: data?.id,
+        }),
+      }).catch((e) => console.error("[submitLoan] confirmation email failed:", e));
+    }
+
     return { data, error: null };
   });
 

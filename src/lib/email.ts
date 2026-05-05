@@ -363,3 +363,128 @@ export function loanRejectionEmail(name: string | null | undefined, reason?: str
   const text = `Hi ${firstName},\n\nWe were unable to approve your loan application at this time.${reason ? `\n\nReason: ${reason}` : ""}\n\nContact us at support@chanaidrecovery.com\n\nChanAidRecovery Team`;
   return { subject, html, text };
 }
+
+// ─── Loan submitted (confirmation) email ──────────────────────────────────────
+export function loanSubmittedEmail(opts: {
+  name?: string | null;
+  amount?: number | string | null;
+  currency?: string | null;
+  refId?: string | null;
+}): { subject: string; html: string; text: string } {
+  const firstName = opts.name ? opts.name.split(" ")[0] : "there";
+  const subject = "✅ Loan application received — we're on it";
+
+  const amountLine = opts.amount
+    ? `${(opts.currency || "USD").toUpperCase()} ${Number(opts.amount).toLocaleString("en-US")}`
+    : null;
+  const refLine = opts.refId ? `#${opts.refId.slice(0, 8).toUpperCase()}` : null;
+
+  const body = `
+    <p style="margin:0 0 20px;font-size:16px;line-height:1.7;color:#334155;">
+      Hi <strong>${firstName}</strong>, we've received your loan application and our compliance team will begin their review shortly. You'll hear from us within <strong>24–48 hours</strong>.
+    </p>
+
+    <!-- Summary card -->
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;margin-bottom:28px;">
+      ${refLine ? infoRow("🔖", "Reference", refLine) : ""}
+      ${amountLine ? infoRow("💰", "Amount", amountLine) : ""}
+      ${infoRow("📋", "Status", '<span style="color:#f97316;font-weight:800;">Under Review</span>')}
+      ${infoRow("⏱️", "Expected", "24–48 business hours")}
+    </table>
+
+    <!-- What happens next -->
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f8fafc;border-radius:12px;padding:20px 24px;margin-bottom:28px;">
+      <tr>
+        <td>
+          <p style="margin:0 0 12px;font-size:13px;font-weight:800;color:#0f172a;text-transform:uppercase;letter-spacing:.08em;">What happens next</p>
+          <table width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr>
+              <td style="padding:6px 0;vertical-align:top;width:28px;font-size:16px;">1️⃣</td>
+              <td style="padding:6px 0;font-size:13px;color:#334155;line-height:1.5;">Our team reviews your identity documents and application details.</td>
+            </tr>
+            <tr>
+              <td style="padding:6px 0;vertical-align:top;font-size:16px;">2️⃣</td>
+              <td style="padding:6px 0;font-size:13px;color:#334155;line-height:1.5;">You'll receive an email update once the review is complete.</td>
+            </tr>
+            <tr>
+              <td style="padding:6px 0;vertical-align:top;font-size:16px;">3️⃣</td>
+              <td style="padding:6px 0;font-size:13px;color:#334155;line-height:1.5;">Approved applicants receive secure wallet access to claim funds.</td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    ${ctaButton("Track My Application", `${SITE}/dashboard`)}
+
+    <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;line-height:1.6;">
+      Questions? Reply to this email or contact <a href="mailto:support@chanaidrecovery.com" style="color:#f97316;text-decoration:none;">support@chanaidrecovery.com</a>
+    </p>
+  `;
+
+  const html = shell({
+    preheader: `Application received! We'll review it within 24–48 hours, ${firstName}.`,
+    heroTitle: "Application Received!",
+    heroSubtitle: "Your loan application is in our queue. Our specialists are reviewing it now.",
+    accentColor: "#f97316",
+    body,
+  });
+
+  const text = `Hi ${firstName},\n\nWe've received your loan application${amountLine ? ` for ${amountLine}` : ""}${refLine ? ` (Ref: ${refLine})` : ""}.\n\nOur team will review it within 24–48 hours. Track your application: ${SITE}/dashboard\n\nQuestions? Email support@chanaidrecovery.com\n\nChanAidRecovery Team`;
+  return { subject, html, text };
+}
+
+// ─── OTP / Email verification email ──────────────────────────────────────────
+// Used when Supabase is configured with a custom SMTP hook to call this endpoint.
+export function otpEmail(opts: {
+  name?: string | null;
+  otp: string;
+  action?: "signup" | "login" | "recovery";
+}): { subject: string; html: string; text: string } {
+  const firstName = opts.name ? opts.name.split(" ")[0] : "there";
+  const action = opts.action || "signup";
+  const actionLabel =
+    action === "signup" ? "Verify your email" :
+    action === "recovery" ? "Reset your password" :
+    "Sign in to your account";
+  const subject = `Your ChanAidRecovery verification code: ${opts.otp}`;
+
+  const body = `
+    <p style="margin:0 0 24px;font-size:16px;line-height:1.7;color:#334155;">
+      Hi <strong>${firstName}</strong>, use the code below to ${actionLabel.toLowerCase()}. It expires in <strong>10 minutes</strong>.
+    </p>
+
+    <!-- OTP display -->
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:28px;">
+      <tr>
+        <td align="center">
+          <div style="display:inline-block;background:#0f172a;border-radius:16px;padding:28px 48px;">
+            <p style="margin:0 0 6px;font-size:10px;font-weight:700;letter-spacing:.25em;text-transform:uppercase;color:rgba(255,255,255,0.4);">Your verification code</p>
+            <p style="margin:0;font-size:44px;font-weight:900;letter-spacing:.2em;color:#f97316;font-family:monospace;">${opts.otp}</p>
+          </div>
+        </td>
+      </tr>
+    </table>
+
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:16px 20px;margin-bottom:20px;">
+      <tr><td style="font-size:13px;color:#9a3412;line-height:1.6;">
+        🔒 <strong>Never share this code.</strong> ChanAidRecovery staff will never ask for your verification code. If you didn't request this, you can safely ignore this email.
+      </td></tr>
+    </table>
+
+    <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">
+      Code expires in 10 minutes · <a href="mailto:support@chanaidrecovery.com" style="color:#f97316;text-decoration:none;">Contact support</a>
+    </p>
+  `;
+
+  const html = shell({
+    preheader: `Your ChanAidRecovery code is: ${opts.otp} — expires in 10 minutes.`,
+    heroTitle: actionLabel,
+    heroSubtitle: "Enter the code below in the ChanAidRecovery app to continue.",
+    accentColor: "#f97316",
+    body,
+  });
+
+  const text = `Hi ${firstName},\n\nYour ChanAidRecovery verification code is: ${opts.otp}\n\nThis code expires in 10 minutes. Never share it with anyone.\n\nIf you didn't request this, ignore this email.\n\nChanAidRecovery Team`;
+  return { subject, html, text };
+}
