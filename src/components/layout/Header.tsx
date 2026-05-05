@@ -1,7 +1,8 @@
 import { Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { Menu, X, ChevronDown, User, LogOut, LayoutDashboard } from "lucide-react";
 import { Logo } from "@/components/site/Logo";
+import { LogoSkeleton } from "@/components/site/LogoSkeleton";
 import { useAuth } from "@/components/layout/AuthContext";
 import { AuthModal } from "@/components/layout/AuthModal";
 
@@ -42,7 +43,9 @@ export function Header() {
       }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-24 flex items-center justify-between">
-        <Logo className={scrolled ? "h-20 w-auto" : "h-24 w-auto"} />
+        <Suspense fallback={<LogoSkeleton className={scrolled ? "h-20 w-auto" : "h-24 w-auto"} />}>
+          <Logo className={scrolled ? "h-20 w-auto" : "h-24 w-auto"} />
+        </Suspense>
 
         <nav className="hidden lg:flex items-center gap-7 text-sm font-medium">
           <Link to="/" className="hover:text-primary transition" activeProps={{ className: "text-primary" }} activeOptions={{ exact: true }}>Home</Link>
