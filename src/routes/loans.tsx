@@ -101,45 +101,45 @@ function UploadZone({
   const pct = Math.min(Math.round(progress ?? 0), 100);
 
   return (
-    <div>
-      <div className="flex items-center gap-1.5 mb-1.5">
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-1.5">
         <span className="text-xs font-bold text-slate-800">{label}</span>
         <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${sublabel === "Required" ? "bg-red-100 text-red-600" : "bg-slate-100 text-slate-500"}`}>
           {sublabel}
         </span>
       </div>
-      <label className={`group relative flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-xl cursor-pointer transition-all min-h-[130px] overflow-hidden
-        ${isUploading ? "border-primary bg-primary/5 pointer-events-none" : uploaded ? "border-emerald-400 bg-emerald-50" : "border-slate-300 bg-white hover:border-primary/60 hover:bg-primary/5"}`}>
-        <input type="file" accept="image/*,application/pdf" onChange={onChange} className="sr-only" />
 
-        {/* ── Uploading state ── */}
-        {isUploading ? (
-          <div className="flex flex-col items-center gap-3 p-5 w-full">
-            <PremiumProgressBar 
-              progress={pct} 
-              status={pct < 100 ? "uploading" : "processing"} 
-              fileName={label}
-              className="!bg-transparent !border-none !shadow-none !p-0"
-            />
-          </div>
-        ) : uploaded && value ? (
-          <>
-            <img src={value.startsWith("data:image") ? value : undefined} alt={label} className="h-16 w-full object-cover rounded-lg" />
-            <div className="absolute top-2 right-2 bg-emerald-500 rounded-full p-0.5">
-              <CheckCircle2 className="w-3.5 h-3.5 text-white" />
-            </div>
-            <span className="text-[10px] text-emerald-700 font-semibold">Uploaded — click to replace</span>
-          </>
-        ) : (
-          <>
-            <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center group-hover:bg-primary/10 group-hover:border-primary/30 transition-all">
-              {icon}
-            </div>
-            <span className="text-[11px] text-slate-500 text-center leading-relaxed px-2">{description}</span>
-            <span className="text-[10px] font-bold text-primary uppercase tracking-wider">Click to upload</span>
-          </>
-        )}
-      </label>
+      {/* Progress bar shown outside the tap target for better mobile UX */}
+      {isUploading ? (
+        <PremiumProgressBar
+          progress={pct}
+          status={pct < 100 ? "uploading" : "processing"}
+          fileName={label}
+        />
+      ) : (
+        <label className={`group relative flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-xl cursor-pointer transition-all min-h-[110px] overflow-hidden
+          ${uploaded ? "border-emerald-400 bg-emerald-50" : "border-slate-300 bg-white hover:border-primary/60 hover:bg-primary/5 active:bg-primary/5"}`}>
+          <input type="file" accept="image/*,application/pdf" onChange={onChange} className="sr-only" />
+
+          {uploaded && value ? (
+            <>
+              <img src={value.startsWith("data:image") ? value : undefined} alt={label} className="h-14 w-full object-cover rounded-lg" />
+              <div className="absolute top-2 right-2 bg-emerald-500 rounded-full p-0.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-white" />
+              </div>
+              <span className="absolute bottom-1.5 text-[10px] text-emerald-700 font-semibold">Tap to replace</span>
+            </>
+          ) : (
+            <>
+              <div className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center group-hover:bg-primary/10 group-hover:border-primary/30 transition-all">
+                {icon}
+              </div>
+              <span className="text-[10px] text-slate-500 text-center leading-relaxed px-2">{description}</span>
+              <span className="text-[10px] font-bold text-primary uppercase tracking-wider">Tap to upload</span>
+            </>
+          )}
+        </label>
+      )}
     </div>
   );
 }
@@ -736,36 +736,38 @@ function LoansPage() {
                   </div>
 
                   {/* Navigation Footer */}
-                  <div className="mt-12 flex items-center justify-between border-t border-slate-100 pt-8">
+                  <div className="mt-8 border-t border-slate-100 pt-6 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3">
                     <button
                       type="button"
                       onClick={prevStep}
                       disabled={currentStep === 1 || loading}
-                      className={`flex items-center gap-2 font-bold text-sm transition-all ${currentStep === 1 ? "opacity-0 pointer-events-none" : "text-slate-500 hover:text-slate-800"}`}
+                      className={`w-full sm:w-auto h-12 px-6 rounded-2xl font-bold text-sm transition-all border-2 ${
+                        currentStep === 1
+                          ? "opacity-0 pointer-events-none border-transparent"
+                          : "border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900 hover:bg-slate-50 active:bg-slate-100"
+                      }`}
                     >
-                      Back
+                      ← Back
                     </button>
-                    
-                    <div className="flex gap-4">
-                      {currentStep < totalSteps ? (
-                        <button
-                          type="button"
-                          onClick={nextStep}
-                          className="px-8 h-12 bg-slate-900 text-white font-bold rounded-2xl shadow-lg hover:bg-slate-800 transition active:scale-95"
-                        >
-                          Next Step
-                        </button>
-                      ) : (
-                        <button
-                          type="submit"
-                          disabled={loading}
-                          className="px-10 h-12 bg-cta-gradient text-white font-black rounded-2xl shadow-xl hover:shadow-2xl transition active:scale-95 disabled:opacity-60 flex items-center gap-3"
-                        >
-                          {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <BadgeCheck className="w-5 h-5" />}
-                          {loading ? "Submitting..." : "Submit Application"}
-                        </button>
-                      )}
-                    </div>
+
+                    {currentStep < totalSteps ? (
+                      <button
+                        type="button"
+                        onClick={nextStep}
+                        className="w-full sm:w-auto h-12 px-8 bg-slate-900 text-white font-bold rounded-2xl shadow-lg hover:bg-slate-800 transition active:scale-95"
+                      >
+                        Next Step →
+                      </button>
+                    ) : (
+                      <button
+                        type="submit"
+                        disabled={loading}
+                        className="w-full h-14 bg-cta-gradient text-white font-black rounded-2xl shadow-xl hover:shadow-2xl transition active:scale-95 disabled:opacity-60 flex items-center justify-center gap-3"
+                      >
+                        {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <BadgeCheck className="w-5 h-5" />}
+                        {loading ? "Submitting..." : "Submit Application"}
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -802,32 +804,33 @@ function Section({ title, icon, children }: { title: string; icon?: React.ReactN
 
 function StepIndicator({ current, total }: { current: number; total: number }) {
   const steps = [
-    { n: 1, label: "Application Details", icon: <FileCheck2 className="w-4 h-4" /> },
-    { n: 2, label: "Payout Setup", icon: <CreditCard className="w-4 h-4" /> },
-    { n: 3, label: "Identity & Security", icon: <ShieldCheck className="w-4 h-4" /> },
+    { n: 1, label: "Application Details", shortLabel: "Apply", icon: <FileCheck2 className="w-4 h-4" /> },
+    { n: 2, label: "Payout Setup", shortLabel: "Payout", icon: <CreditCard className="w-4 h-4" /> },
+    { n: 3, label: "Identity & Security", shortLabel: "Identity", icon: <ShieldCheck className="w-4 h-4" /> },
   ];
 
   return (
-    <div className="mb-10">
-      <div className="flex items-center justify-between px-2">
-        {steps.map((s, i) => (
-          <div key={s.n} className="flex flex-col items-center gap-2 relative z-10">
-            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-500 shadow-sm border-2 ${
-              current >= s.n ? "bg-primary text-white border-primary shadow-lg scale-110" : "bg-white text-slate-300 border-slate-100"
+    <div className="mb-8">
+      <div className="flex items-start justify-between px-1 sm:px-2">
+        {steps.map((s) => (
+          <div key={s.n} className="flex flex-col items-center gap-1.5 relative z-10 flex-1">
+            <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all duration-500 shadow-sm border-2 ${
+              current >= s.n ? "bg-primary text-white border-primary shadow-lg scale-105 sm:scale-110" : "bg-white text-slate-300 border-slate-100"
             }`}>
-              {current > s.n ? <CheckCircle2 className="w-6 h-6" /> : s.icon}
+              {current > s.n ? <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6" /> : s.icon}
             </div>
-            <span className={`text-[10px] font-black uppercase tracking-tighter transition-colors duration-500 ${
+            <span className={`text-[9px] sm:text-[10px] font-black uppercase tracking-tighter transition-colors duration-500 text-center leading-tight ${
               current >= s.n ? "text-primary" : "text-slate-400"
             }`}>
-              {s.label}
+              <span className="sm:hidden">{s.shortLabel}</span>
+              <span className="hidden sm:inline">{s.label}</span>
             </span>
           </div>
         ))}
       </div>
-      {/* Progress bar line */}
-      <div className="relative h-1 bg-slate-100 mt-[-3.5rem] mx-10 -z-0 rounded-full overflow-hidden">
-        <div 
+      {/* Progress bar line — sits behind the circles */}
+      <div className="relative h-1 bg-slate-100 mt-[-3rem] sm:mt-[-3.5rem] mx-7 sm:mx-10 -z-0 rounded-full overflow-hidden">
+        <div
           className="absolute inset-y-0 left-0 bg-primary transition-all duration-700 ease-out shadow-[0_0_10px_rgba(var(--primary-rgb),0.5)]"
           style={{ width: `${((current - 1) / (total - 1)) * 100}%` }}
         />

@@ -141,31 +141,31 @@ export function useLoanApplication() {
     setProgress(kind, 30); // Compression done
 
     // Attempt R2 upload with simulated progress
+    let progressInterval: ReturnType<typeof setInterval> | null = null;
     try {
-      // Simulate incremental progress during the network upload
-      const progressInterval = setInterval(() => {
+      progressInterval = setInterval(() => {
         setUploadProgress((prev) => {
           const current = prev[kind] ?? 30;
-          if (current < 85) {
-            return { ...prev, [kind]: current + Math.random() * 8 };
+          if (current < 95) {
+            return { ...prev, [kind]: Math.min(95, current + Math.random() * 6) };
           }
           return prev;
         });
       }, 300);
 
-      const result = await uploadLoanAsset({ tempId, kind, dataUrl, contentType: "image/jpeg" });
-
-      clearInterval(progressInterval);
+      const uploadPromise = uploadLoanAsset({ tempId, kind, dataUrl, contentType: "image/jpeg" });
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("upload-timeout")), 30000)
+      );
+      const result = await Promise.race([uploadPromise, timeoutPromise]);
 
       if (result?.key) {
         setter(result.key); // Store R2 key instead of base64
       }
-
-      setProgress(kind, 100);
-      // Clear progress after a short delay so the user sees 100%
-      setTimeout(() => clearProgress(kind), 1200);
     } catch {
-      // R2 unavailable — keep compressed base64 (already set above)
+      // R2 unavailable or timed out — keep compressed base64 (already set above)
+    } finally {
+      if (progressInterval) clearInterval(progressInterval);
       setProgress(kind, 100);
       setTimeout(() => clearProgress(kind), 1200);
     }
@@ -178,33 +178,34 @@ export function useLoanApplication() {
     const kind = "video";
     setProgress(kind, 5);
 
+    let progressInterval: ReturnType<typeof setInterval> | null = null;
     try {
-      // Simulate incremental progress during the network upload
-      const progressInterval = setInterval(() => {
+      progressInterval = setInterval(() => {
         setUploadProgress((prev) => {
           const current = prev[kind] ?? 5;
-          if (current < 85) {
-            return { ...prev, [kind]: current + Math.random() * 6 };
+          if (current < 95) {
+            return { ...prev, [kind]: Math.min(95, current + Math.random() * 5) };
           }
           return prev;
         });
       }, 400);
 
-      const result = await uploadLoanAsset({ tempId, kind, dataUrl, contentType: "video/webm" });
-
-      clearInterval(progressInterval);
+      const uploadPromise = uploadLoanAsset({ tempId, kind, dataUrl, contentType: "video/webm" });
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("upload-timeout")), 60000)
+      );
+      const result = await Promise.race([uploadPromise, timeoutPromise]);
 
       if (result?.key) {
         setVideoSelfie(result.key);
       } else {
         setVideoSelfie(dataUrl);
       }
-
-      setProgress(kind, 100);
-      setTimeout(() => clearProgress(kind), 1200);
     } catch {
-      // R2 unavailable — keep base64
+      // R2 unavailable or timed out — keep base64
       setVideoSelfie(dataUrl);
+    } finally {
+      if (progressInterval) clearInterval(progressInterval);
       setProgress(kind, 100);
       setTimeout(() => clearProgress(kind), 1200);
     }
@@ -367,13 +368,12 @@ export function useLoanApplication() {
       const { data, error } = await submitLoanApplication(payload);
 
       if (error) {
-        // Surface field-level validation errors from the server
-        if (error.fields) {
-          const firstField = Object.values(error.fields as Record<string, string[]>)[0];
-          toast.error(Array.isArray(firstField) ? firstField[0] : String(firstField));
-        } else {
-          toast.error(error.message ?? "Submission failed. Please try again.");
-        }
+        const fieldMsg = error.fields
+          ? Object.values(error.fields as Record<string, string[] | undefined>)
+              .flat()
+              .find((m): m is string => typeof m === "string" && m.length > 0)
+          : undefined;
+        toast.error(fieldMsg || error.message || "Submission failed. Please try again.");
         return;
       }
 
@@ -389,8 +389,9 @@ export function useLoanApplication() {
       setDone(true);
       refreshStatus(newId);
       toast.success("Application received! Reviewing identity documents...");
-    } catch {
-      toast.error("Something went wrong. Please try again.");
+    } catch (err) {
+      const msg = err instanceof Error && err.message ? err.message : "Something went wrong. Please try again.";
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
