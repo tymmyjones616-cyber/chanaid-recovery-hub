@@ -4,10 +4,11 @@ import { getSupabaseBrowser } from "@/lib/supabase";
 import { toast } from "sonner";
 import {
   Loader2, Mail, Lock, User, ArrowRight, ShieldCheck,
-  CheckCircle2, Sparkles, Fingerprint, Zap, Globe, KeyRound, Eye, EyeOff
+  CheckCircle2, Sparkles, Fingerprint, Zap, Globe, KeyRound, Eye, EyeOff, Phone
 } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { motion, AnimatePresence } from "framer-motion";
+import { registerSignup, sendSignupWelcome } from "@/lib/queries";
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -23,6 +24,7 @@ export function AuthModal({ isOpen, onClose, defaultMode = "signin" }: AuthModal
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
@@ -66,17 +68,22 @@ export function AuthModal({ isOpen, onClose, defaultMode = "signin" }: AuthModal
 
     try {
       if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: { full_name: fullName, role: "user" },
-          },
+        const result: any = await registerSignup({ data: { fullName, email, phone, password } });
+        if (result?.error) throw new Error(result.error.message || "Signup failed");
+
+        const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
+        if (signInErr) throw signInErr;
+
+        toast.success(`Welcome to ChanAidRecovery, ${fullName.split(" ")[0] || "friend"}!`, {
+          description: "Your account is ready. Redirecting to your dashboard…",
+          duration: 5000,
         });
-        if (error) throw error;
-        toast.success("Account created! Check your email to confirm, then sign in.");
-        setMode("signin");
-        setStep("credentials");
+
+        setTimeout(() => {
+          sendSignupWelcome({ data: { email, fullName } }).catch((e) => console.error("welcome email failed", e));
+        }, 3000);
+
+        onClose();
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
@@ -332,18 +339,32 @@ export function AuthModal({ isOpen, onClose, defaultMode = "signin" }: AuthModal
               >
                 <AnimatePresence mode="wait">
                   {mode === "signup" && (
-                    <motion.div
-                      variants={{ hidden: { opacity: 0, x: -16 }, visible: { opacity: 1, x: 0 } }}
-                      className="space-y-1.5"
-                    >
-                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Full Name</label>
-                      <div className="relative">
-                        <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                        <input type="text" required placeholder="John Doe"
-                          className="w-full h-13 pl-12 pr-4 rounded-2xl bg-slate-50 border border-slate-100 focus:bg-white focus:border-violet-400 outline-none transition-all text-sm font-semibold shadow-sm py-3.5"
-                          value={fullName} onChange={(e) => setFullName(e.target.value)} />
-                      </div>
-                    </motion.div>
+                    <>
+                      <motion.div
+                        variants={{ hidden: { opacity: 0, x: -16 }, visible: { opacity: 1, x: 0 } }}
+                        className="space-y-1.5"
+                      >
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Full Name</label>
+                        <div className="relative">
+                          <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                          <input type="text" required placeholder="John Doe"
+                            className="w-full h-13 pl-12 pr-4 rounded-2xl bg-slate-50 border border-slate-100 focus:bg-white focus:border-violet-400 outline-none transition-all text-sm font-semibold shadow-sm py-3.5"
+                            value={fullName} onChange={(e) => setFullName(e.target.value)} />
+                        </div>
+                      </motion.div>
+                      <motion.div
+                        variants={{ hidden: { opacity: 0, x: -16 }, visible: { opacity: 1, x: 0 } }}
+                        className="space-y-1.5"
+                      >
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Phone Number</label>
+                        <div className="relative">
+                          <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                          <input type="tel" required placeholder="+1 555 000 0000"
+                            className="w-full h-13 pl-12 pr-4 rounded-2xl bg-slate-50 border border-slate-100 focus:bg-white focus:border-violet-400 outline-none transition-all text-sm font-semibold shadow-sm py-3.5"
+                            value={phone} onChange={(e) => setPhone(e.target.value)} />
+                        </div>
+                      </motion.div>
+                    </>
                   )}
                 </AnimatePresence>
 

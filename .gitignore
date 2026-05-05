@@ -45,3 +45,10 @@ artifacts/
 *.txt
 seed*.js
 add_blog_posts.js
+
+# Build artifacts
+worker.js
+
+# Claude Code internal
+.claude/worktrees/
+.claude/plans/

@@ -288,7 +288,7 @@ function Index() {
         </Reveal>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 perspective-1000">
           {services.slice(0, 4).map((s: any, idx: number) => (
-            <Reveal key={s.id} direction="up" delay={idx * 70}>
+            <Reveal key={s.slug} direction="up" delay={idx * 70}>
               <TiltCard className="rounded-2xl h-full" intensity={9}>
                 <Link
                   to="/services/$slug"
@@ -377,7 +377,7 @@ function Index() {
           <div className="space-y-4" itemScope itemType="https://schema.org/FAQPage">
             {faqs.map((f: any) => (
               <div
-                key={f.id}
+                key={f.id ?? f.question}
                 className="bg-white/80 backdrop-blur-sm rounded-2xl border border-border overflow-hidden hover:border-primary/30 transition-all shadow-sm"
                 itemScope
                 itemProp="mainEntity"

@@ -21,8 +21,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const supabase = getSupabaseBrowser();
 
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    // Get initial session — suppress stale refresh-token errors (expected for logged-out visitors)
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error?.message?.includes("Refresh Token")) {
+        supabase.auth.signOut().catch(() => null);
+      }
       setSession(session);
       setUser(session?.user ?? null);
       setIsAdmin(session?.user?.app_metadata?.role === "admin" || session?.user?.user_metadata?.role === "admin");
@@ -34,7 +37,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "TOKEN_REFRESH_FAILED") {
+        supabase.auth.signOut().catch(() => null);
+        setSession(null);
+        setUser(null);
+        setIsAdmin(false);
+        setIsLoading(false);
+        return;
+      }
       setSession(session);
       setUser(session?.user ?? null);
       setIsAdmin(session?.user?.app_metadata?.role === "admin" || session?.user?.user_metadata?.role === "admin");

@@ -9,6 +9,10 @@ import {
   updateTestimonialStatus,
   verifyLoanIdentity,
   resolveLoanAsset,
+  adminListUsers,
+  adminCreateUser,
+  adminDeleteUser,
+  adminUpdateUser,
 } from "@/lib/queries";
 import { toast } from "sonner";
 import { fetchSiteSettings, saveSiteSettings, type SiteSettings } from "@/lib/site";
@@ -18,7 +22,7 @@ import {
   Palette, Type, Save, ChevronRight, TrendingUp,
   FileText, Star, ShieldCheck, Camera, IdCard, BookOpen, CheckCircle2, ZoomIn,
   Clock, CreditCard, ShieldAlert, Fingerprint, Video, XCircle, Play,
-  Activity, Code2, Download
+  Activity, Code2, Download, UserPlus, Trash2, Pencil, X, Phone, Mail, Shield, User, Eye, EyeOff, Search
 } from "lucide-react";
 import { generateLoanPDF, generateBulkLoanPDF, generateLeadPDF, generateBulkLeadPDF } from "@/lib/pdf-generator";
 import type { StatusHistoryEntry } from "@/types/admin";

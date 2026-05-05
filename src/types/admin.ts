@@ -1,4 +1,4 @@
-export type Tab = "overview" | "leads" | "loans" | "testimonials" | "site";
+export type Tab = "overview" | "leads" | "loans" | "testimonials" | "site" | "users";
 
 export type Lead = {
   id: string; firstName: string; lastName: string | null; email: string;

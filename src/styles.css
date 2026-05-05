@@ -146,6 +146,16 @@
 @layer base {
   * {
     border-color: var(--color-border);
+    /* Prevent horizontal overflow on mobile */
+    box-sizing: border-box;
+  }
+
+  html {
+    /* Prevent text size inflation on mobile rotation */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    /* Smooth scroll only for in-page anchors, not route changes */
+    scroll-behavior: auto;
   }
 
   body {
@@ -153,11 +163,37 @@
     color: var(--color-foreground);
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
+    /* Prevent horizontal scroll on mobile */
+    overflow-x: hidden;
+    max-width: 100vw;
   }
 
   h1, h2, h3, h4 {
     font-family: 'Sora', 'Inter', system-ui, sans-serif;
     letter-spacing: -0.02em;
+  }
+
+  /* Prevent iOS zoom on input focus (font-size must be >= 16px) */
+  input, select, textarea {
+    font-size: max(16px, 1em);
+  }
+
+  /* Minimum tap target size for touch */
+  button, a, [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Fix for inline/icon-only buttons not needing forced 44px */
+  button.inline-btn, a.inline-btn {
+    min-height: unset;
+    min-width: unset;
+  }
+
+  /* Image safety */
+  img, video {
+    max-width: 100%;
+    height: auto;
   }
 }
 

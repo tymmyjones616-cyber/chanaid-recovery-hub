@@ -15,7 +15,7 @@ import {
   requireAdmin,
   clearAdminSession,
 } from "@/lib/admin-auth";
-import { sendEmail, loanVerifiedEmail, loanStatusUpdateEmail, loanRejectionEmail } from "@/lib/email";
+import { sendEmail, loanVerifiedEmail, loanStatusUpdateEmail, loanRejectionEmail, welcomeEmail } from "@/lib/email";
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -388,6 +388,129 @@ export const submitTestimonial = createServerFn({ method: "POST" })
       .single();
     if (error) return { data: null, error: { message: error.message } };
     return { data, error: null };
+  });
+
+export const registerSignup = createServerFn({ method: "POST" })
+  .inputValidator((payload: any) => payload)
+  .handler(async ({ data: payload }) => {
+    const sb = getSupabaseAdmin();
+    const fullName: string = (payload.fullName || "").trim();
+    const email: string = (payload.email || "").trim().toLowerCase();
+    const phone: string = (payload.phone || "").trim();
+    const password: string = payload.password || "";
+
+    if (!email || !password || !fullName) {
+      return { data: null, error: { message: "Missing required fields" } };
+    }
+
+    const [firstName, ...rest] = fullName.split(/\s+/);
+    const lastName = rest.join(" ") || null;
+
+    const { data: created, error: authErr } = await sb.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      phone: phone || undefined,
+      user_metadata: { full_name: fullName, phone, role: "user" },
+    });
+
+    if (authErr) {
+      return { data: null, error: { message: authErr.message } };
+    }
+
+    try {
+      await sb.from("leads").insert({
+        first_name: firstName,
+        last_name: lastName,
+        email,
+        phone: phone || null,
+        message: "New account signup",
+        scam_type: "Account Signup",
+        source_page: "signup",
+        status: "new",
+      });
+    } catch (e) {
+      console.error("[signup] failed to save lead", e);
+    }
+
+    return { data: { userId: created?.user?.id || null }, error: null };
+  });
+
+export const sendSignupWelcome = createServerFn({ method: "POST" })
+  .inputValidator((payload: any) => payload)
+  .handler(async ({ data: payload }) => {
+    const to: string = (payload?.email || "").trim();
+    const name: string = payload?.fullName || "";
+    if (!to) return { ok: false };
+    const mail = welcomeEmail(name);
+    const res = await sendEmail({ to, ...mail });
+    return { ok: res.ok };
+  });
+
+// ─── User Management (Admin only) ────────────────────────────────────────────
+
+export const adminListUsers = createServerFn()
+  .handler(async ({ request }) => {
+    await requireAdmin(request);
+    const sb = getSupabaseAdmin();
+    const { data, error } = await sb.auth.admin.listUsers({ perPage: 1000 });
+    if (error) throw new Error(error.message);
+    return (data.users || []).map((u: any) => ({
+      id: u.id,
+      email: u.email,
+      fullName: u.user_metadata?.full_name || null,
+      phone: u.user_metadata?.phone || u.phone || null,
+      role: u.user_metadata?.role || "user",
+      createdAt: u.created_at,
+      lastSignIn: u.last_sign_in_at || null,
+      confirmed: !!u.email_confirmed_at,
+    }));
+  });
+
+export const adminCreateUser = createServerFn({ method: "POST" })
+  .inputValidator((p: any) => p)
+  .handler(async ({ data: payload, request }) => {
+    await requireAdmin(request);
+    const sb = getSupabaseAdmin();
+    const { fullName, email, phone, password, role } = payload;
+    if (!email || !password || !fullName) return { data: null, error: { message: "Missing required fields" } };
+    const { data, error } = await sb.auth.admin.createUser({
+      email: email.trim().toLowerCase(),
+      password,
+      email_confirm: true,
+      phone: phone || undefined,
+      user_metadata: { full_name: fullName, phone, role: role || "user" },
+    });
+    if (error) return { data: null, error: { message: error.message } };
+    return { data: { id: data.user?.id }, error: null };
+  });
+
+export const adminDeleteUser = createServerFn({ method: "POST" })
+  .inputValidator((p: any) => p)
+  .handler(async ({ data: payload, request }) => {
+    await requireAdmin(request);
+    const sb = getSupabaseAdmin();
+    const { userId } = payload;
+    if (!userId) return { error: { message: "Missing userId" } };
+    const { error } = await sb.auth.admin.deleteUser(userId);
+    if (error) return { error: { message: error.message } };
+    return { error: null };
+  });
+
+export const adminUpdateUser = createServerFn({ method: "POST" })
+  .inputValidator((p: any) => p)
+  .handler(async ({ data: payload, request }) => {
+    await requireAdmin(request);
+    const sb = getSupabaseAdmin();
+    const { userId, fullName, phone, role, password } = payload;
+    if (!userId) return { error: { message: "Missing userId" } };
+    const update: any = {
+      user_metadata: { full_name: fullName, phone, role: role || "user" },
+    };
+    if (password) update.password = password;
+    const { error } = await sb.auth.admin.updateUserById(userId, update);
+    if (error) return { error: { message: error.message } };
+    return { error: null };
   });
 
 export const submitLead = createServerFn({ method: "POST" })

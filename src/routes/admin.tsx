@@ -18,6 +18,7 @@ import {
   TestimonialsTab,
   SiteEditorTab
 } from "@/components/admin/AdminTabs";
+import { UsersTab } from "@/components/admin/UsersTab";
 import {
   LayoutDashboard,
   Users,
@@ -192,6 +193,7 @@ const NAV = [
   { id: "leads" as Tab, label: "Leads", icon: Users },
   { id: "loans" as Tab, label: "Loans", icon: Banknote },
   { id: "testimonials" as Tab, label: "Testimonials", icon: MessageSquare },
+  { id: "users" as Tab, label: "Users", icon: Users },
   { id: "site" as Tab, label: "Site Editor", icon: Settings },
 ];
 
@@ -309,6 +311,7 @@ function AdminPage() {
             {tab === "leads" && <LeadsTab />}
             {tab === "loans" && <LoansTab />}
             {tab === "testimonials" && <TestimonialsTab />}
+            {tab === "users" && <UsersTab />}
             {tab === "site" && <SiteEditorTab />}
           </Reveal>
         </main>

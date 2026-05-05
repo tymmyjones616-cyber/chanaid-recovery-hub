@@ -1,11 +1,9 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Menu, X, ChevronDown, MessageCircle, Send } from "lucide-react";
+import { Menu, X, ChevronDown, User, LogOut, LayoutDashboard } from "lucide-react";
 import { Logo } from "@/components/site/Logo";
-import { Button } from "@/components/ui/button";
 import { useAuth } from "@/components/layout/AuthContext";
 import { AuthModal } from "@/components/layout/AuthModal";
-import { User, LogOut, LayoutDashboard } from "lucide-react";
 
 const services = [
   { slug: "crypto-recovery", name: "Cryptocurrency Recovery" },
@@ -109,13 +107,23 @@ export function Header() {
           )}
         </div>
 
-        <button
-          aria-label="Toggle menu"
-          className="lg:hidden p-2 rounded-md hover:bg-accent"
-          onClick={() => setOpen(!open)}
-        >
-          {open ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-        </button>
+        <div className="lg:hidden flex items-center gap-2">
+          {!user && (
+            <button
+              onClick={() => setIsAuthModalOpen(true)}
+              className="flex items-center gap-1.5 bg-slate-900 text-white px-4 py-2 rounded-full font-black text-xs uppercase tracking-wider shadow-lg shadow-slate-900/20 active:scale-95 transition-all"
+            >
+              <User className="w-4 h-4" /> Sign In
+            </button>
+          )}
+          <button
+            aria-label="Toggle menu"
+            className="p-2 rounded-md hover:bg-accent border border-slate-200"
+            onClick={() => setOpen(!open)}
+          >
+            {open ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
+        </div>
       </div>
 
       <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
@@ -123,6 +131,15 @@ export function Header() {
       {open && (
         <div className="lg:hidden border-t border-border bg-white">
           <div className="px-4 py-4 space-y-1 text-sm">
+            {user && (
+              <Link
+                to="/dashboard"
+                onClick={() => setOpen(false)}
+                className="flex items-center justify-center gap-2 mb-3 bg-gradient-to-r from-violet-600 to-blue-600 text-white py-3.5 rounded-2xl font-black uppercase tracking-wider text-sm shadow-lg shadow-violet-600/30"
+              >
+                <LayoutDashboard className="w-5 h-5" /> Open My Dashboard
+              </Link>
+            )}
             <Link to="/" onClick={() => setOpen(false)} className="block py-2">Home</Link>
             <details className="py-1">
               <summary className="cursor-pointer py-2">Recovery Services</summary>
@@ -139,9 +156,25 @@ export function Header() {
             <Link to="/about" onClick={() => setOpen(false)} className="block py-2">About</Link>
             <Link to="/success-calculator" onClick={() => setOpen(false)} className="block py-2">Calculator</Link>
             <button onClick={() => { setOpen(false); handleAction("/loans"); }} className="block w-full text-left py-2 font-bold text-primary">Get Loan</button>
+            {user ? (
+              <button
+                onClick={() => { setOpen(false); signOut(); }}
+                className="flex items-center gap-2 w-full text-left py-2 font-bold text-red-500"
+              >
+                <LogOut className="w-4 h-4" /> Sign Out
+              </button>
+            ) : (
+              <button
+                onClick={() => { setOpen(false); setIsAuthModalOpen(true); }}
+                className="flex items-center gap-2 w-full text-left py-2 font-bold text-violet-600"
+              >
+                <User className="w-4 h-4" /> Sign In / Create Account
+              </button>
+            )}
           </div>
         </div>
       )}
+
     </header>
   );
 }
