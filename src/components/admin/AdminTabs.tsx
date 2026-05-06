@@ -135,14 +135,23 @@ export function OverviewTab({ setTab }: { setTab: (t: Tab) => void }) {
 }
 
 // ─── Shared Components ────────────────────────────────────────────────────────
-function StatusPicker({ current, onUpdate }: { current: string; onUpdate: (s: string) => void }) {
-  const statuses = [
-    { id: "pending", label: "Pending", cls: "hover:bg-amber-50 hover:text-amber-700" },
-    { id: "under_review", label: "Reviewing", cls: "hover:bg-blue-50 hover:text-blue-700" },
-    { id: "verified", label: "Verify", cls: "hover:bg-emerald-50 hover:text-emerald-700" },
-    { id: "rejected", label: "Reject", cls: "hover:bg-red-50 hover:text-red-700" },
-    { id: "needs_correction", label: "Correct", cls: "hover:bg-purple-50 hover:text-purple-700" },
-  ];
+const LOAN_STATUSES = [
+  { id: "pending", label: "Pending", cls: "hover:bg-amber-50 hover:text-amber-700" },
+  { id: "under_review", label: "Reviewing", cls: "hover:bg-blue-50 hover:text-blue-700" },
+  { id: "verified", label: "Verify", cls: "hover:bg-emerald-50 hover:text-emerald-700" },
+  { id: "rejected", label: "Reject", cls: "hover:bg-red-50 hover:text-red-700" },
+  { id: "needs_correction", label: "Correct", cls: "hover:bg-purple-50 hover:text-purple-700" },
+];
+
+const LEAD_STATUSES = [
+  { id: "new", label: "New", cls: "hover:bg-sky-50 hover:text-sky-700" },
+  { id: "contacted", label: "Contacted", cls: "hover:bg-blue-50 hover:text-blue-700" },
+  { id: "in_progress", label: "In Progress", cls: "hover:bg-amber-50 hover:text-amber-700" },
+  { id: "closed", label: "Closed", cls: "hover:bg-emerald-50 hover:text-emerald-700" },
+  { id: "spam", label: "Spam", cls: "hover:bg-red-50 hover:text-red-700" },
+];
+
+function StatusPicker({ current, onUpdate, statuses = LOAN_STATUSES }: { current: string; onUpdate: (s: string) => void; statuses?: typeof LOAN_STATUSES }) {
 
   return (
     <div className="flex flex-wrap items-center gap-1.5 p-1 bg-gray-50 rounded-lg border border-gray-100">
@@ -270,7 +279,7 @@ export function LeadsTab() {
                             <Download className="w-3 h-3" /> PDF
                           </button>
                           <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Update Status</span>
-                          <StatusPicker current={r.status} onUpdate={(s) => onUpdateStatus(r.id, s)} />
+                          <StatusPicker current={r.status} onUpdate={(s) => onUpdateStatus(r.id, s)} statuses={LEAD_STATUSES} />
                         </div>
                       </div>
                     </td>
@@ -317,10 +326,7 @@ export function LoansTab() {
   const onUpdateStatus = async (id: string, status: string, reason?: string) => {
     try {
       await updateLoanStatus({ id, status, ...(reason ? { reason } : {}) });
-      setRows(prev => prev.map(r => r.id === id
-        ? { ...r, status, ...(reason ? { rejectionReason: reason } : {}) }
-        : r
-      ));
+      await load();
       toast.success(`Loan status updated to ${status}`);
     } catch { toast.error("Failed to update status"); }
   };

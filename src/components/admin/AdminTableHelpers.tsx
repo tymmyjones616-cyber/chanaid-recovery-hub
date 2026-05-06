@@ -64,13 +64,17 @@ export function Chip({ text }: { text: string }) {
 
 export function StatusBadge({ status }: { status: string }) {
   const map: Record<string, { label: string; cls: string; icon: React.ReactNode }> = {
-    new:              { label: "New",              cls: "bg-blue-50 text-blue-700 border-blue-200",     icon: <Clock className="w-3 h-3" /> },
-    pending:          { label: "Pending",          cls: "bg-amber-50 text-amber-700 border-amber-200",  icon: <Clock className="w-3 h-3" /> },
-    under_review:     { label: "Under Review",     cls: "bg-blue-50 text-blue-700 border-blue-200",     icon: <RefreshCw className="w-3 h-3 animate-spin" /> },
+    new:              { label: "New",              cls: "bg-blue-50 text-blue-700 border-blue-200",        icon: <Clock className="w-3 h-3" /> },
+    contacted:        { label: "Contacted",        cls: "bg-sky-50 text-sky-700 border-sky-200",           icon: <RefreshCw className="w-3 h-3" /> },
+    in_progress:      { label: "In Progress",      cls: "bg-amber-50 text-amber-700 border-amber-200",     icon: <RefreshCw className="w-3 h-3 animate-spin" /> },
+    closed:           { label: "Closed",           cls: "bg-emerald-50 text-emerald-700 border-emerald-200", icon: <CheckCircle2 className="w-3 h-3" /> },
+    spam:             { label: "Spam",             cls: "bg-red-50 text-red-600 border-red-200",           icon: <XCircle className="w-3 h-3" /> },
+    pending:          { label: "Pending",          cls: "bg-amber-50 text-amber-700 border-amber-200",     icon: <Clock className="w-3 h-3" /> },
+    under_review:     { label: "Under Review",     cls: "bg-blue-50 text-blue-700 border-blue-200",        icon: <RefreshCw className="w-3 h-3 animate-spin" /> },
     verified:         { label: "Verified",         cls: "bg-emerald-50 text-emerald-700 border-emerald-200", icon: <CheckCircle2 className="w-3 h-3" /> },
     approved:         { label: "Approved",         cls: "bg-emerald-50 text-emerald-700 border-emerald-200", icon: <CheckCircle2 className="w-3 h-3" /> },
-    rejected:         { label: "Rejected",         cls: "bg-red-50 text-red-600 border-red-200",        icon: <XCircle className="w-3 h-3" /> },
-    needs_correction: { label: "Needs Correction", cls: "bg-purple-50 text-purple-700 border-purple-200", icon: <XCircle className="w-3 h-3" /> },
+    rejected:         { label: "Rejected",         cls: "bg-red-50 text-red-600 border-red-200",           icon: <XCircle className="w-3 h-3" /> },
+    needs_correction: { label: "Needs Correction", cls: "bg-purple-50 text-purple-700 border-purple-200",  icon: <XCircle className="w-3 h-3" /> },
   };
   const s = map[status] ?? { label: status, cls: "bg-gray-100 text-gray-600 border-gray-200", icon: null };
   return (

@@ -77,11 +77,13 @@ function LoginScreen() {
     setBusy(true);
     const supabase = getSupabaseBrowser();
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password: pw,
-      });
-      
+      let data: any, error: any;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        ({ data, error } = await supabase.auth.signInWithPassword({ email, password: pw }));
+        if (!error || !error.message?.includes("fetch")) break;
+        await new Promise(r => setTimeout(r, 600 * (attempt + 1)));
+      }
+
       if (error) throw error;
 
       // Check if user is admin

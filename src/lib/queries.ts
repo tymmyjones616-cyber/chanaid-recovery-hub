@@ -863,10 +863,9 @@ export const updateTestimonialStatus = createServerFn({ method: "POST" })
     return { success: true };
   });
 export const sendAdminCustomMessage = createServerFn({ method: "POST" })
-  .inputValidator((data: { to: string; subject: string; message: string; userName: string }) => data)
-  .handler(async ({ data, request }) => {
+  .inputValidator((payload: { to: string; subject: string; message: string; userName: string }) => payload)
+  .handler(async ({ data: { to, subject, message, userName }, request }) => {
     await requireAdmin(request);
-    const { to, subject, message, userName } = data;
     
     const { sendEmail, customAdminEmail } = await import("@/lib/email");
     
