@@ -3,7 +3,7 @@ import { SiteShell } from "@/components/layout/SiteShell";
 
 // Static date — bumped manually when the policy changes. Avoids SSR/CSR
 // hydration mismatch from `new Date()` in render.
-const LAST_UPDATED = "29 April 2026";
+const LAST_UPDATED = "29 April 2024";
 
 export const Route = createFileRoute("/privacy-policy")({
   head: () => ({

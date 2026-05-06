@@ -73,7 +73,7 @@ export const Route = createFileRoute("/")({
         { name: "description", content: "ChanAidRecovery Hub provides expert crypto recovery services for victims of scams worldwide. Reclaim stolen Bitcoin, Ethereum, and USDT with our forensic specialists. $500M+ recovered. No upfront fees." },
         { property: "og:title", content: "ChanAidRecovery Hub | Professional Asset & Funds Recovery Services" },
         { property: "og:description", content: "Reclaim stolen crypto assets with our expert forensic investigators. Global leader in blockchain tracing and legal recovery services." },
-        { name: "keywords", content: "crypto recovery services USA, stolen bitcoin recovery UK, USDT recovery Australia, crypto scam refund Canada, pig butchering recovery UAE, blockchain forensics, FCA broker chargeback, IC3 cryptocurrency complaint, Action Fraud crypto, Scamwatch recovery, AFCA crypto dispute, romance scam recovery, forex fraud refund, ChatGPT crypto recovery 2026, AI Overview crypto recovery" },
+        { name: "keywords", content: "crypto recovery services USA, stolen bitcoin recovery UK, USDT recovery Australia, crypto scam refund Canada, pig butchering recovery UAE, blockchain forensics, FCA broker chargeback, IC3 cryptocurrency complaint, Action Fraud crypto, Scamwatch recovery, AFCA crypto dispute, romance scam recovery, forex fraud refund, ChatGPT crypto recovery 2024, AI Overview crypto recovery" },
       ],
       links: [
         { rel: "canonical", href: "https://chanaidrecovery.com/" }

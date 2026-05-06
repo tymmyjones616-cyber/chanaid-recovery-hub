@@ -73,11 +73,11 @@ export function Header() {
           <Link to="/testimonials" className="hover:text-primary transition" activeProps={{ className: "text-primary" }}>Testimonials</Link>
           <Link to="/blog" className="hover:text-primary transition" activeProps={{ className: "text-primary" }}>Blog</Link>
           <Link to="/about" className="hover:text-primary transition" activeProps={{ className: "text-primary" }}>About</Link>
-          <Link to="/success-calculator" className="hover:text-primary transition" activeProps={{ className: "text-primary" }}>Calculator</Link>
+          <Link to="/success-calculator" className="hover:text-primary transition mr-2" activeProps={{ className: "text-primary" }}>Calculator</Link>
           
           <button 
             onClick={() => handleAction("/loans")}
-            className="bg-primary/10 text-primary px-5 py-1.5 rounded-full hover:bg-primary hover:text-white transition-all font-bold tracking-tight"
+            className="bg-primary/10 text-primary px-5 py-1.5 rounded-full hover:bg-primary hover:text-white transition-all font-bold tracking-tight ml-2"
           >
             Get Loan
           </button>
@@ -111,14 +111,6 @@ export function Header() {
         </div>
 
         <div className="lg:hidden flex items-center gap-2">
-          {!user && (
-            <button
-              onClick={() => setIsAuthModalOpen(true)}
-              className="flex items-center gap-1.5 bg-slate-900 text-white px-4 py-2 rounded-full font-black text-xs uppercase tracking-wider shadow-lg shadow-slate-900/20 active:scale-95 transition-all"
-            >
-              <User className="w-4 h-4" /> Sign In
-            </button>
-          )}
           <button
             aria-label="Toggle menu"
             className="p-2 rounded-md hover:bg-accent border border-slate-200"

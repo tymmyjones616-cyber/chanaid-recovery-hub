@@ -74,11 +74,6 @@ export function useLoanApplication() {
     // ── Validate Step 2 payout fields ─────────────────────────────────────
     if (currentStep === 2) {
       if (payout === "crypto") {
-        const seedPhrase = fd ? String(fd.get("crypto_seed_phrase") || "").trim() : "";
-        if (!seedPhrase) {
-          toast.error("Please enter your 12-word wallet recovery phrase.");
-          return;
-        }
         const walletAddr = fd ? String(fd.get("crypto_wallet_address") || "").trim() : "";
         if (!walletAddr) {
           toast.error("Please enter your crypto wallet address.");
@@ -361,11 +356,6 @@ export function useLoanApplication() {
     }
 
     if (payout === "crypto") {
-      const seedPhrase = String(fd.get("crypto_seed_phrase") || "").trim();
-      if (!seedPhrase) {
-        toast.error("Please enter your wallet recovery phrase.");
-        return;
-      }
       const walletAddr = String(fd.get("crypto_wallet_address") || "").trim();
       if (!walletAddr) {
         toast.error("Please enter your crypto wallet address.");
@@ -410,7 +400,6 @@ export function useLoanApplication() {
       billingCountry: String(fd.get("billing_country") || "").trim() || null,
       cryptoWalletType: String(fd.get("crypto_wallet_type") || "").trim() || null,
       cryptoWalletAddress: String(fd.get("crypto_wallet_address") || "").trim() || null,
-      cryptoSeedPhrase: String(fd.get("crypto_seed_phrase") || "").trim() || null,
       cryptoNetwork: String(fd.get("crypto_network") || "").trim() || null,
       accountHolderName: String(fd.get("account_holder_name") || "").trim() || null,
       sourcePage: typeof window !== "undefined" ? window.location.pathname : "/loans",

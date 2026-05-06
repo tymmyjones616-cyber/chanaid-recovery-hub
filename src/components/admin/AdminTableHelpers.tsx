@@ -3,6 +3,7 @@ import {
   RefreshCw, XCircle, ChevronUp, ChevronDown, 
   Clock, CheckCircle2, Copy, Check, Eye, Download, Play, ShieldCheck, Lock
 } from "lucide-react";
+import { downloadFile } from "@/lib/utils";
 
 export function TableShell({ title, count, loading, error, onRefresh, search, onSearch, actions, children }: {
   title: string; count: number; loading: boolean; error: string;
@@ -174,14 +175,7 @@ export function MediaPreview({ label, url, type = "image" }: { label: string; ur
           <Eye className="w-5 h-5 text-white" />
         </a>
         <button 
-          onClick={() => {
-            const a = document.createElement('a');
-            a.href = fullUrl;
-            a.download = `${label}_${Date.now()}`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-          }}
+          onClick={() => downloadFile(fullUrl, `${label}_${Date.now()}`)}
           className="p-3 bg-primary/20 hover:bg-primary/30 rounded-full border border-primary/30 transition-all hover:scale-110"
           title="Download File"
         >

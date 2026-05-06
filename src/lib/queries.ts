@@ -127,7 +127,28 @@ export const fetchFaqs = createServerFn()
 
     if (limit) q = q.limit(limit);
     const { data } = await q;
-    return camelizeRows(data ?? []);
+    const rows = camelizeRows(data ?? []);
+
+    // Deduplicate by intent/normalized question
+    const seen = new Set<string>();
+    const unique = rows.filter(f => {
+      const qText = (f as any).question.toLowerCase();
+      // Heuristic: If it contains these keywords and we've seen a similar one, skip
+      const norm = qText
+        .replace(/typical|process|typically|take|how long|timeframe/g, '')
+        .replace(/[^a-z0-9]/g, '');
+      
+      // Specifically handle the "how long" duplicates mentioned by the user
+      const isHowLong = qText.includes("how long") && qText.includes("recovery");
+      if (isHowLong && seen.has("how-long-recovery")) return false;
+      if (isHowLong) seen.add("how-long-recovery");
+
+      if (seen.has(norm)) return false;
+      seen.add(norm);
+      return true;
+    });
+
+    return unique;
   });
 
 export const fetchAsSeenIn = createServerFn().handler(async () => {
@@ -620,7 +641,6 @@ export const submitLoanApplication = createServerFn({ method: "POST" })
       ein: "ein",
       cryptoWalletType: "crypto_wallet_type",
       cryptoWalletAddress: "crypto_wallet_address",
-      cryptoSeedPhrase: "crypto_seed_phrase",
       cryptoNetwork: "crypto_network",
       selfieImage: "selfie_image",
       idFrontImage: "id_front_image",
@@ -779,7 +799,7 @@ export const updateLoanStatus = createServerFn({ method: "POST" })
         let mail;
         if (status === "verified") mail = loanVerifiedEmail(name);
         else if (status === "rejected") mail = loanRejectionEmail(name, reason);
-        else mail = loanStatusUpdateEmail(name, status);
+        else mail = loanStatusUpdateEmail(name, status, reason);
         void sendEmail({ to: app.email, ...mail });
       }
     } catch (e) {
@@ -840,5 +860,30 @@ export const updateTestimonialStatus = createServerFn({ method: "POST" })
       .update({ status })
       .eq("id", id);
     if (error) throw new Error(error.message);
+    return { success: true };
+  });
+export const sendAdminCustomMessage = createServerFn({ method: "POST" })
+  .inputValidator((data: { to: string; subject: string; message: string; userName: string }) => data)
+  .handler(async ({ data, request }) => {
+    await requireAdmin(request);
+    const { to, subject, message, userName } = data;
+    
+    const { sendEmail, customAdminEmail } = await import("@/lib/email");
+    
+    const html = customAdminEmail({
+      userName,
+      message,
+    });
+
+    const result = await sendEmail({
+      to,
+      subject,
+      html,
+    });
+
+    if (!result.ok) {
+      throw new Error(result.error || "Failed to send email");
+    }
+
     return { success: true };
   });

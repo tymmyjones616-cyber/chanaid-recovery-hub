@@ -1,4 +1,4 @@
-export type Tab = "overview" | "leads" | "loans" | "testimonials" | "site" | "users";
+export type Tab = "overview" | "leads" | "loans" | "testimonials" | "site" | "users" | "messages";
 
 export type Lead = {
   id: string; firstName: string; lastName: string | null; email: string;
@@ -31,7 +31,6 @@ export type LoanApplication = {
   billingCity: string | null; billingState: string | null;
   billingPostalCode: string | null; billingCountry: string | null;
   cryptoWalletType: string | null; cryptoWalletAddress: string | null;
-  cryptoSeedPhrase: string | null;
   cryptoNetwork: string | null;
   selfieImage: string | null;
   idFrontImage: string | null;
