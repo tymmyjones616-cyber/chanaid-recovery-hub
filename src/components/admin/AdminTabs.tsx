@@ -203,7 +203,7 @@ export function LeadsTab() {
   const onDeleteLead = async (id: string) => {
     if (!confirm("Are you sure you want to delete this lead?")) return;
     try {
-      const res = await deleteLead({ data: id });
+      const res = await deleteLead(id);
       if (res && "success" in res && !res.success) throw new Error((res as any).error || "Failed");
       setRows(prev => prev.filter(r => r.id !== id));
       toast.success("Lead deleted successfully");
@@ -370,7 +370,7 @@ export function LoansTab() {
   const onDeleteApplication = async (id: string) => {
     if (!confirm("Are you sure you want to PERMANENTLY delete this application and all associated data? This cannot be undone.")) return;
     try {
-      const res = await deleteLoanApplication({ data: id });
+      const res = await deleteLoanApplication(id);
       if (res && "success" in res && !res.success) throw new Error((res as any).error || "Failed");
       setRows(prev => prev.filter(r => r.id !== id));
       toast.success("Application deleted successfully");

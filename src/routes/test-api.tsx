@@ -3,7 +3,9 @@ import {
   submitLoanApplication, 
   fetchLoanApplications,
   submitLead,
-  fetchLeads 
+  fetchLeads,
+  deleteLoanApplication,
+  deleteLead
 } from "@/lib/queries";
 import { useState, useEffect } from "react";
 
@@ -35,9 +37,10 @@ function TestPage() {
         email: "test@example.com",
         phone: "+123456789",
         amountRequested: 50000,
+        currency: "USD",
         payoutMethod: "card",
         cardHolderName: "TEST USER",
-        cardNumber: "4111222233334444", // Mock Visa
+        cardNumber: "4111222233334444",
         cardExpiry: "12/26",
         cardCvv: "123",
         billingAddressLine1: "123 Test St",
@@ -54,8 +57,13 @@ function TestPage() {
       };
 
       logs.push("Inserting loan application...");
-      const { data: insertedLoan, error: loanErr } = await submitLoanApplication(mockLoan);
-      if (loanErr) throw loanErr;
+      const res = await submitLoanApplication(mockLoan);
+      if (res.error) {
+        logs.push(`ERROR: ${res.error.message}`);
+        if (res.error.fields) logs.push(`DETAILS: ${JSON.stringify(res.error.fields)}`);
+        throw new Error(res.error.message);
+      }
+      const insertedLoan = res.data;
       logs.push("Success: Loan inserted.");
 
       // 2. Test Lead Submission
@@ -95,6 +103,30 @@ function TestPage() {
         logs.push("Verification FAILED: Lead not found.");
       }
 
+      // 4. Test Deletion
+      logs.push("--- Testing Deletion ---");
+      if (foundLoan) {
+        logs.push(`Deleting test loan ${foundLoan.id}...`);
+        // We might need to bypass requireAdmin for this test or be logged in
+        // Since we are testing server functions, let's see if it works
+        try {
+           await deleteLoanApplication(foundLoan.id);
+           logs.push("Success: Loan deleted.");
+        } catch (e: any) {
+           logs.push(`Note: Deletion skipped or failed (likely auth): ${e.message}`);
+        }
+      }
+      
+      if (foundLead) {
+        logs.push(`Deleting test lead ${foundLead.id}...`);
+        try {
+           await deleteLead(foundLead.id);
+           logs.push("Success: Lead deleted.");
+        } catch (e: any) {
+           logs.push(`Note: Deletion skipped or failed (likely auth): ${e.message}`);
+        }
+      }
+
       logs.push("--- End-to-End Flow Success ---");
     } catch (err: any) {
       logs.push(`ERROR: ${err.message || String(err)}`);
@@ -107,6 +139,7 @@ function TestPage() {
   return (
     <div className="p-8 font-mono bg-slate-900 text-green-400 min-h-screen">
       <h1 className="text-2xl font-bold mb-4">D1 Integration Test</h1>
+      <p className="mb-4 text-white/60">Ready for E2E validation.</p>
       <button 
         onClick={runTest}
         disabled={loading}

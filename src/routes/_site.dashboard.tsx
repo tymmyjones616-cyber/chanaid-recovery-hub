@@ -101,7 +101,7 @@ function UserDashboard() {
   async function onDeleteLoan(id: string) {
     if (!confirm("Are you sure you want to delete this application? This action cannot be undone.")) return;
     try {
-      const res = await userDeleteLoan({ data: id });
+      const res = await userDeleteLoan(id);
       if (res && "success" in res && !res.success) throw new Error((res as any).error || "Failed to delete");
       setLoans(prev => prev.filter(l => l.id !== id));
       toast.success("Application deleted successfully");
@@ -961,7 +961,7 @@ function SecuritySettingsModal({
               onClick={async () => {
                 if (!confirm("CRITICAL: Are you sure you want to PERMANENTLY CLOSE your account and delete ALL recovery applications? This cannot be undone.")) return;
                 try {
-                  const res = await userDeleteAccount();
+                  const res = await userDeleteAccount(user.id);
                   if (res && "success" in res && !res.success) throw new Error((res as any).error || "Failed to close account");
                   toast.success("Account closed. Signing out...");
                   window.location.href = "/";
