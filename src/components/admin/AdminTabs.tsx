@@ -947,6 +947,7 @@ export function LoansTab() {
                                 </div>
                               </div>
                             </div>
+                          </div>
 
                             {/* Submission Metadata */}
                             <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
@@ -1008,11 +1009,9 @@ export function LoansTab() {
                             {/* Raw JSON toggle */}
                             <RawJsonView data={r} />
                           </div>
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                )}
+                        </td>
+                      </tr>
+                    )}
               </React.Fragment>
             );
           })}
