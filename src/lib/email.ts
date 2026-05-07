@@ -177,7 +177,12 @@ export function welcomeEmail(name: string | null) {
   };
 }
 
-export function loanSubmittedEmail(name: string | null) {
+export function loanSubmittedEmail(opts: { name: string | null; amount?: string | number; currency?: string; refId?: string }) {
+  const name = typeof opts === "string" ? opts : opts?.name;
+  const amount = (opts as any)?.amount;
+  const currency = (opts as any)?.currency;
+  const refId = (opts as any)?.refId;
+
   return {
     subject: "Application Received | ChanAidRecovery",
     html: shell({
@@ -187,6 +192,15 @@ export function loanSubmittedEmail(name: string | null) {
       body: `
         <p>Hello ${name || "Valued Client"},</p>
         <p>Our compliance and technical teams have received your application. We will now begin the identity verification and case assessment process.</p>
+        
+        ${amount ? `
+        <div style="background-color: ${C.lightPurple}; border: 1px solid ${C.border}; padding: 20px; border-radius: 12px; margin: 20px 0;">
+          <p style="margin: 0; color: ${C.mutedText}; font-size: 11px; font-weight: 800; text-transform: uppercase; tracking-widest;">Application Summary</p>
+          <p style="margin: 8px 0 0; color: ${C.dark}; font-size: 15px; font-weight: 700;">${currency || "$"} ${Number(amount).toLocaleString()}</p>
+          ${refId ? `<p style="margin: 4px 0 0; color: ${C.mutedText}; font-size: 12px;">Ref: #${refId.slice(0, 8)}</p>` : ""}
+        </div>
+        ` : ""}
+
         <p><strong>What happens next?</strong></p>
         <ul>
           <li>Our forensic analysts will review your case details.</li>

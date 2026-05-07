@@ -83,12 +83,15 @@ function UserDashboard() {
   }
 
   async function loadLoans() {
+    if (!user) return;
     try {
-      const email = user?.email ?? user?.user_metadata?.email ?? "";
-      const data = await fetchUserLoans({ data: email });
+      // Pass the whole user object; the server-side extraction in fetchUserLoans 
+      // is now ultra-robust and will find the correct email.
+      const data = await fetchUserLoans({ data: user });
       setLoans(data);
     } catch (error) {
-      toast.error("Failed to load your applications");
+      console.error("[Dashboard] Failed to load loans:", error);
+      toast.error("Synchronization delay. Retrying...");
     } finally {
       setLoading(false);
     }
@@ -223,6 +226,40 @@ function UserDashboard() {
               </div>
 
 
+              {/* Verified Success Banner */}
+              {verifiedCount > 0 && (
+                <Reveal direction="down">
+                  <div className="bg-emerald-500 rounded-[2rem] p-8 text-white shadow-xl shadow-emerald-500/20 relative overflow-hidden group mb-8">
+                    <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:scale-110 transition-transform">
+                      <BadgeCheck className="w-24 h-24" />
+                    </div>
+                    <div className="relative z-10">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
+                          <CheckCircle2 className="w-5 h-5 text-white" />
+                        </div>
+                        <span className="text-xs font-black uppercase tracking-widest text-emerald-100">Verification Success</span>
+                      </div>
+                      <h3 className="text-2xl font-black italic tracking-tight mb-2">Congratulations! Your Identity is Verified.</h3>
+                      <p className="text-emerald-50 text-sm font-medium leading-relaxed max-w-xl">
+                        Your application has been approved by our compliance team. We are now initializing the recovery settlement process. Please monitor your email for the final transfer instructions.
+                      </p>
+                      <div className="mt-6 flex flex-wrap gap-3">
+                         <Link 
+                           to="/contact"
+                           className="px-6 py-2.5 rounded-xl bg-white text-emerald-600 font-bold text-xs hover:shadow-lg transition-all"
+                         >
+                           Speak with Officer
+                         </Link>
+                         <div className="px-4 py-2.5 rounded-xl bg-emerald-600/50 border border-emerald-400/30 backdrop-blur-sm text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                           <div className="w-1.5 h-1.5 rounded-full bg-emerald-200 animate-pulse" />
+                           Settlement Active
+                         </div>
+                      </div>
+                    </div>
+                  </div>
+                </Reveal>
+              )}
 
               {/* Priority Alerts */}
               {loans
@@ -423,7 +460,8 @@ function LoanCard({ loan }: { loan: any }) {
               <span className="font-black text-slate-900 tracking-tight">
                 {loan.currency} {Number(loan.amountRequested).toLocaleString()}
               </span>
-              <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border ${currentStatus.bg} ${currentStatus.text} ${currentStatus.border}`}>
+              <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border ${currentStatus.bg} ${currentStatus.text} ${currentStatus.border} flex items-center gap-1`}>
+                {loan.status === 'verified' && <BadgeCheck className="w-3 h-3" />}
                 {currentStatus.label}
               </span>
             </div>

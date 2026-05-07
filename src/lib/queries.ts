@@ -221,14 +221,29 @@ export const fetchLeads = createServerFn().handler(async ({ request }) => {
 export const fetchUserLoans = createServerFn()
   .inputValidator((p: any) => p)
   .handler(async ({ data: input }) => {
-    const email = typeof input === "string" ? input : (input as any)?.data;
-    if (!email) return [];
+    // Ultra-robust extraction: check string, {data:str}, {email:str}, or the raw object itself
+    let email: any = null;
+    
+    if (typeof input === "string") {
+      email = input;
+    } else if (input && typeof input === "object") {
+      email = input.data || input.email || input.user_metadata?.email || null;
+      // If it's still an object (e.g. from a nested payload), try one level deeper
+      if (typeof email === "object" && email !== null) {
+        email = email.email || email.data || null;
+      }
+    }
+    
+    if (!email || typeof email !== "string") {
+      console.warn("[fetchUserLoans] Could not extract email from input:", JSON.stringify(input));
+      return [];
+    }
     
     const sb = getSupabaseAdmin();
     const { data } = await sb
       .from("loan_applications")
       .select("*")
-      .ilike("email", email)
+      .ilike("email", email.trim())
       .order("created_at", { ascending: false });
     return camelizeRows(data ?? []);
   });

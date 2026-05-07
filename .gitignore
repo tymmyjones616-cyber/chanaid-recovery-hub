@@ -50,5 +50,6 @@ add_blog_posts.js
 worker.js
 
 # Claude Code internal
+.claude/
 .claude/worktrees/
 .claude/plans/
