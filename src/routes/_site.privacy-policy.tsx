@@ -5,7 +5,7 @@ import { SiteShell } from "@/components/layout/SiteShell";
 // hydration mismatch from `new Date()` in render.
 const LAST_UPDATED = "29 April 2024";
 
-export const Route = createFileRoute("/privacy-policy")({
+export const Route = createFileRoute("/_site/privacy-policy")({
   head: () => ({
     meta: [
       { title: "Privacy Policy | ChanAidRecovery Hub" },
@@ -19,7 +19,7 @@ export const Route = createFileRoute("/privacy-policy")({
 
 function PrivacyPolicy() {
   return (
-    <SiteShell>
+    <>
       <section className="max-w-3xl mx-auto px-4 py-16 prose prose-sm">
         <h1 className="text-4xl font-bold mb-6">Privacy Policy</h1>
         <p className="text-muted-foreground">Last updated: {LAST_UPDATED}</p>
@@ -78,6 +78,6 @@ function PrivacyPolicy() {
           To exercise any right, email <a href="mailto:support@chanaidrecovery.com">support@chanaidrecovery.com</a>. We will respond within statutory deadlines.
         </p>
       </section>
-    </SiteShell>
+    </>
   );
 }

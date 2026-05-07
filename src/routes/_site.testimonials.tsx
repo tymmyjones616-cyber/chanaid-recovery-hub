@@ -8,7 +8,7 @@ import { TiltCard } from "@/components/effects/TiltCard";
 import { InfiniteTestimonialCarousel } from "@/components/site/InfiniteTestimonialCarousel";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/testimonials")({
+export const Route = createFileRoute("/_site/testimonials")({
   head: () => ({
     meta: [
       { title: "Client Testimonials | ChanAidRecovery Hub Success Stories" },
@@ -40,7 +40,7 @@ function TestimonialsPage() {
   const row3 = items.slice(third * 2);
 
   return (
-    <SiteShell>
+    <>
       <section className="relative bg-hero-gradient py-20 overflow-hidden">
         <div className="max-w-4xl mx-auto text-center px-4 relative">
           <Reveal direction="up">
@@ -123,7 +123,7 @@ function TestimonialsPage() {
           </Reveal>
         </div>
       </section>
-    </SiteShell>
+    </>
   );
 }
 

@@ -3,7 +3,7 @@ import { SiteShell } from "@/components/layout/SiteShell";
 import { ShieldCheck, Users, Award, Globe, BadgeCheck } from "lucide-react";
 import { Reveal } from "@/components/effects/Reveal";
 
-export const Route = createFileRoute("/about")({
+export const Route = createFileRoute("/_site/about")({
   head: () => ({
     meta: [
       { title: "About ChanAidRecovery Hub | Global Funds Recovery Specialists" },
@@ -13,7 +13,7 @@ export const Route = createFileRoute("/about")({
     ],
   }),
   component: () => (
-    <SiteShell>
+    <>
       <section className="bg-hero-gradient py-20">
         <div className="max-w-4xl mx-auto px-4 text-center">
           <h1 className="text-4xl sm:text-5xl font-bold">Years of experience fighting online financial fraud</h1>
@@ -102,6 +102,6 @@ export const Route = createFileRoute("/about")({
           </Reveal>
         </div>
       </section>
-    </SiteShell>
+    </>
   ),
 });

@@ -9,35 +9,26 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as TestimonialsRouteImport } from './routes/testimonials'
 import { Route as TestApiRouteImport } from './routes/test-api'
-import { Route as SuccessCalculatorRouteImport } from './routes/success-calculator'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
-import { Route as PrivacyPolicyRouteImport } from './routes/privacy-policy'
-import { Route as LoansRouteImport } from './routes/loans'
-import { Route as DashboardRouteImport } from './routes/dashboard'
-import { Route as ContactRouteImport } from './routes/contact'
 import { Route as AdminRouteImport } from './routes/admin'
-import { Route as AboutRouteImport } from './routes/about'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as BlogIndexRouteImport } from './routes/blog.index'
-import { Route as ServicesSlugRouteImport } from './routes/services.$slug'
-import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
+import { Route as SiteRouteImport } from './routes/_site'
+import { Route as SiteIndexRouteImport } from './routes/_site.index'
+import { Route as SiteTestimonialsRouteImport } from './routes/_site.testimonials'
+import { Route as SiteSuccessCalculatorRouteImport } from './routes/_site.success-calculator'
+import { Route as SitePrivacyPolicyRouteImport } from './routes/_site.privacy-policy'
+import { Route as SiteLoansRouteImport } from './routes/_site.loans'
+import { Route as SiteDashboardRouteImport } from './routes/_site.dashboard'
+import { Route as SiteContactRouteImport } from './routes/_site.contact'
+import { Route as SiteAboutRouteImport } from './routes/_site.about'
+import { Route as SiteBlogIndexRouteImport } from './routes/_site.blog.index'
+import { Route as SiteServicesSlugRouteImport } from './routes/_site.services.$slug'
+import { Route as SiteBlogSlugRouteImport } from './routes/_site.blog.$slug'
 
-const TestimonialsRoute = TestimonialsRouteImport.update({
-  id: '/testimonials',
-  path: '/testimonials',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const TestApiRoute = TestApiRouteImport.update({
   id: '/test-api',
   path: '/test-api',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SuccessCalculatorRoute = SuccessCalculatorRouteImport.update({
-  id: '/success-calculator',
-  path: '/success-calculator',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
@@ -50,202 +41,194 @@ const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
   path: '/robots.txt',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PrivacyPolicyRoute = PrivacyPolicyRouteImport.update({
-  id: '/privacy-policy',
-  path: '/privacy-policy',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LoansRoute = LoansRouteImport.update({
-  id: '/loans',
-  path: '/loans',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DashboardRoute = DashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ContactRoute = ContactRouteImport.update({
-  id: '/contact',
-  path: '/contact',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
   path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AboutRoute = AboutRouteImport.update({
-  id: '/about',
-  path: '/about',
+const SiteRoute = SiteRouteImport.update({
+  id: '/_site',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
+const SiteIndexRoute = SiteIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => SiteRoute,
 } as any)
-const BlogIndexRoute = BlogIndexRouteImport.update({
+const SiteTestimonialsRoute = SiteTestimonialsRouteImport.update({
+  id: '/testimonials',
+  path: '/testimonials',
+  getParentRoute: () => SiteRoute,
+} as any)
+const SiteSuccessCalculatorRoute = SiteSuccessCalculatorRouteImport.update({
+  id: '/success-calculator',
+  path: '/success-calculator',
+  getParentRoute: () => SiteRoute,
+} as any)
+const SitePrivacyPolicyRoute = SitePrivacyPolicyRouteImport.update({
+  id: '/privacy-policy',
+  path: '/privacy-policy',
+  getParentRoute: () => SiteRoute,
+} as any)
+const SiteLoansRoute = SiteLoansRouteImport.update({
+  id: '/loans',
+  path: '/loans',
+  getParentRoute: () => SiteRoute,
+} as any)
+const SiteDashboardRoute = SiteDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => SiteRoute,
+} as any)
+const SiteContactRoute = SiteContactRouteImport.update({
+  id: '/contact',
+  path: '/contact',
+  getParentRoute: () => SiteRoute,
+} as any)
+const SiteAboutRoute = SiteAboutRouteImport.update({
+  id: '/about',
+  path: '/about',
+  getParentRoute: () => SiteRoute,
+} as any)
+const SiteBlogIndexRoute = SiteBlogIndexRouteImport.update({
   id: '/blog/',
   path: '/blog/',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => SiteRoute,
 } as any)
-const ServicesSlugRoute = ServicesSlugRouteImport.update({
+const SiteServicesSlugRoute = SiteServicesSlugRouteImport.update({
   id: '/services/$slug',
   path: '/services/$slug',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => SiteRoute,
 } as any)
-const BlogSlugRoute = BlogSlugRouteImport.update({
+const SiteBlogSlugRoute = SiteBlogSlugRouteImport.update({
   id: '/blog/$slug',
   path: '/blog/$slug',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => SiteRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/about': typeof AboutRoute
+  '/': typeof SiteIndexRoute
   '/admin': typeof AdminRoute
-  '/contact': typeof ContactRoute
-  '/dashboard': typeof DashboardRoute
-  '/loans': typeof LoansRoute
-  '/privacy-policy': typeof PrivacyPolicyRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
-  '/success-calculator': typeof SuccessCalculatorRoute
   '/test-api': typeof TestApiRoute
-  '/testimonials': typeof TestimonialsRoute
-  '/blog/$slug': typeof BlogSlugRoute
-  '/services/$slug': typeof ServicesSlugRoute
-  '/blog/': typeof BlogIndexRoute
+  '/about': typeof SiteAboutRoute
+  '/contact': typeof SiteContactRoute
+  '/dashboard': typeof SiteDashboardRoute
+  '/loans': typeof SiteLoansRoute
+  '/privacy-policy': typeof SitePrivacyPolicyRoute
+  '/success-calculator': typeof SiteSuccessCalculatorRoute
+  '/testimonials': typeof SiteTestimonialsRoute
+  '/blog/$slug': typeof SiteBlogSlugRoute
+  '/services/$slug': typeof SiteServicesSlugRoute
+  '/blog/': typeof SiteBlogIndexRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/about': typeof AboutRoute
   '/admin': typeof AdminRoute
-  '/contact': typeof ContactRoute
-  '/dashboard': typeof DashboardRoute
-  '/loans': typeof LoansRoute
-  '/privacy-policy': typeof PrivacyPolicyRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
-  '/success-calculator': typeof SuccessCalculatorRoute
   '/test-api': typeof TestApiRoute
-  '/testimonials': typeof TestimonialsRoute
-  '/blog/$slug': typeof BlogSlugRoute
-  '/services/$slug': typeof ServicesSlugRoute
-  '/blog': typeof BlogIndexRoute
+  '/about': typeof SiteAboutRoute
+  '/contact': typeof SiteContactRoute
+  '/dashboard': typeof SiteDashboardRoute
+  '/loans': typeof SiteLoansRoute
+  '/privacy-policy': typeof SitePrivacyPolicyRoute
+  '/success-calculator': typeof SiteSuccessCalculatorRoute
+  '/testimonials': typeof SiteTestimonialsRoute
+  '/': typeof SiteIndexRoute
+  '/blog/$slug': typeof SiteBlogSlugRoute
+  '/services/$slug': typeof SiteServicesSlugRoute
+  '/blog': typeof SiteBlogIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/about': typeof AboutRoute
+  '/_site': typeof SiteRouteWithChildren
   '/admin': typeof AdminRoute
-  '/contact': typeof ContactRoute
-  '/dashboard': typeof DashboardRoute
-  '/loans': typeof LoansRoute
-  '/privacy-policy': typeof PrivacyPolicyRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
-  '/success-calculator': typeof SuccessCalculatorRoute
   '/test-api': typeof TestApiRoute
-  '/testimonials': typeof TestimonialsRoute
-  '/blog/$slug': typeof BlogSlugRoute
-  '/services/$slug': typeof ServicesSlugRoute
-  '/blog/': typeof BlogIndexRoute
+  '/_site/about': typeof SiteAboutRoute
+  '/_site/contact': typeof SiteContactRoute
+  '/_site/dashboard': typeof SiteDashboardRoute
+  '/_site/loans': typeof SiteLoansRoute
+  '/_site/privacy-policy': typeof SitePrivacyPolicyRoute
+  '/_site/success-calculator': typeof SiteSuccessCalculatorRoute
+  '/_site/testimonials': typeof SiteTestimonialsRoute
+  '/_site/': typeof SiteIndexRoute
+  '/_site/blog/$slug': typeof SiteBlogSlugRoute
+  '/_site/services/$slug': typeof SiteServicesSlugRoute
+  '/_site/blog/': typeof SiteBlogIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/about'
     | '/admin'
+    | '/robots.txt'
+    | '/sitemap.xml'
+    | '/test-api'
+    | '/about'
     | '/contact'
     | '/dashboard'
     | '/loans'
     | '/privacy-policy'
-    | '/robots.txt'
-    | '/sitemap.xml'
     | '/success-calculator'
-    | '/test-api'
     | '/testimonials'
     | '/blog/$slug'
     | '/services/$slug'
     | '/blog/'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/'
-    | '/about'
     | '/admin'
+    | '/robots.txt'
+    | '/sitemap.xml'
+    | '/test-api'
+    | '/about'
     | '/contact'
     | '/dashboard'
     | '/loans'
     | '/privacy-policy'
-    | '/robots.txt'
-    | '/sitemap.xml'
     | '/success-calculator'
-    | '/test-api'
     | '/testimonials'
+    | '/'
     | '/blog/$slug'
     | '/services/$slug'
     | '/blog'
   id:
     | '__root__'
-    | '/'
-    | '/about'
+    | '/_site'
     | '/admin'
-    | '/contact'
-    | '/dashboard'
-    | '/loans'
-    | '/privacy-policy'
     | '/robots.txt'
     | '/sitemap.xml'
-    | '/success-calculator'
     | '/test-api'
-    | '/testimonials'
-    | '/blog/$slug'
-    | '/services/$slug'
-    | '/blog/'
+    | '/_site/about'
+    | '/_site/contact'
+    | '/_site/dashboard'
+    | '/_site/loans'
+    | '/_site/privacy-policy'
+    | '/_site/success-calculator'
+    | '/_site/testimonials'
+    | '/_site/'
+    | '/_site/blog/$slug'
+    | '/_site/services/$slug'
+    | '/_site/blog/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  AboutRoute: typeof AboutRoute
+  SiteRoute: typeof SiteRouteWithChildren
   AdminRoute: typeof AdminRoute
-  ContactRoute: typeof ContactRoute
-  DashboardRoute: typeof DashboardRoute
-  LoansRoute: typeof LoansRoute
-  PrivacyPolicyRoute: typeof PrivacyPolicyRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
-  SuccessCalculatorRoute: typeof SuccessCalculatorRoute
   TestApiRoute: typeof TestApiRoute
-  TestimonialsRoute: typeof TestimonialsRoute
-  BlogSlugRoute: typeof BlogSlugRoute
-  ServicesSlugRoute: typeof ServicesSlugRoute
-  BlogIndexRoute: typeof BlogIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/testimonials': {
-      id: '/testimonials'
-      path: '/testimonials'
-      fullPath: '/testimonials'
-      preLoaderRoute: typeof TestimonialsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/test-api': {
       id: '/test-api'
       path: '/test-api'
       fullPath: '/test-api'
       preLoaderRoute: typeof TestApiRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/success-calculator': {
-      id: '/success-calculator'
-      path: '/success-calculator'
-      fullPath: '/success-calculator'
-      preLoaderRoute: typeof SuccessCalculatorRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sitemap.xml': {
@@ -262,34 +245,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RobotsDottxtRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/privacy-policy': {
-      id: '/privacy-policy'
-      path: '/privacy-policy'
-      fullPath: '/privacy-policy'
-      preLoaderRoute: typeof PrivacyPolicyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/loans': {
-      id: '/loans'
-      path: '/loans'
-      fullPath: '/loans'
-      preLoaderRoute: typeof LoansRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/dashboard': {
-      id: '/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof DashboardRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/contact': {
-      id: '/contact'
-      path: '/contact'
-      fullPath: '/contact'
-      preLoaderRoute: typeof ContactRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/admin': {
       id: '/admin'
       path: '/admin'
@@ -297,60 +252,129 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/about': {
-      id: '/about'
-      path: '/about'
-      fullPath: '/about'
-      preLoaderRoute: typeof AboutRouteImport
+    '/_site': {
+      id: '/_site'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof SiteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
+    '/_site/': {
+      id: '/_site/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof SiteIndexRouteImport
+      parentRoute: typeof SiteRoute
     }
-    '/blog/': {
-      id: '/blog/'
+    '/_site/testimonials': {
+      id: '/_site/testimonials'
+      path: '/testimonials'
+      fullPath: '/testimonials'
+      preLoaderRoute: typeof SiteTestimonialsRouteImport
+      parentRoute: typeof SiteRoute
+    }
+    '/_site/success-calculator': {
+      id: '/_site/success-calculator'
+      path: '/success-calculator'
+      fullPath: '/success-calculator'
+      preLoaderRoute: typeof SiteSuccessCalculatorRouteImport
+      parentRoute: typeof SiteRoute
+    }
+    '/_site/privacy-policy': {
+      id: '/_site/privacy-policy'
+      path: '/privacy-policy'
+      fullPath: '/privacy-policy'
+      preLoaderRoute: typeof SitePrivacyPolicyRouteImport
+      parentRoute: typeof SiteRoute
+    }
+    '/_site/loans': {
+      id: '/_site/loans'
+      path: '/loans'
+      fullPath: '/loans'
+      preLoaderRoute: typeof SiteLoansRouteImport
+      parentRoute: typeof SiteRoute
+    }
+    '/_site/dashboard': {
+      id: '/_site/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof SiteDashboardRouteImport
+      parentRoute: typeof SiteRoute
+    }
+    '/_site/contact': {
+      id: '/_site/contact'
+      path: '/contact'
+      fullPath: '/contact'
+      preLoaderRoute: typeof SiteContactRouteImport
+      parentRoute: typeof SiteRoute
+    }
+    '/_site/about': {
+      id: '/_site/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof SiteAboutRouteImport
+      parentRoute: typeof SiteRoute
+    }
+    '/_site/blog/': {
+      id: '/_site/blog/'
       path: '/blog'
       fullPath: '/blog/'
-      preLoaderRoute: typeof BlogIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof SiteBlogIndexRouteImport
+      parentRoute: typeof SiteRoute
     }
-    '/services/$slug': {
-      id: '/services/$slug'
+    '/_site/services/$slug': {
+      id: '/_site/services/$slug'
       path: '/services/$slug'
       fullPath: '/services/$slug'
-      preLoaderRoute: typeof ServicesSlugRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof SiteServicesSlugRouteImport
+      parentRoute: typeof SiteRoute
     }
-    '/blog/$slug': {
-      id: '/blog/$slug'
+    '/_site/blog/$slug': {
+      id: '/_site/blog/$slug'
       path: '/blog/$slug'
       fullPath: '/blog/$slug'
-      preLoaderRoute: typeof BlogSlugRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof SiteBlogSlugRouteImport
+      parentRoute: typeof SiteRoute
     }
   }
 }
 
+interface SiteRouteChildren {
+  SiteAboutRoute: typeof SiteAboutRoute
+  SiteContactRoute: typeof SiteContactRoute
+  SiteDashboardRoute: typeof SiteDashboardRoute
+  SiteLoansRoute: typeof SiteLoansRoute
+  SitePrivacyPolicyRoute: typeof SitePrivacyPolicyRoute
+  SiteSuccessCalculatorRoute: typeof SiteSuccessCalculatorRoute
+  SiteTestimonialsRoute: typeof SiteTestimonialsRoute
+  SiteIndexRoute: typeof SiteIndexRoute
+  SiteBlogSlugRoute: typeof SiteBlogSlugRoute
+  SiteServicesSlugRoute: typeof SiteServicesSlugRoute
+  SiteBlogIndexRoute: typeof SiteBlogIndexRoute
+}
+
+const SiteRouteChildren: SiteRouteChildren = {
+  SiteAboutRoute: SiteAboutRoute,
+  SiteContactRoute: SiteContactRoute,
+  SiteDashboardRoute: SiteDashboardRoute,
+  SiteLoansRoute: SiteLoansRoute,
+  SitePrivacyPolicyRoute: SitePrivacyPolicyRoute,
+  SiteSuccessCalculatorRoute: SiteSuccessCalculatorRoute,
+  SiteTestimonialsRoute: SiteTestimonialsRoute,
+  SiteIndexRoute: SiteIndexRoute,
+  SiteBlogSlugRoute: SiteBlogSlugRoute,
+  SiteServicesSlugRoute: SiteServicesSlugRoute,
+  SiteBlogIndexRoute: SiteBlogIndexRoute,
+}
+
+const SiteRouteWithChildren = SiteRoute._addFileChildren(SiteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  AboutRoute: AboutRoute,
+  SiteRoute: SiteRouteWithChildren,
   AdminRoute: AdminRoute,
-  ContactRoute: ContactRoute,
-  DashboardRoute: DashboardRoute,
-  LoansRoute: LoansRoute,
-  PrivacyPolicyRoute: PrivacyPolicyRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
-  SuccessCalculatorRoute: SuccessCalculatorRoute,
   TestApiRoute: TestApiRoute,
-  TestimonialsRoute: TestimonialsRoute,
-  BlogSlugRoute: BlogSlugRoute,
-  ServicesSlugRoute: ServicesSlugRoute,
-  BlogIndexRoute: BlogIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

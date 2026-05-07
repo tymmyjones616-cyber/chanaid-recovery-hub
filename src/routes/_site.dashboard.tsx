@@ -11,6 +11,7 @@ import {
   XCircle, 
   Lock,
   AlertCircle, 
+  AlertTriangle,
   CreditCard, 
   Banknote, 
   Wallet, 
@@ -20,17 +21,18 @@ import {
   FileText,
   BadgeCheck,
   Calendar,
-  ExternalLink,
   ChevronRight,
   User as UserIcon,
   LogOut,
-  Settings
+  Settings,
+  RefreshCw,
+  Mail
 } from "lucide-react";
 import { Reveal } from "@/components/effects/Reveal";
 import { toast } from "sonner";
 import { getSupabaseBrowser } from "@/lib/supabase";
 
-export const Route = createFileRoute("/dashboard")({
+export const Route = createFileRoute("/_site/dashboard")({
   component: UserDashboard,
 });
 
@@ -44,11 +46,11 @@ function UserDashboard() {
   const [statusFilter, setStatusFilter] = useState<"all" | "verified" | "under_review" | "rejected">("all");
 
   const verifiedCount = loans.filter(l => l.status === 'verified').length;
-  const underReviewCount = loans.filter(l => l.status === 'pending' || l.status === 'under_review').length;
+  const ongoingCount = loans.filter(l => l.status === 'pending' || l.status === 'under_review' || l.status === 'needs_correction').length;
   const filteredLoans = statusFilter === "all"
     ? loans
     : statusFilter === "under_review"
-      ? loans.filter(l => l.status === 'pending' || l.status === 'under_review')
+      ? loans.filter(l => l.status === 'pending' || l.status === 'under_review' || l.status === 'needs_correction')
       : loans.filter(l => l.status === statusFilter);
 
   const identityVerified = loans.some(l => l.identityVerified) || !!user?.email_confirmed_at;
@@ -65,6 +67,8 @@ function UserDashboard() {
     if (user) {
       loadLoans();
       refreshTwoFactor();
+      const timer = setInterval(loadLoans, 10000);
+      return () => clearInterval(timer);
     }
   }, [user]);
 
@@ -92,19 +96,19 @@ function UserDashboard() {
 
   if (authLoading || loading) {
     return (
-      <SiteShell>
+    <>
         <div className="min-h-[70vh] flex items-center justify-center">
           <div className="flex flex-col items-center gap-4">
             <Loader2 className="w-10 h-10 text-primary animate-spin" />
             <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">Synchronizing Secure Session...</p>
           </div>
         </div>
-      </SiteShell>
+    </>
     );
   }
 
   return (
-    <SiteShell>
+    <>
       <div className="bg-slate-50 min-h-screen pb-20">
         {/* Header Section */}
         <div className="bg-slate-900 text-white pt-16 pb-32">
@@ -140,6 +144,27 @@ function UserDashboard() {
               </div>
             </div>
 
+            {/* Communication Tip */}
+            <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl p-6 text-white shadow-xl relative overflow-hidden group mt-12">
+              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
+                <Mail className="w-12 h-12" />
+              </div>
+              <div className="relative z-10">
+                <h4 className="text-xs font-black uppercase tracking-widest text-primary mb-2 flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                  Email Updates
+                </h4>
+                <p className="text-[11px] text-slate-300 leading-relaxed font-medium mb-3">
+                  Our system sends real-time updates for each stage of your application.
+                </p>
+                <div className="bg-white/5 rounded-xl p-3 border border-white/10">
+                   <p className="text-[10px] text-slate-400 font-bold leading-tight">
+                     <span className="text-white">Pro Tip:</span> Check your <span className="text-white underline decoration-primary underline-offset-2">Spam or Promotions</span> folder and add us to your contacts to ensure priority delivery.
+                   </p>
+                </div>
+              </div>
+            </div>
+
             {/* Quick Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-12">
               <StatCard
@@ -158,8 +183,8 @@ function UserDashboard() {
                 active={statusFilter === "verified"}
               />
               <StatCard
-                label="Under Review"
-                value={underReviewCount}
+                label="Ongoing Status"
+                value={ongoingCount}
                 icon={<Clock className="w-4 h-4 text-amber-400" />}
                 color="amber"
                 onClick={() => setStatusFilter("under_review")}
@@ -188,7 +213,7 @@ function UserDashboard() {
                       onClick={() => setStatusFilter("all")}
                       className="ml-2 text-[10px] font-bold text-primary normal-case tracking-normal hover:underline"
                     >
-                      (filtered: {statusFilter.replace('_', ' ')} · clear)
+                      (filtered: {statusFilter === "under_review" ? "ongoing" : statusFilter.replace('_', ' ')} · clear)
                     </button>
                   )}
                 </h3>
@@ -196,6 +221,17 @@ function UserDashboard() {
                   {filteredLoans.length} Records Found
                 </span>
               </div>
+
+
+
+              {/* Priority Alerts */}
+              {loans
+                .filter(l => l.status === 'needs_correction' || l.status === 'rejected')
+                .sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime())
+                .slice(0, 1) // Show only the most recent priority update
+                .map(loan => (
+                  <PriorityAlert key={loan.id} loan={loan} />
+                ))}
 
               {filteredLoans.length === 0 ? (
                 <div className="bg-white rounded-[2rem] border border-slate-100 p-12 text-center shadow-sm">
@@ -293,8 +329,40 @@ function UserDashboard() {
         user={user}
         loans={loans}
       />
-    </SiteShell>
+    </>
   );
+}
+
+
+function PriorityAlert({ loan }: { loan: any }) {
+  if (loan.status === 'rejected' || loan.status === 'needs_correction') {
+    return (
+      <div className="bg-white rounded-[2rem] border-2 border-red-100 p-8 text-center shadow-lg animate-in fade-in slide-in-from-top-2 duration-300 mb-8 relative overflow-hidden group">
+        <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform text-red-600">
+           <AlertTriangle className="w-20 h-20" />
+        </div>
+        <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto shadow-inner mb-6">
+          <AlertCircle className="w-10 h-10 text-red-600" />
+        </div>
+        <h2 className="text-3xl font-black text-slate-900 tracking-tight mb-2">Review Alert</h2>
+        <div className="bg-red-50 border border-red-100 rounded-2xl p-6 max-w-md mx-auto">
+          <p className="text-red-800 font-bold mb-2 uppercase tracking-widest text-[10px]">Correction Required</p>
+          <p className="text-sm text-red-700 leading-relaxed font-medium">
+            {loan.rejectionReason || "Our team was unable to verify your identity with the provided documents. Please ensure images are clear and valid."}
+          </p>
+        </div>
+        <div className="mt-6">
+          <Link
+            to="/loans"
+            className="inline-flex items-center gap-2 text-primary font-bold text-sm border-b-2 border-primary/20 hover:border-primary transition-all pb-0.5"
+          >
+            Update Documentation & Retry <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
+      </div>
+    );
+  }
+  return null;
 }
 
 function StatCard({ label, value, icon, color = "primary", onClick, active }: { label: string, value: string | number, icon: React.ReactNode, color?: string, onClick?: () => void, active?: boolean }) {
@@ -597,27 +665,7 @@ function DetailItem({ label, value }: { label: string, value: string }) {
   );
 }
 
-function RefreshCw(props: any) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
-      <path d="M21 3v5h-5" />
-      <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
-      <path d="M3 21v-5h5" />
-    </svg>
-  );
-}
+
 
 function DialogWrapper({ children }: { children: React.ReactNode }) {
   // Empty wrapper to avoid compile error if it was used in code above
@@ -631,8 +679,21 @@ function SecuritySettingsModal({
 }) {
   const [fullName, setFullName] = useState(user?.user_metadata?.full_name || "");
   const [phone, setPhone] = useState(user?.user_metadata?.phone || user?.phone || "");
+  const [ssn, setSsn] = useState(user?.user_metadata?.ssn || "");
+  const [ein, setEin] = useState(user?.user_metadata?.ein || "");
   const [email, setEmail] = useState(user?.email || "");
   const [saving, setSaving] = useState(false);
+  
+  // Also try to find SSN/EIN from existing loans if not in metadata
+  useEffect(() => {
+    if (!ssn || !ein) {
+      const latestLoan = loans.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+      if (latestLoan) {
+        if (!ssn && latestLoan.ssn) setSsn(latestLoan.ssn);
+        if (!ein && latestLoan.ein) setEin(latestLoan.ein);
+      }
+    }
+  }, [loans]);
 
   if (!isOpen) return null;
 
@@ -643,7 +704,7 @@ function SecuritySettingsModal({
     setSaving(true);
     try {
       const supabase = getSupabaseBrowser();
-      const updates: any = { data: { full_name: fullName, phone } };
+      const updates: any = { data: { full_name: fullName, phone, ssn, ein } };
       if (email !== user?.email) updates.email = email;
       const { error } = await supabase.auth.updateUser(updates);
       if (error) throw error;
@@ -702,6 +763,30 @@ function SecuritySettingsModal({
                   placeholder="Your full name"
                   className="w-full h-11 px-4 rounded-xl border border-slate-200 bg-slate-50 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 focus:bg-white transition-all"
                 />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1.5">SSN *</label>
+                  <input
+                    type="text"
+                    value={ssn}
+                    onChange={e => setSsn(e.target.value)}
+                    placeholder="XXX-XX-XXXX"
+                    required
+                    className="w-full h-11 px-4 rounded-xl border border-slate-200 bg-slate-50 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 focus:bg-white transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1.5">EIN *</label>
+                  <input
+                    type="text"
+                    value={ein}
+                    onChange={e => setEin(e.target.value)}
+                    placeholder="XX-XXXXXXX"
+                    required
+                    className="w-full h-11 px-4 rounded-xl border border-slate-200 bg-slate-50 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 focus:bg-white transition-all"
+                  />
+                </div>
               </div>
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1.5">Phone Number</label>

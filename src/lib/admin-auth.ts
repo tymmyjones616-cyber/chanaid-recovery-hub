@@ -45,7 +45,11 @@ export async function isAdminAuthed(request?: Request): Promise<boolean> {
 
     // Fallback: Super Admin Password in cookie
     const superAdminSecret = getCookieFromRequest(request, "chanaid_super_admin");
-    if (superAdminSecret === "Admin2024") return true;
+    
+    
+    if (superAdminSecret === "Admin2024") {
+      return true;
+    }
 
     if (!token) return false;
 

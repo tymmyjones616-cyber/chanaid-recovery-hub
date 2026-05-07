@@ -47,7 +47,6 @@ function getEnv(key: string): string {
 export function getSupabaseAdmin(): SupabaseClient {
   if (_adminClient) return _adminClient;
 
-  console.log("[Supabase] Initializing Admin Client...");
   const url = getEnv("SUPABASE_URL");
   const key = getEnv("SUPABASE_SERVICE_ROLE_KEY");
 
@@ -61,7 +60,6 @@ export function getSupabaseAdmin(): SupabaseClient {
     _adminClient = createClient(url, key, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
-    console.log("[Supabase] Admin Client initialized successfully.");
     return _adminClient;
   } catch (err: any) {
     console.error("[Supabase] Failed to create Admin Client:", err);

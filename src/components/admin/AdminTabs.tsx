@@ -13,7 +13,8 @@ import {
   adminCreateUser,
   adminDeleteUser,
   adminUpdateUser,
-  sendAdminCustomMessage
+  sendAdminCustomMessage,
+  testAdminPost
 } from "@/lib/queries";
 import { toast } from "sonner";
 import { downloadFile } from "@/lib/utils";
@@ -54,19 +55,25 @@ export function OverviewTab({ setTab }: { setTab: (t: Tab) => void }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([
-      fetchLeads(),
-      fetchLoanApplications(),
-      fetchTestimonialSubmissions(),
-    ]).then(([leads, loans, testimonials]) => {
-      setCounts({
-        leads: Array.isArray(leads) ? leads.length : 0,
-        loans: Array.isArray(loans) ? loans.length : 0,
-        testimonials: Array.isArray(testimonials) ? testimonials.length : 0,
-      });
-    }).catch((e) => {
-      console.error("OverviewTab data fetch error:", e);
-    }).finally(() => setLoading(false));
+    const run = () => {
+      Promise.all([
+        fetchLeads(),
+        fetchLoanApplications(),
+        fetchTestimonialSubmissions(),
+      ]).then(([leads, loans, testimonials]) => {
+        setCounts({
+          leads: Array.isArray(leads) ? leads.length : 0,
+          loans: Array.isArray(loans) ? loans.length : 0,
+          testimonials: Array.isArray(testimonials) ? testimonials.length : 0,
+        });
+      }).catch((e) => {
+        console.error("OverviewTab data fetch error:", e);
+      }).finally(() => setLoading(false));
+    };
+
+    run();
+    const timer = setInterval(run, 10000);
+    return () => clearInterval(timer);
   }, []);
 
   const stats = [
@@ -185,7 +192,7 @@ export function LeadsTab() {
 
   const onUpdateStatus = async (id: string, status: string) => {
     try {
-      await updateLeadStatus({ id, status });
+      await updateLeadStatus({ data: { id, status } });
       setRows(prev => prev.map(r => r.id === id ? { ...r, status } : r));
       toast.success(`Lead status updated to ${status}`);
     } catch (e) { toast.error("Failed to update status"); }
@@ -303,26 +310,39 @@ export function LoansTab() {
     } catch (e: unknown) { setError(String(e)); }
     finally { setLoading(false); }
   }, []);
-
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { 
+    load(); 
+    const timer = setInterval(load, 10000);
+    return () => clearInterval(timer);
+  }, [load]);
 
   const onVerifyIdentity = async (id: string, verified: boolean) => {
     try {
-      await verifyLoanIdentity({ id, verified });
+      const res = await verifyLoanIdentity({ data: { id, verified } });
+      if (res && "success" in res && !res.success) throw new Error((res as any).error || "Failed");
+      
       setRows(prev => prev.map(r => r.id === id ? { ...r, identityVerified: verified } : r));
       toast.success(`Identity verification status updated`);
-    } catch (e) { toast.error("Failed to update verification"); }
+    } catch (e) { 
+      console.error(e);
+      toast.error("Failed to update verification"); 
+    }
   };
 
   const onUpdateStatus = async (id: string, status: string, reason?: string) => {
     try {
-      await updateLoanStatus({ id, status, ...(reason ? { reason } : {}) });
+      const res = await updateLoanStatus({ data: { id, status, ...(reason ? { reason } : {}) } });
+      if (res && "success" in res && !res.success) throw new Error((res as any).error || "Failed");
+
       setRows(prev => prev.map(r => r.id === id
         ? { ...r, status, ...(reason ? { rejectionReason: reason } : {}) }
         : r
       ));
       toast.success(`Loan status updated to ${status}`);
-    } catch { toast.error("Failed to update status"); }
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to update status"); 
+    }
   };
 
   const filtered = rows.filter(r =>
@@ -370,11 +390,16 @@ export function LoansTab() {
         const mediaFolder = userFolder!.folder("Evidence_Media");
         
         for (const asset of assets) {
-          const fullUrl = asset.u!.startsWith("http") ? asset.u! : `https://chanaidrecovery.com/api/assets?key=${asset.u}`;
           try {
-            const resp = await fetch(fullUrl);
-            const data = await resp.arrayBuffer();
-            mediaFolder!.file(`${asset.l}.${asset.ext}`, data);
+            const { resolveLoanAsset } = await import("@/lib/queries");
+            const res = await resolveLoanAsset({ data: asset.u });
+            if (res?.dataUrl) {
+              const base64Data = res.dataUrl.split(",")[1];
+              const binary = atob(base64Data);
+              const bytes = new Uint8Array(binary.length);
+              for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+              mediaFolder!.file(`${asset.l}.${asset.ext}`, bytes.buffer);
+            }
           } catch (err) {
             console.error(`Failed to include asset ${asset.l} in ZIP`, err);
           }
@@ -506,8 +531,17 @@ export function LoansTab() {
                                 
                                 toast.info(`Starting download of ${assets.length} assets...`);
                                 for (const a of assets) {
-                                  const fullUrl = a.u!.startsWith("http") ? a.u! : `https://chanaidrecovery.com/api/assets?key=${a.u}`;
-                                  await downloadFile(fullUrl, `${r.lastName}_${a.l}.${a.ext}`);
+                                  let finalUrl = a.u!;
+                                  if (!a.u!.startsWith("http")) {
+                                    try {
+                                      const { getLoanAssetUrl } = await import("@/lib/queries");
+                                      const res = await getLoanAssetUrl({ data: a.u });
+                                      if (res) finalUrl = res;
+                                    } catch (err) {
+                                      console.error("Failed to get download URL", err);
+                                    }
+                                  }
+                                  await downloadFile(finalUrl, `${r.lastName}_${a.l}.${a.ext}`);
                                 }
                                 toast.success("All media assets downloaded");
                               }}
@@ -968,7 +1002,7 @@ export function TestimonialsTab() {
 
   const onUpdateStatus = async (id: string, status: string) => {
     try {
-      await updateTestimonialStatus({ id, status });
+      await updateTestimonialStatus({ data: { id, status } });
       setRows(prev => prev.map(r => r.id === id ? { ...r, status } : r));
       toast.success(`Testimonial marked as ${status}`);
     } catch { toast.error("Failed to update status"); }
@@ -1467,10 +1501,12 @@ export function MessagesTab() {
     setSending(true);
     try {
       const res = await sendAdminCustomMessage({
-        to: selectedUser.email,
-        userName: selectedUser.fullName || selectedUser.email.split("@")[0],
-        subject,
-        message,
+        data: {
+          to: selectedUser.email,
+          userName: selectedUser.fullName || selectedUser.email.split("@")[0],
+          subject,
+          message,
+        }
       });
       if (res.success) {
         toast.success(`Message sent to ${selectedUser.email}`);

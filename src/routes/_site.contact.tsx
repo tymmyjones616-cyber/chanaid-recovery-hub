@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { SiteShell } from "@/components/layout/SiteShell";
 import { LeadForm } from "@/components/site/LeadForm";
 
-export const Route = createFileRoute("/contact")({
+export const Route = createFileRoute("/_site/contact")({
   head: () => ({
     meta: [
       { title: "Contact ChanAidRecovery Hub | Free Forensic Consultation" },
@@ -12,7 +12,7 @@ export const Route = createFileRoute("/contact")({
     ],
   }),
   component: () => (
-    <SiteShell>
+    <>
       <section className="bg-hero-gradient py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid lg:grid-cols-2 gap-10 items-start">
           <div>
@@ -22,6 +22,6 @@ export const Route = createFileRoute("/contact")({
           <LeadForm sourcePage="/contact" />
         </div>
       </section>
-    </SiteShell>
+    </>
   ),
 });

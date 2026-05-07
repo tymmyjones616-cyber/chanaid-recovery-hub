@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/components/layout/AuthContext";
 import { AuthModal } from "@/components/layout/AuthModal";
 
-export const Route = createFileRoute("/blog/$slug")({
+export const Route = createFileRoute("/_site/blog/$slug")({
   head: ({ loaderData }) => {
     const post = loaderData;
     if (!post) return {};
@@ -29,22 +29,22 @@ export const Route = createFileRoute("/blog/$slug")({
   loader: async ({ params }) => await fetchBlogPost({ data: params.slug }).catch(() => null),
   component: BlogPost,
   errorComponent: ({ error }) => (
-    <SiteShell>
+    <>
       <div className="max-w-2xl mx-auto py-24 text-center">
         <h1 className="text-3xl font-bold text-slate-900">Unable to load blog post</h1>
         <p className="mt-4 text-slate-600">The recovery guide you are looking for might be temporarily unavailable. Please check back in a few minutes.</p>
         <Link to="/blog" className="mt-8 inline-block text-blue-600 font-semibold hover:underline">Back to Blog</Link>
       </div>
-    </SiteShell>
+    </>
   ),
   notFoundComponent: () => (
-    <SiteShell>
+    <>
       <div className="max-w-2xl mx-auto py-24 text-center">
         <h1 className="text-3xl font-bold text-slate-900">Guide not found</h1>
         <p className="mt-4 text-slate-600">We couldn't find the specific recovery guide you requested.</p>
         <Link to="/blog" className="mt-8 inline-block text-blue-600 font-semibold hover:underline">Browse all guides</Link>
       </div>
-    </SiteShell>
+    </>
   ),
 });
 
@@ -98,7 +98,7 @@ function BlogPost() {
   };
 
   return (
-    <SiteShell>
+    <>
       <article className="bg-white pt-32 pb-20">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
           <Link 
@@ -203,6 +203,6 @@ function BlogPost() {
         </div>
       </article>
       <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
-    </SiteShell>
+    </>
   );
 }

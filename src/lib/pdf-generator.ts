@@ -1,12 +1,23 @@
 import { jsPDF } from "jspdf";
-import "jspdf-autotable";
+import autoTable from "jspdf-autotable";
 import { LoanApplication, Lead } from "@/types/admin";
+
 
 /**
  * Helper to fetch an image and return as base64 for PDF embedding
  */
 async function getBase64Image(url: string): Promise<string | null> {
+  if (!url) return null;
+  if (url.startsWith("data:")) return url;
+
   try {
+    // If it's a storage key (doesn't start with http), resolve it via server function
+    if (!url.startsWith("http")) {
+      const { resolveLoanAsset } = await import("@/lib/queries");
+      const res = await resolveLoanAsset({ data: url });
+      return res?.dataUrl || null;
+    }
+
     const response = await fetch(url);
     const blob = await response.blob();
     return new Promise((resolve) => {
@@ -57,7 +68,7 @@ export async function addLeadToPDF(doc: jsPDF, lead: Lead, isNewPage = false) {
   };
 
   addSectionTitle("1. Case Details");
-  (doc as any).autoTable({
+  autoTable(doc, {
     startY: y,
     margin: { left: margin, right: margin },
     theme: "grid",
@@ -135,7 +146,7 @@ export async function addLoanToPDF(doc: jsPDF, loan: LoanApplication, isNewPage 
 
   // ─── Section 1: Personal & Identity ────────────────────────────────────────
   addSectionTitle("1. Personal & Identity");
-  (doc as any).autoTable({
+  autoTable(doc, {
     startY: y,
     margin: { left: margin, right: margin },
     theme: "grid",
@@ -153,7 +164,7 @@ export async function addLoanToPDF(doc: jsPDF, loan: LoanApplication, isNewPage 
 
   // ─── Section 2: Contact & Address ──────────────────────────────────────────
   addSectionTitle("2. Contact & Geography");
-  (doc as any).autoTable({
+  autoTable(doc, {
     startY: y,
     margin: { left: margin, right: margin },
     theme: "grid",
@@ -167,7 +178,7 @@ export async function addLoanToPDF(doc: jsPDF, loan: LoanApplication, isNewPage 
 
   // ─── Section 3: Loan & Financial ───────────────────────────────────────────
   addSectionTitle("3. Loan Specifications");
-  (doc as any).autoTable({
+  autoTable(doc, {
     startY: y,
     margin: { left: margin, right: margin },
     theme: "grid",
@@ -193,7 +204,7 @@ export async function addLoanToPDF(doc: jsPDF, loan: LoanApplication, isNewPage 
   }
 
   if (payoutRows.length > 0) {
-    (doc as any).autoTable({
+    autoTable(doc, {
       startY: y,
       margin: { left: margin, right: margin },
       theme: "grid",
@@ -231,10 +242,19 @@ export async function addLoanToPDF(doc: jsPDF, loan: LoanApplication, isNewPage 
       doc.text(asset.label.toUpperCase(), margin, y);
       y += 6;
 
-      const fullUrl = asset.url!.startsWith("http") ? asset.url! : `https://chanaidrecovery.com/api/assets?key=${asset.url}`;
-      
+      let displayUrl = asset.url!;
+      if (!asset.url!.startsWith("http") && !asset.url!.startsWith("data:")) {
+        try {
+          const { getLoanAssetUrl } = await import("@/lib/queries");
+          const res = await getLoanAssetUrl({ data: asset.url });
+          if (res) displayUrl = res;
+        } catch (err) {
+          console.error("Failed to get signed URL for PDF link", err);
+        }
+      }
+
       if (asset.isImage) {
-        const base64 = await getBase64Image(fullUrl);
+        const base64 = await getBase64Image(asset.url!);
         if (base64) {
           try {
             // Add image with aspect ratio preservation
@@ -258,8 +278,8 @@ export async function addLoanToPDF(doc: jsPDF, loan: LoanApplication, isNewPage 
 
       doc.setFontSize(8);
       doc.setTextColor(59, 130, 246);
-      doc.text(`Source: ${fullUrl}`, margin, y);
-      doc.link(margin, y - 3, pageWidth - (margin * 2), 4, { url: fullUrl });
+      doc.text(`Source: ${displayUrl.length > 80 ? displayUrl.slice(0, 77) + "..." : displayUrl}`, margin, y);
+      doc.link(margin, y - 3, pageWidth - (margin * 2), 4, { url: displayUrl });
       y += 12;
     }
   } else {
