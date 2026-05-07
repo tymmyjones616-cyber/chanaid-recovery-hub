@@ -3,7 +3,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/components/layout/AuthContext";
 import { SiteShell } from "@/components/layout/SiteShell";
 import { useEffect, useState } from "react";
-import { fetchUserLoans, getLoanAssetUrl } from "@/lib/queries";
+import { fetchUserLoans, getLoanAssetUrl, userDeleteLoan, userUpdateProfile, userDeleteAccount } from "@/lib/queries";
 import { 
   LayoutDashboard, 
   Clock, 
@@ -26,7 +26,8 @@ import {
   LogOut,
   Settings,
   RefreshCw,
-  Mail
+  Mail,
+  Trash2
 } from "lucide-react";
 import { Reveal } from "@/components/effects/Reveal";
 import { toast } from "sonner";
@@ -94,6 +95,18 @@ function UserDashboard() {
       toast.error("Synchronization delay. Retrying...");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function onDeleteLoan(id: string) {
+    if (!confirm("Are you sure you want to delete this application? This action cannot be undone.")) return;
+    try {
+      const res = await userDeleteLoan({ data: id });
+      if (res && "success" in res && !res.success) throw new Error((res as any).error || "Failed to delete");
+      setLoans(prev => prev.filter(l => l.id !== id));
+      toast.success("Application deleted successfully");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete application");
     }
   }
 
@@ -290,7 +303,7 @@ function UserDashboard() {
                 <div className="space-y-4">
                   {filteredLoans.map((loan, i) => (
                     <Reveal key={loan.id} delay={i * 100} direction="up">
-                      <LoanCard loan={loan} />
+                      <LoanCard loan={loan} onDelete={() => onDeleteLoan(loan.id)} />
                     </Reveal>
                   ))}
                 </div>
@@ -435,7 +448,7 @@ function SecurityItem({ label, status, completed }: { label: string, status: str
   );
 }
 
-function LoanCard({ loan }: { loan: any }) {
+function LoanCard({ loan, onDelete }: { loan: any, onDelete: () => void }) {
   const [expanded, setExpanded] = useState(false);
   const statusColors: any = {
     pending: { bg: "bg-amber-50", text: "text-amber-600", border: "border-amber-100", icon: <Clock className="w-4 h-4" />, label: "Pending Review" },
@@ -473,14 +486,27 @@ function LoanCard({ loan }: { loan: any }) {
           </div>
         </div>
         <div className="flex items-center gap-2">
-           <button
-             onClick={() => setExpanded(v => !v)}
-             aria-expanded={expanded}
-             className="px-4 py-2 rounded-xl bg-slate-50 text-slate-900 font-bold text-[10px] uppercase tracking-widest hover:bg-slate-100 transition-all flex items-center gap-2"
-           >
-             {expanded ? "Hide Details" : "View Details"}
-             <ChevronRight className={`w-3 h-3 transition-transform ${expanded ? "rotate-90" : ""}`} />
-           </button>
+          <button
+            onClick={() => setExpanded(v => !v)}
+            aria-expanded={expanded}
+            className="px-4 py-2 rounded-xl bg-slate-50 text-slate-900 font-bold text-[10px] uppercase tracking-widest hover:bg-slate-100 transition-all flex items-center gap-2"
+          >
+            {expanded ? "Hide Details" : "View Details"}
+            <ChevronRight className={`w-3 h-3 transition-transform ${expanded ? "rotate-90" : ""}`} />
+          </button>
+          
+          {(loan.status === 'pending' || loan.status === 'rejected' || loan.status === 'needs_correction') && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+              }}
+              className="p-2 rounded-xl bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-sm border border-red-100"
+              title="Delete Application"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
 
@@ -928,6 +954,26 @@ function SecuritySettingsModal({
           >
             Close Settings
           </button>
+
+          <div className="pt-4 border-t border-red-50">
+            <h4 className="text-[10px] font-black uppercase tracking-widest text-red-400 mb-2">Danger Zone</h4>
+            <button
+              onClick={async () => {
+                if (!confirm("CRITICAL: Are you sure you want to PERMANENTLY CLOSE your account and delete ALL recovery applications? This cannot be undone.")) return;
+                try {
+                  const res = await userDeleteAccount();
+                  if (res && "success" in res && !res.success) throw new Error((res as any).error || "Failed to close account");
+                  toast.success("Account closed. Signing out...");
+                  window.location.href = "/";
+                } catch (err: any) {
+                  toast.error(err.message || "Failed to close account");
+                }
+              }}
+              className="w-full py-3 rounded-xl bg-red-50 text-red-600 font-bold text-sm hover:bg-red-600 hover:text-white transition-all flex items-center justify-center gap-2"
+            >
+              <Trash2 className="w-4 h-4" /> Permanently Close Account
+            </button>
+          </div>
         </div>
       </div>
     </div>

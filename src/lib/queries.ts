@@ -911,3 +911,75 @@ export const sendAdminCustomMessage = createServerFn({ method: "POST" })
     return { success: true };
   });
 
+// --- Management & Deletion Functions ---
+
+export const deleteLoanApplication = createServerFn({ method: "POST" })
+  .inputValidator((id: string) => id)
+  .handler(async ({ data: id }) => {
+    await requireAdmin();
+    const sb = getSupabaseAdmin();
+    const { error } = await sb.from("loan_applications").delete().eq("id", id);
+    if (error) throw new Error(error.message);
+    return { success: true };
+  });
+
+export const deleteLead = createServerFn({ method: "POST" })
+  .inputValidator((id: string) => id)
+  .handler(async ({ data: id }) => {
+    await requireAdmin();
+    const sb = getSupabaseAdmin();
+    const { error } = await sb.from("leads").delete().eq("id", id);
+    if (error) throw new Error(error.message);
+    return { success: true };
+  });
+
+export const userDeleteLoan = createServerFn({ method: "POST" })
+  .inputValidator((id: string) => id)
+  .handler(async ({ data: id }) => {
+    const sb = getSupabaseAdmin();
+    const { data: loan } = await sb.from("loan_applications").select("status").eq("id", id).single();
+    if (!loan) throw new Error("Application not found");
+    
+    // Only allow deleting if not already verified
+    if (loan.status === 'verified') {
+      throw new Error("Verified applications cannot be deleted online. Please contact support.");
+    }
+
+    const { error } = await sb.from("loan_applications").delete().eq("id", id);
+    if (error) throw new Error(error.message);
+    return { success: true };
+  });
+
+export const userUpdateProfile = createServerFn({ method: "POST" })
+  .inputValidator((p: any) => p)
+  .handler(async ({ data: input }) => {
+    const payload = input.data || input;
+    const { userId, fullName, phone } = payload;
+    if (!userId) throw new Error("User ID required");
+    
+    const sb = getSupabaseAdmin();
+    const { error } = await sb.auth.admin.updateUserById(userId, {
+      user_metadata: { full_name: fullName, phone }
+    });
+    
+    if (error) throw new Error(error.message);
+    return { success: true };
+  });
+
+export const userDeleteAccount = createServerFn({ method: "POST" })
+  .inputValidator((userId: string) => userId)
+  .handler(async ({ data: userId }) => {
+    const sb = getSupabaseAdmin();
+    const { data: user } = await sb.auth.admin.getUserById(userId);
+    const email = user.user?.email;
+    
+    if (email) {
+      // Delete their applications first
+      await sb.from("loan_applications").delete().eq("email", email);
+    }
+    
+    const { error } = await sb.auth.admin.deleteUser(userId);
+    if (error) throw new Error(error.message);
+    return { success: true };
+  });
+

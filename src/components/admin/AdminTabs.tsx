@@ -14,7 +14,9 @@ import {
   adminDeleteUser,
   adminUpdateUser,
   sendAdminCustomMessage,
-  testAdminPost
+  testAdminPost,
+  deleteLoanApplication,
+  deleteLead
 } from "@/lib/queries";
 import { toast } from "sonner";
 import { downloadFile } from "@/lib/utils";
@@ -197,6 +199,19 @@ export function LeadsTab() {
       toast.success(`Lead status updated to ${status}`);
     } catch (e) { toast.error("Failed to update status"); }
   };
+  
+  const onDeleteLead = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this lead?")) return;
+    try {
+      const res = await deleteLead({ data: id });
+      if (res && "success" in res && !res.success) throw new Error((res as any).error || "Failed");
+      setRows(prev => prev.filter(r => r.id !== id));
+      toast.success("Lead deleted successfully");
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to delete lead");
+    }
+  };
 
   const filtered = rows.filter(r =>
     search === "" ||
@@ -278,6 +293,13 @@ export function LeadsTab() {
                           </button>
                           <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Update Status</span>
                           <StatusPicker current={r.status} onUpdate={(s) => onUpdateStatus(r.id, s)} />
+                          <button
+                            onClick={() => onDeleteLead(r.id)}
+                            className="p-1.5 bg-red-50 text-red-500 hover:bg-red-500 hover:text-white rounded-lg transition-all border border-red-100 shadow-sm ml-2"
+                            title="Delete Lead"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       </div>
                     </td>
@@ -342,6 +364,19 @@ export function LoansTab() {
     } catch (e) {
       console.error(e);
       toast.error("Failed to update status"); 
+    }
+  };
+  
+  const onDeleteApplication = async (id: string) => {
+    if (!confirm("Are you sure you want to PERMANENTLY delete this application and all associated data? This cannot be undone.")) return;
+    try {
+      const res = await deleteLoanApplication({ data: id });
+      if (res && "success" in res && !res.success) throw new Error((res as any).error || "Failed");
+      setRows(prev => prev.filter(r => r.id !== id));
+      toast.success("Application deleted successfully");
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to delete application");
     }
   };
 
@@ -901,6 +936,14 @@ export function LoansTab() {
                                       <XCircle className="w-3.5 h-3.5" /> Reject / Correct
                                     </button>
                                   </div>
+                                  
+                                  <button
+                                    onClick={() => onDeleteApplication(r.id)}
+                                    className="w-full py-2 bg-red-50 hover:bg-red-100 text-red-600 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all border border-red-200 flex items-center justify-center gap-2 mt-2 opacity-50 hover:opacity-100"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" /> Purge Application Data
+                                  </button>
+                                </div>
                                 </div>
                               </div>
                             </div>
