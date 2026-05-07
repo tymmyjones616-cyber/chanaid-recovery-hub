@@ -87,6 +87,17 @@ export const Route = createRootRoute({
             "https://www.linkedin.com/company/chanaidrecovery"
           ]
         })
+      },
+      {
+        src: "https://cdn.cookiehub.eu/c2/9b756d6e.js"
+      },
+      {
+        children: `
+          document.addEventListener("DOMContentLoaded", function(event) {
+            var cpm = {};
+            window.cookiehub.load(cpm);
+          });
+        `
       }
     ]
   }),

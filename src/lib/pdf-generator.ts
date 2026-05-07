@@ -1,5 +1,4 @@
-import { jsPDF } from "jspdf";
-import autoTable from "jspdf-autotable";
+
 import { LoanApplication, Lead } from "@/types/admin";
 
 
@@ -34,7 +33,8 @@ async function getBase64Image(url: string): Promise<string | null> {
 /**
  * Generates a professional profile for a single lead into the provided PDF doc.
  */
-export async function addLeadToPDF(doc: jsPDF, lead: Lead, isNewPage = false) {
+export async function addLeadToPDF(doc: any, lead: Lead, isNewPage = false) {
+  const { default: autoTable } = await import("jspdf-autotable");
   if (isNewPage) doc.addPage();
 
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -91,13 +91,15 @@ export async function addLeadToPDF(doc: jsPDF, lead: Lead, isNewPage = false) {
   doc.text(splitMsg, margin, y);
 }
 
-export async function generateLeadPDF(lead: Lead): Promise<jsPDF> {
+export async function generateLeadPDF(lead: Lead): Promise<any> {
+  const { jsPDF } = await import("jspdf");
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   await addLeadToPDF(doc, lead);
   return doc;
 }
 
-export async function generateBulkLeadPDF(leads: Lead[]): Promise<jsPDF> {
+export async function generateBulkLeadPDF(leads: Lead[]): Promise<any> {
+  const { jsPDF } = await import("jspdf");
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   for (let i = 0; i < leads.length; i++) {
     await addLeadToPDF(doc, leads[i], i > 0);
@@ -108,7 +110,8 @@ export async function generateBulkLeadPDF(leads: Lead[]): Promise<jsPDF> {
 /**
  * Generates a professional profile for a single loan application into the provided PDF doc.
  */
-export async function addLoanToPDF(doc: jsPDF, loan: LoanApplication, isNewPage = false) {
+export async function addLoanToPDF(doc: any, loan: LoanApplication, isNewPage = false) {
+  const { default: autoTable } = await import("jspdf-autotable");
   if (isNewPage) doc.addPage();
 
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -299,13 +302,15 @@ export async function addLoanToPDF(doc: jsPDF, loan: LoanApplication, isNewPage 
   doc.text(`Page ${doc.internal.getNumberOfPages()}`, pageWidth - margin - 15, footerY);
 }
 
-export async function generateLoanPDF(loan: LoanApplication): Promise<jsPDF> {
+export async function generateLoanPDF(loan: LoanApplication): Promise<any> {
+  const { jsPDF } = await import("jspdf");
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   await addLoanToPDF(doc, loan);
   return doc;
 }
 
-export async function generateBulkLoanPDF(loans: LoanApplication[]): Promise<jsPDF> {
+export async function generateBulkLoanPDF(loans: LoanApplication[]): Promise<any> {
+  const { jsPDF } = await import("jspdf");
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   for (let i = 0; i < loans.length; i++) {
     await addLoanToPDF(doc, loans[i], i > 0);
