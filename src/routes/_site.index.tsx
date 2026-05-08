@@ -238,6 +238,9 @@ function Index() {
                     src={ASSETS.HERO_IMAGE} 
                     alt="Cyber Security Forensic Analysis" 
                     className="w-full h-auto"
+                    loading="eager"
+                    // @ts-ignore
+                    fetchpriority="high"
                   />
                 </div>
               </Reveal>

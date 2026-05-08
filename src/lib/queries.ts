@@ -219,7 +219,7 @@ export const fetchLeads = createServerFn().handler(async ({ request }) => {
 });
 
 export const fetchUserLoans = createServerFn()
-  .input(z.any())
+  .inputValidator(z.any())
   .handler(async ({ data: input }) => {
     // Ultra-robust extraction: check string, {data:str}, {email:str}, or the raw object itself
     let email: any = null;
@@ -558,7 +558,7 @@ export const adminUpdateUser = createServerFn({ method: "POST" })
   });
 
 export const submitLead = createServerFn({ method: "POST" })
-  .input(z.any())
+  .inputValidator(z.any())
   .handler(async ({ data: inputData }) => {
     const payload = (inputData as any)?.data || inputData || {};
     const sb = getSupabaseAdmin();
@@ -586,7 +586,7 @@ export const submitLead = createServerFn({ method: "POST" })
   });
 
 export const submitLoanApplication = createServerFn({ method: "POST" })
-  .input(z.any())
+  .inputValidator(z.any())
   .handler(async ({ data: inputData, request }) => {
     // Robust payload extraction
     const payload = (inputData as any)?.data || inputData || {};
@@ -915,7 +915,7 @@ export const sendAdminCustomMessage = createServerFn({ method: "POST" })
 // --- Management & Deletion Functions ---
 
 export const deleteLoanApplication = createServerFn({ method: "POST" })
-  .input(z.string())
+  .inputValidator(z.string())
   .handler(async ({ data: id }) => {
     await requireAdmin();
     const sb = getSupabaseAdmin();
@@ -925,7 +925,7 @@ export const deleteLoanApplication = createServerFn({ method: "POST" })
   });
 
 export const deleteLead = createServerFn({ method: "POST" })
-  .input(z.string())
+  .inputValidator(z.string())
   .handler(async ({ data: id }) => {
     await requireAdmin();
     const sb = getSupabaseAdmin();
@@ -935,7 +935,7 @@ export const deleteLead = createServerFn({ method: "POST" })
   });
 
 export const userDeleteLoan = createServerFn({ method: "POST" })
-  .input(z.string())
+  .inputValidator(z.string())
   .handler(async ({ data: id }) => {
     const sb = getSupabaseAdmin();
     const { data: loan } = await sb.from("loan_applications").select("status").eq("id", id).single();
@@ -952,7 +952,7 @@ export const userDeleteLoan = createServerFn({ method: "POST" })
   });
 
 export const userUpdateProfile = createServerFn({ method: "POST" })
-  .input(z.any())
+  .inputValidator(z.any())
   .handler(async ({ data: input }) => {
     const payload = input.data || input;
     const { userId, fullName, phone } = payload;
@@ -968,7 +968,7 @@ export const userUpdateProfile = createServerFn({ method: "POST" })
   });
 
 export const userDeleteAccount = createServerFn({ method: "POST" })
-  .input(z.string())
+  .inputValidator(z.string())
   .handler(async ({ data: userId }) => {
     const sb = getSupabaseAdmin();
     const { data: user } = await sb.auth.admin.getUserById(userId);
