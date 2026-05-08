@@ -51,7 +51,7 @@ export function getSupabaseAdmin(): SupabaseClient {
   const key = getEnv("SUPABASE_SERVICE_ROLE_KEY");
 
   if (!url || !key) {
-    const msg = `Supabase admin client: URL or SERVICE_ROLE_KEY missing. url=${!!url}, key=${!!key}`;
+    const msg = `Supabase admin client: URL or SERVICE_ROLE_KEY missing. url=${!!url}, key=${!!key}. Check Cloudflare Worker Secrets/Bindings.`;
     console.error(`[Supabase] ${msg}`);
     throw new Error(msg);
   }

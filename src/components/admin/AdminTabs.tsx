@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useCallback } from "react";
-import JSZip from "jszip";
 import {
   fetchLeads,
   fetchLoanApplications,
@@ -29,7 +28,6 @@ import {
   Clock, CreditCard, ShieldAlert, Fingerprint, Video, XCircle, Play,
   Activity, Code2, Download, UserPlus, Trash2, Pencil, X, Phone, Mail, Shield, User, Eye, EyeOff, Search, Send, MessageCircle
 } from "lucide-react";
-import { generateLoanPDF, generateBulkLoanPDF, generateLeadPDF, generateBulkLeadPDF } from "@/lib/pdf-generator";
 import type { StatusHistoryEntry } from "@/types/admin";
 import { 
   TableShell, THead, EmptyRow, Chip, StatusBadge, 
@@ -220,6 +218,7 @@ export function LeadsTab() {
 
   const onDownloadPDF = async (lead: Lead) => {
     try {
+      const { generateLeadPDF } = await import("@/lib/pdf-generator");
       const doc = await generateLeadPDF(lead);
       doc.save(`Lead_Profile_${lead.lastName}_${lead.id.slice(0, 8)}.pdf`);
       toast.success("Lead PDF downloaded");
@@ -230,6 +229,7 @@ export function LeadsTab() {
     if (filtered.length === 0) return;
     toast.info(`Preparing bulk download for ${filtered.length} leads...`);
     try {
+      const { generateBulkLeadPDF } = await import("@/lib/pdf-generator");
       const doc = await generateBulkLeadPDF(filtered);
       doc.save(`Bulk_Leads_${new Date().toISOString().split('T')[0]}.pdf`);
       toast.success("Bulk PDF downloaded");
@@ -387,6 +387,7 @@ export function LoansTab() {
 
   const onDownloadPDF = async (loan: LoanApplication) => {
     try {
+      const { generateLoanPDF } = await import("@/lib/pdf-generator");
       const doc = await generateLoanPDF(loan);
       doc.save(`Loan_Application_${loan.lastName}_${loan.id.slice(0, 8)}.pdf`);
       toast.success("PDF generated and downloaded");
@@ -401,6 +402,7 @@ export function LoansTab() {
     toast.info(`Generating deep-audit ZIP for ${filtered.length} records... This may take a minute.`);
     
     try {
+      const { default: JSZip } = await import("jszip");
       const zip = new JSZip();
       const rootFolder = zip.folder(`Bulk_Export_${new Date().toISOString().split('T')[0]}`);
       
@@ -408,6 +410,7 @@ export function LoansTab() {
         const userFolder = rootFolder!.folder(`${loan.lastName}_${loan.firstName}_${loan.id.slice(0, 8)}`);
         
         // 1. Generate PDF for this user
+        const { generateLoanPDF } = await import("@/lib/pdf-generator");
         const doc = await generateLoanPDF(loan);
         const pdfBlob = doc.output('blob');
         userFolder!.file("Identity_Profile.pdf", pdfBlob);
@@ -470,7 +473,8 @@ export function LoansTab() {
       actions={
         <div className="flex items-center gap-2">
           <button
-            onClick={() => {
+            onClick={async () => {
+              const { generateBulkLoanPDF } = await import("@/lib/pdf-generator");
               const doc = generateBulkLoanPDF(filtered);
               doc.then(d => d.save(`Consolidated_Profiles_${new Date().toISOString().split('T')[0]}.pdf`));
             }}

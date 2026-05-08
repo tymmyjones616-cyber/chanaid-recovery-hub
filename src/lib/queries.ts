@@ -7,7 +7,7 @@
  *  - Admin writes  → getSupabaseAdmin() + requireAdmin() guard
  */
 import { createServerFn } from "@tanstack/react-start";
-import { getSupabaseAdmin } from "@/lib/supabase";
+import { getSupabaseAdmin, getSupabasePublic } from "@/lib/supabase";
 import { z } from "zod";
 import { loanSubmissionSchema } from "@/lib/validation/loan";
 import {
@@ -58,7 +58,7 @@ function throwOnError<T>(result: { data: T | null; error: any }): T {
 export const fetchPage = createServerFn()
   .inputValidator((slug: string) => slug)
   .handler(async ({ data: slug }) => {
-    const sb = getSupabaseAdmin();
+    const sb = getSupabasePublic();
     const { data, error } = await sb
       .from("pages")
       .select("*")
@@ -70,7 +70,7 @@ export const fetchPage = createServerFn()
   });
 
 export const fetchServices = createServerFn().handler(async () => {
-  const sb = getSupabaseAdmin();
+  const sb = getSupabasePublic();
   const { data } = await sb
     .from("services")
     .select("*")
@@ -82,7 +82,7 @@ export const fetchServices = createServerFn().handler(async () => {
 export const fetchService = createServerFn()
   .inputValidator((slug: string) => slug)
   .handler(async ({ data: slug }) => {
-    const sb = getSupabaseAdmin();
+    const sb = getSupabasePublic();
     const { data, error } = await sb
       .from("services")
       .select("*")
@@ -98,7 +98,7 @@ export const fetchTestimonials = createServerFn()
     (opts?: { featuredOnly?: boolean; limit?: number }) => opts
   )
   .handler(async ({ data: opts }) => {
-    const sb = getSupabaseAdmin();
+    const sb = getSupabasePublic();
     let q = sb
       .from("testimonials")
       .select("*")
@@ -119,7 +119,7 @@ export const fetchTestimonials = createServerFn()
 export const fetchFaqs = createServerFn()
   .inputValidator((limit?: number) => limit)
   .handler(async ({ data: limit }) => {
-    const sb = getSupabaseAdmin();
+    const sb = getSupabasePublic();
     let q = sb
       .from("faqs")
       .select("*")
@@ -153,7 +153,7 @@ export const fetchFaqs = createServerFn()
   });
 
 export const fetchAsSeenIn = createServerFn().handler(async () => {
-  const sb = getSupabaseAdmin();
+  const sb = getSupabasePublic();
   const { data } = await sb
     .from("as_seen_in")
     .select("*")
@@ -163,7 +163,7 @@ export const fetchAsSeenIn = createServerFn().handler(async () => {
 });
 
 export const fetchBlogPosts = createServerFn().handler(async () => {
-  const sb = getSupabaseAdmin();
+  const sb = getSupabasePublic();
   const { data } = await sb
     .from("blog_posts")
     .select("*")
@@ -175,7 +175,7 @@ export const fetchBlogPosts = createServerFn().handler(async () => {
 export const fetchBlogPost = createServerFn()
   .inputValidator((slug: string) => slug)
   .handler(async ({ data: slug }) => {
-    const sb = getSupabaseAdmin();
+    const sb = getSupabasePublic();
     const { data, error } = await sb
       .from("blog_posts")
       .select("*")

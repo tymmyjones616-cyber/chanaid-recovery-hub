@@ -32,21 +32,39 @@ export default {
     }
 
     try {
+      // ─── Connectivity Check ───────────────────────────────────────────
+      if (new URL(request.url).pathname === '/__worker_test') {
+        console.log('Worker: Performing Supabase connectivity check...');
+        const check = await fetch(`${env.SUPABASE_URL}/rest/v1/services?select=count`, {
+           headers: { 'apikey': env.SUPABASE_ANON_KEY }
+        });
+        const status = check.status;
+        const text = await check.text();
+        return new Response(`Supabase Check: Status=${status}, Body=${text}`, { status: 200 });
+      }
+
       // Attach cloudflare env to the request so vinxi/getEvent() can access it
       request.cloudflare = { env, context: ctx };
       
-      return await server.fetch(request, env, ctx);
+      console.log('Worker V4: Calling server.fetch for path:', new URL(request.url).pathname);
+      const resp = await server.fetch(request, env, ctx);
+      
+      if (resp.status === 500) {
+        console.warn('Worker: server.fetch returned 500. Attempting to inspect response...');
+        try {
+          const clone = resp.clone();
+          const text = await clone.text();
+          console.log('Worker: 500 Response Body:', text);
+        } catch (e) {
+          console.error('Worker: Failed to read 500 response body:', e);
+        }
+      }
+      
+      return resp;
     } catch (err) {
-      console.error('Worker Error:', err);
-      return new Response(JSON.stringify({ 
-        status: 500,
-        unhandled: true,
-        message: 'HTTPError',
-        debug: err.message,
-        stack: err.stack 
-      }), { 
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
+      console.error('CRITICAL_WORKER_ERROR:', JSON.stringify(err, Object.getOwnPropertyNames(err)));
+      return new Response("CATCH_BLOCK_TRIGGERED: " + err.message + "\nStack: " + err.stack, { 
+        status: 500
       });
     }
   }

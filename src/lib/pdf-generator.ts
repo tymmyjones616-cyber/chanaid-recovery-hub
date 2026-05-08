@@ -1,6 +1,10 @@
-
 import { LoanApplication, Lead } from "@/types/admin";
+import { type jsPDF } from "jspdf";
 
+// Exit early if on server - PDF generation is client-only
+if (typeof window === 'undefined') {
+  console.log('[PDF] Server-side import detected. Skipping initialization.');
+}
 
 /**
  * Helper to fetch an image and return as base64 for PDF embedding
