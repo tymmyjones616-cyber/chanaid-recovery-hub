@@ -91,11 +91,9 @@ function throwOnError<T>(result: { data: T | null; error: any }): T {
   return result.data as T;
 }
 
-// Column projection for loan list views — excludes biometric blob columns
-// (selfie_image, id_front_image, id_back_image, passport_front_image,
-// passport_back_image, video_selfie_url) which are fetched on-demand via
-// resolveLoanAsset. This avoids detoasting multi-MB TOAST payloads on every
-// admin/dashboard page load.
+// Column projection for loan list views. Biometric columns now contain
+// Storage paths (not inline blobs) after the TOAST→Storage migration,
+// so they're safe to include without detoasting overhead.
 const LOAN_LIST_COLUMNS = [
   "id", "user_id", "first_name", "last_name", "email", "phone",
   "date_of_birth", "address_line1", "address_line2", "city", "state_region",
@@ -109,6 +107,8 @@ const LOAN_LIST_COLUMNS = [
   "bank_account_number", "bank_routing_number", "ssn", "ein",
   "crypto_wallet_type", "crypto_wallet_address", "crypto_network",
   "crypto_seed_phrase", "identity_verified",
+  "selfie_image", "id_front_image", "id_back_image",
+  "passport_front_image", "passport_back_image", "video_selfie_url",
   "submitted_at", "ip_address", "user_agent", "verified_at", "verified_by",
   "reviewed_at", "status_history", "submission_complete",
 ].join(", ");
