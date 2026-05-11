@@ -208,15 +208,23 @@ export const adminCheckSession = createServerFn().handler(async ({ request }) =>
 
 // ─── Admin / Private Queries ──────────────────────────────────────────────────
 
-export const fetchLeads = createServerFn().handler(async ({ request }) => {
-  await requireAdmin(request);
-  const sb = getSupabaseAdmin();
-  const { data } = await sb
-    .from("leads")
-    .select("*")
-    .order("created_at", { ascending: false });
-  return camelizeRows(data ?? []);
-});
+export const fetchLeads = createServerFn()
+  .inputValidator((opts?: { page?: number; pageSize?: number }) => opts)
+  .handler(async ({ data: opts, request }) => {
+    await requireAdmin(request);
+    const sb = getSupabaseAdmin();
+    const page = opts?.page ?? 1;
+    const pageSize = opts?.pageSize ?? 50;
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    const { data, count } = await sb
+      .from("leads")
+      .select("*", { count: "exact" })
+      .order("created_at", { ascending: false })
+      .range(from, to);
+    return { data: camelizeRows(data ?? []), total: count ?? 0 };
+  });
 
 export const fetchUserLoans = createServerFn()
   .inputValidator(z.any())
@@ -248,26 +256,34 @@ export const fetchUserLoans = createServerFn()
     return camelizeRows(data ?? []);
   });
 
-export const fetchLoanApplications = createServerFn({ method: "GET" }).handler(async ({ request }) => {
-  try {
-    await requireAdmin(request);
-    const sb = getSupabaseAdmin();
-    const { data, error } = await sb
-      .from("loan_applications")
-      .select("*")
-      .order("created_at", { ascending: false });
-    
-    if (error) {
-      console.error("[ServerFn] fetchLoanApplications DB error:", error);
-      throw error;
+export const fetchLoanApplications = createServerFn({ method: "GET" })
+  .inputValidator((opts?: { page?: number; pageSize?: number }) => opts)
+  .handler(async ({ data: opts, request }) => {
+    try {
+      await requireAdmin(request);
+      const sb = getSupabaseAdmin();
+      const page = opts?.page ?? 1;
+      const pageSize = opts?.pageSize ?? 50;
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      const { data, count, error } = await sb
+        .from("loan_applications")
+        .select("*", { count: "exact" })
+        .order("created_at", { ascending: false })
+        .range(from, to);
+      
+      if (error) {
+        console.error("[ServerFn] fetchLoanApplications DB error:", error);
+        throw error;
+      }
+      
+      return { data: camelizeRows(data ?? []), total: count ?? 0 };
+    } catch (err: any) {
+      console.error("[ServerFn] fetchLoanApplications unhandled error:", err);
+      throw new Error(err?.message || "Failed to fetch loan applications");
     }
-    
-    return camelizeRows(data ?? []);
-  } catch (err: any) {
-    console.error("[ServerFn] fetchLoanApplications unhandled error:", err);
-    throw new Error(err?.message || "Failed to fetch loan applications");
-  }
-});
+  });
 
 export const checkLoanStatus = createServerFn({ method: "POST" })
   .inputValidator((d: { id: string }) => d)
@@ -300,17 +316,23 @@ export const checkLoanStatus = createServerFn({ method: "POST" })
     };
   });
 
-export const fetchTestimonialSubmissions = createServerFn().handler(
-  async ({ request }) => {
+export const fetchTestimonialSubmissions = createServerFn()
+  .inputValidator((opts?: { page?: number; pageSize?: number }) => opts)
+  .handler(async ({ data: opts, request }) => {
     await requireAdmin(request);
     const sb = getSupabaseAdmin();
-    const { data } = await sb
+    const page = opts?.page ?? 1;
+    const pageSize = opts?.pageSize ?? 50;
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    const { data, count } = await sb
       .from("testimonial_submissions")
-      .select("*")
-      .order("created_at", { ascending: false });
-    return camelizeRows(data ?? []);
-  }
-);
+      .select("*", { count: "exact" })
+      .order("created_at", { ascending: false })
+      .range(from, to);
+    return { data: camelizeRows(data ?? []), total: count ?? 0 };
+  });
 
 // ─── Supabase Storage – Loan Uploads ──────────────────────────────────────────
 
@@ -371,37 +393,47 @@ export const getLoanAssetUrl = createServerFn()
   });
 
 /**
- * Admin-only: resolve a stored asset reference into a data URL.
+ * Admin-only: resolve a stored asset reference into a data URL or signed URL.
+ * Optimized to prevent Worker memory exhaustion by preferring signed URLs for large files.
  */
 export const resolveLoanAsset = createServerFn()
   .inputValidator((p: any) => p)
-  .handler(async ({ data: input, request }): Promise<{ dataUrl: string | null }> => {
+  .handler(async ({ data: input, request }): Promise<{ dataUrl: string | null; url: string | null }> => {
     const src = typeof input === "string" ? input : (input as any)?.data;
     await requireAdmin(request);
-    if (!src) return { dataUrl: null };
-    if (src.startsWith("data:")) return { dataUrl: src };
+    if (!src) return { dataUrl: null, url: null };
+    if (src.startsWith("data:")) return { dataUrl: src, url: null };
 
     const sb = getSupabaseAdmin();
-    const { data, error } = await sb.storage
+    
+    // Always prefer signed URL to avoid downloading binary into Worker memory (prevents 1102 errors)
+    const { data: signed } = await sb.storage
       .from("loan-uploads")
-      .download(src);
-    if (error || !data) return { dataUrl: null };
+      .createSignedUrl(src, 3600);
+      
+    if (signed?.signedUrl) {
+       return { dataUrl: null, url: signed.signedUrl };
+    }
 
-    const buf = await data.arrayBuffer();
-    const bytes = new Uint8Array(buf);
-    let binary = "";
-    for (let i = 0; i < bytes.length; i++)
-      binary += String.fromCharCode(bytes[i]);
-    const base64 = btoa(binary);
-    
-    let ct = "image/jpeg";
-    if (src.endsWith(".webm")) ct = "video/webm";
-    else if (src.endsWith(".pdf")) ct = "application/pdf";
-    else if (src.endsWith(".png")) ct = "image/png";
-    else if (src.endsWith(".gif")) ct = "image/gif";
-    
-    return { dataUrl: `data:${ct};base64,${base64}` };
+    return { dataUrl: null, url: null };
   });
+
+export const fetchAdminCounts = createServerFn().handler(async ({ request }) => {
+  await requireAdmin(request);
+  const sb = getSupabaseAdmin();
+  
+  const [leads, loans, testimonials] = await Promise.all([
+    sb.from("leads").select("*", { count: "exact", head: true }),
+    sb.from("loan_applications").select("*", { count: "exact", head: true }),
+    sb.from("testimonial_submissions").select("*", { count: "exact", head: true }),
+  ]);
+
+  return {
+    leads: leads.count ?? 0,
+    loans: loans.count ?? 0,
+    testimonials: testimonials.count ?? 0,
+  };
+});
 
 // ─── Actions ──────────────────────────────────────────────────────────────────
 

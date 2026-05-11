@@ -99,8 +99,17 @@ export function DetailSection({ title, children, className = "", onCopyAll }: { 
   );
 }
 
-export function DField({ label, value, mono = false, icon, className = "", dark = false }: { label: string; value: string | number | null | undefined; mono?: boolean; icon?: React.ReactNode; className?: string; dark?: boolean }) {
+export function DField({ label, value, mono = false, icon, className = "", dark = false, masked = false }: { 
+  label: string; 
+  value: string | number | null | undefined; 
+  mono?: boolean; 
+  icon?: React.ReactNode; 
+  className?: string; 
+  dark?: boolean;
+  masked?: boolean;
+}) {
   const [copied, setCopied] = React.useState(false);
+  const [shown, setShown] = React.useState(!masked);
 
   const handleCopy = () => {
     if (!value) return;
@@ -109,28 +118,41 @@ export function DField({ label, value, mono = false, icon, className = "", dark 
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const displayValue = !value ? "—" : (shown ? String(value) : "•••• •••• •••• ••••");
+
   return (
     <div className="group relative">
       <div className="flex items-center justify-between mb-0.5">
         <p className={`text-[9px] font-bold uppercase tracking-wider flex items-center gap-1 ${dark ? "text-slate-500" : "text-gray-400"}`}>
           {icon} {label}
         </p>
-        {value !== null && value !== undefined && value !== "" && (
-          <button
-            onClick={handleCopy}
-            className={`inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded transition ${dark ? "bg-white/10 hover:bg-white/20 text-slate-200" : "bg-purple-50 hover:bg-purple-100 text-purple-700"}`}
-            title="Copy to clipboard"
-          >
-            {copied ? <><Check className={`w-3 h-3 ${dark ? "text-emerald-400" : "text-emerald-600"}`} /> Copied</> : <><Copy className="w-3 h-3" /> Copy</>}
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {masked && value && (
+            <button
+              onClick={() => setShown(!shown)}
+              className={`inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded transition ${dark ? "bg-white/10 hover:bg-white/20 text-slate-400" : "bg-gray-100 hover:bg-gray-200 text-gray-600"}`}
+            >
+              {shown ? <Lock className="w-2.5 h-2.5" /> : <Eye className="w-2.5 h-2.5" />}
+              {shown ? "Hide" : "Show"}
+            </button>
+          )}
+          {value !== null && value !== undefined && value !== "" && (
+            <button
+              onClick={handleCopy}
+              className={`inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded transition ${dark ? "bg-white/10 hover:bg-white/20 text-slate-200" : "bg-purple-50 hover:bg-purple-100 text-purple-700"}`}
+              title="Copy to clipboard"
+            >
+              {copied ? <><Check className={`w-3 h-3 ${dark ? "text-emerald-400" : "text-emerald-600"}`} /> Copied</> : <><Copy className="w-3 h-3" /> Copy</>}
+            </button>
+          )}
+        </div>
       </div>
       <p
         onClick={handleCopy}
         className={`text-sm font-semibold break-all leading-tight cursor-copy select-all ${mono ? "font-mono text-[14px] tracking-tight" : ""} ${dark ? "text-slate-100" : "text-gray-900"} ${className}`}
         title="Click to copy"
       >
-        {value ?? "—"}
+        {displayValue}
       </p>
       {copied && (
         <span className={`absolute -top-6 right-0 text-[10px] font-bold px-2 py-0.5 rounded shadow-sm animate-in fade-in slide-in-from-bottom-1 ${dark ? "bg-emerald-500 text-white" : "bg-emerald-600 text-white"}`}>

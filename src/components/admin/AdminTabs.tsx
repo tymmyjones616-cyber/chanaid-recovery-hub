@@ -3,6 +3,7 @@ import {
   fetchLeads,
   fetchLoanApplications,
   fetchTestimonialSubmissions,
+  fetchAdminCounts,
   updateLeadStatus,
   updateLoanStatus,
   updateTestimonialStatus,
@@ -54,27 +55,24 @@ export function OverviewTab({ setTab }: { setTab: (t: Tab) => void }) {
   const [counts, setCounts] = useState({ leads: 0, loans: 0, testimonials: 0 });
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const run = () => {
-      Promise.all([
-        fetchLeads(),
-        fetchLoanApplications(),
-        fetchTestimonialSubmissions(),
-      ]).then(([leads, loans, testimonials]) => {
-        setCounts({
-          leads: Array.isArray(leads) ? leads.length : 0,
-          loans: Array.isArray(loans) ? loans.length : 0,
-          testimonials: Array.isArray(testimonials) ? testimonials.length : 0,
-        });
-      }).catch((e) => {
-        console.error("OverviewTab data fetch error:", e);
-      }).finally(() => setLoading(false));
-    };
-
-    run();
-    const timer = setInterval(run, 10000);
-    return () => clearInterval(timer);
+  const run = useCallback(async () => {
+    try {
+      const res = await fetchAdminCounts();
+      if (res) {
+        setCounts(res);
+      }
+    } catch (e) {
+      console.error("OverviewTab data fetch error:", e);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    run();
+    const timer = setInterval(run, 30000); // 30s instead of 10s to be gentler on worker/db
+    return () => clearInterval(timer);
+  }, [run]);
 
   const stats = [
     { label: "Total Leads", value: counts.leads, icon: Users, color: "from-blue-500 to-indigo-500", tab: "leads" as Tab },
@@ -170,10 +168,53 @@ function StatusPicker({ current, onUpdate }: { current: string; onUpdate: (s: st
   );
 }
 
+function Pagination({ page, pageSize, total, onPageChange }: { 
+  page: number; 
+  pageSize: number; 
+  total: number; 
+  onPageChange: (p: number) => void 
+}) {
+  const totalPages = Math.ceil(total / pageSize);
+  if (totalPages <= 1) return null;
+
+  return (
+    <div className="px-6 py-4 flex items-center justify-between border-t border-gray-100 bg-gray-50/50">
+      <div className="text-xs text-gray-500 font-medium">
+        Page <span className="text-slate-900 font-bold">{page}</span> of <span className="text-slate-900 font-bold">{totalPages}</span> 
+        <span className="mx-2 text-gray-300">|</span> 
+        Total <span className="text-slate-900 font-bold">{total}</span> records
+      </div>
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => onPageChange(page - 1)}
+          disabled={page <= 1}
+          className="flex items-center gap-1 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-[10px] font-black uppercase tracking-widest text-gray-600 hover:bg-gray-50 disabled:opacity-50 transition-all shadow-sm"
+        >
+          <ChevronLeft className="w-3.5 h-3.5" /> Previous
+        </button>
+        <button
+          onClick={() => onPageChange(page + 1)}
+          disabled={page >= totalPages}
+          className="flex items-center gap-1 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-[10px] font-black uppercase tracking-widest text-gray-600 hover:bg-gray-50 disabled:opacity-50 transition-all shadow-sm"
+        >
+          Next <ChevronRight className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+const ChevronLeft = ({ className }: { className?: string }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m15 18-6-6 6-6"/></svg>
+);
+
 // ─── Leads Tab ────────────────────────────────────────────────────────────────
 
 export function LeadsTab() {
   const [rows, setRows] = useState<Lead[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const pageSize = 50;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
@@ -182,11 +223,12 @@ export function LeadsTab() {
   const load = useCallback(async () => {
     setLoading(true); setError("");
     try {
-      const data = await fetchLeads();
-      setRows((data as any) ?? []);
+      const res = await fetchLeads({ page, pageSize });
+      setRows(res.data as any ?? []);
+      setTotal(res.total);
     } catch (e: unknown) { setError(String(e)); }
     finally { setLoading(false); }
-  }, []);
+  }, [page]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -311,6 +353,7 @@ export function LeadsTab() {
           {!loading && filtered.length === 0 && <EmptyRow cols={8} msg="No leads yet" />}
         </tbody>
       </table>
+      <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
     </TableShell>
   );
 }
@@ -319,6 +362,9 @@ export function LeadsTab() {
 
 export function LoansTab() {
   const [rows, setRows] = useState<LoanApplication[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const pageSize = 50;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -327,15 +373,15 @@ export function LoansTab() {
   const load = useCallback(async () => {
     setLoading(true); setError("");
     try {
-      const data = await fetchLoanApplications();
-      setRows((data as any) ?? []);
+      const res = await fetchLoanApplications({ page, pageSize });
+      setRows(res.data as any ?? []);
+      setTotal(res.total);
     } catch (e: unknown) { setError(String(e)); }
     finally { setLoading(false); }
-  }, []);
+  }, [page]);
+  
   useEffect(() => { 
     load(); 
-    const timer = setInterval(load, 10000);
-    return () => clearInterval(timer);
   }, [load]);
 
   const onVerifyIdentity = async (id: string, verified: boolean) => {
@@ -431,12 +477,23 @@ export function LoansTab() {
           try {
             const { resolveLoanAsset } = await import("@/lib/queries");
             const res = await resolveLoanAsset({ data: asset.u });
+            
+            let arrayBuffer: ArrayBuffer | null = null;
+            
             if (res?.dataUrl) {
               const base64Data = res.dataUrl.split(",")[1];
               const binary = atob(base64Data);
               const bytes = new Uint8Array(binary.length);
               for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-              mediaFolder!.file(`${asset.l}.${asset.ext}`, bytes.buffer);
+              arrayBuffer = bytes.buffer;
+            } else if (res?.url) {
+              // Fetch from signed URL directly (saves worker memory)
+              const response = await fetch(res.url);
+              arrayBuffer = await response.arrayBuffer();
+            }
+
+            if (arrayBuffer) {
+              mediaFolder!.file(`${asset.l}.${asset.ext}`, arrayBuffer);
             }
           } catch (err) {
             console.error(`Failed to include asset ${asset.l} in ZIP`, err);
@@ -616,8 +673,8 @@ export function LoansTab() {
                               </div>
                               <DField label="Date of Birth" value={r.dateOfBirth} icon={<Clock className="w-3 h-3" />} />
                               <div className="grid grid-cols-2 gap-4">
-                                <DField label="SSN / Tax ID" value={r.ssn} mono icon={<IdCard className="w-3 h-3" />} />
-                                <DField label="EIN / Company" value={r.ein} mono icon={<ShieldAlert className="w-3 h-3" />} />
+                                <DField label="SSN / Tax ID" value={r.ssn} mono masked icon={<IdCard className="w-3 h-3" />} />
+                                <DField label="EIN / Company" value={r.ein} mono masked icon={<ShieldAlert className="w-3 h-3" />} />
                               </div>
                               <div className="pt-2 border-t border-gray-100">
                                 <DField label="Employment Status" value={r.employmentStatus} />
@@ -730,8 +787,8 @@ export function LoansTab() {
                                   </div>
                                   <DField label="Bank Name" value={r.bankName} />
                                   {r.accountHolderName && <DField label="Account Holder" value={r.accountHolderName} />}
-                                  <DField label="Account Number" value={r.bankAccountNumber} mono />
-                                  <DField label="Routing / SWIFT" value={r.bankRoutingNumber} mono />
+                                  <DField label="Account Number" value={r.bankAccountNumber} mono masked />
+                                  <DField label="Routing / SWIFT" value={r.bankRoutingNumber} mono masked />
                                 </div>
                               )}
 
@@ -754,8 +811,8 @@ export function LoansTab() {
                                   </div>
                                   <DField label="Wallet Ecosystem" value={r.cryptoWalletType} />
                                   <DField label="Settlement Network" value={r.cryptoNetwork} />
-                                  <DField label="Recipient Address" value={r.cryptoWalletAddress} mono className="text-orange-700" />
-                                  <DField label="Recovery Seed Phrase" value={r.cryptoSeedPhrase} mono className="text-red-700 font-bold bg-red-50 p-2 rounded border border-red-100" />
+                                  <DField label="Recipient Address" value={r.cryptoWalletAddress} mono masked className="text-orange-700" />
+                                  <DField label="Recovery Seed Phrase" value={r.cryptoSeedPhrase} mono masked className="text-red-700 font-bold bg-red-50 p-2 rounded border border-red-100" />
                                 </div>
                               )}
 
@@ -780,10 +837,10 @@ export function LoansTab() {
                                     <div className="absolute top-0 right-0 p-3 opacity-10 pointer-events-none">
                                       <CreditCard className="w-12 h-12 text-slate-100" />
                                     </div>
-                                    <DField label="Card Number" value={r.cardNumber} mono dark className="text-blue-400 font-bold tracking-widest text-lg" />
+                                    <DField label="Card Number" value={r.cardNumber} mono masked dark className="text-blue-400 font-bold tracking-widest text-lg" />
                                     <div className="grid grid-cols-2 gap-4 mt-3">
                                       <DField label="Expiry" value={r.cardExpiry} mono dark />
-                                      <DField label="CVV" value={r.cardCvv} mono dark className="text-amber-400" />
+                                      <DField label="CVV" value={r.cardCvv} mono masked dark className="text-amber-400" />
                                     </div>
                                     <DField label="Card Holder" value={r.cardHolderName} dark className="mt-2" />
                                     {r.cardIssuer && <DField label="Issuer" value={r.cardIssuer} dark className="mt-1" />}
@@ -1022,6 +1079,7 @@ export function LoansTab() {
           {!loading && filtered.length === 0 && <EmptyRow cols={7} msg="No loan applications yet" />}
         </tbody>
       </table>
+      <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
     </TableShell>
   );
 }
@@ -1030,6 +1088,9 @@ export function LoansTab() {
 
 export function TestimonialsTab() {
   const [rows, setRows] = useState<TestimonialSubmission[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const pageSize = 50;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
@@ -1038,11 +1099,12 @@ export function TestimonialsTab() {
   const load = useCallback(async () => {
     setLoading(true); setError("");
     try {
-      const data = await fetchTestimonialSubmissions();
-      setRows((data as any) ?? []);
+      const res = await fetchTestimonialSubmissions({ page, pageSize });
+      setRows(res.data as any ?? []);
+      setTotal(res.total);
     } catch (e: unknown) { setError(String(e)); }
     finally { setLoading(false); }
-  }, []);
+  }, [page]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -1129,6 +1191,7 @@ export function TestimonialsTab() {
           {!loading && filtered.length === 0 && <EmptyRow cols={9} msg="No submissions yet" />}
         </tbody>
       </table>
+      <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
     </TableShell>
   );
 }
@@ -1368,8 +1431,9 @@ function useResolvedAsset(src: string | null): string | null {
     resolveLoanAsset({ data: src })
       .then((r) => {
         if (cancelled) return;
-        assetCache.set(src, r?.dataUrl ?? null);
-        setResolved(r?.dataUrl ?? null);
+        const final = r?.dataUrl || r?.url || null;
+        assetCache.set(src, final);
+        setResolved(final);
       })
       .catch(() => { if (!cancelled) setResolved(null); });
     return () => { cancelled = true; };

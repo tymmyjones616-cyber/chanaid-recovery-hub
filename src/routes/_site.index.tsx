@@ -255,7 +255,7 @@ function Index() {
             ].map((expert, i) => (
               <Reveal key={i} direction="up" delay={i * 100}>
                 <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-border">
-                  <img src={expert.image} alt={expert.name} className="w-16 h-16 rounded-full object-cover border-2 border-white shadow-sm" />
+                  <img src={expert.image} alt={expert.name} loading="lazy" className="w-16 h-16 rounded-full object-cover border-2 border-white shadow-sm" />
                   <div>
                     <div className="font-bold text-slate-900">{expert.name}</div>
                     <div className="text-xs text-primary font-semibold uppercase tracking-wider">{expert.role}</div>
