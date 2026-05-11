@@ -2,6 +2,7 @@ import { useState } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
 import { Loader2, CheckCircle2, MessageCircle, Send } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { submitLead } from "@/lib/queries";
 
 import { CONTACT_INFO } from "@/lib/constants";
@@ -62,7 +63,7 @@ export function LeadForm({ variant = "card", defaultScamType, sourcePage, title 
     setLoading(true);
     try {
       const { error } = await submitLead(payload);
-      if (error) throw new Error("Submission failed");
+      if (error) throw new Error(error.message || "Submission failed. Please try again.");
       
       // Construct highly structured message
       const text = `🚨 *NEW RECOVERY CASE INQUIRY* 🚨
@@ -92,8 +93,10 @@ _Sent via ChanAid Recovery Hub_`;
       setTimeout(() => {
         window.open(whatsappUrl, "_blank");
       }, 1500);
-    } catch {
-      toast.error("Something went wrong. Please try again.");
+    } catch (err: any) {
+      const msg = err?.message || "Something went wrong. Please try again.";
+      console.error("[LeadForm] submit error:", err);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -141,18 +144,21 @@ _Sent via ChanAid Recovery Hub_`;
         <Field name="email" type="email" placeholder="Email *" error={errors.email} required autoComplete="email" />
         <Field name="phone" placeholder="Phone" error={errors.phone} autoComplete="tel" />
         <Field name="amount_lost" placeholder="Amount lost (e.g. $5,000)" error={errors.amountLost} />
-        <select name="scam_type" defaultValue={defaultScamType ?? ""} className="h-11 rounded-lg border border-input bg-white px-3 text-sm">
-          <option value="">Type of scam</option>
-          <option>Cryptocurrency</option>
-          <option>Pig Butchering</option>
-          <option>Romance Scams</option>
-          <option>Forex & Trading</option>
-          <option>Binary Options</option>
-          <option>Investment Fraud</option>
-          <option>Phishing & ID Theft</option>
-          <option>Tax Fraud Recovery</option>
-          <option>Other</option>
-        </select>
+        <div>
+          <select name="scam_type" defaultValue={defaultScamType ?? ""} className={`h-11 w-full rounded-lg border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring ${errors.scamType ? "border-destructive bg-destructive/5" : "border-input bg-white"}`}>
+            <option value="">Type of scam</option>
+            <option>Cryptocurrency</option>
+            <option>Pig Butchering</option>
+            <option>Romance Scams</option>
+            <option>Forex & Trading</option>
+            <option>Binary Options</option>
+            <option>Investment Fraud</option>
+            <option>Phishing & ID Theft</option>
+            <option>Tax Fraud Recovery</option>
+            <option>Other</option>
+          </select>
+          {errors.scamType && <p className="text-xs text-destructive mt-1">{errors.scamType}</p>}
+        </div>
       </div>
       <textarea
         name="message"
@@ -170,7 +176,9 @@ _Sent via ChanAid Recovery Hub_`;
         {loading ? "Submitting…" : "Get my free consultation"}
       </button>
       <p className="text-[11px] text-muted-foreground mt-3 text-center">
-        By submitting you agree to our privacy policy. No recovery, no fee.
+        By submitting you agree to our{" "}
+        <Link to="/privacy-policy" className="underline hover:text-primary">privacy policy</Link>
+        . No recovery, no fee.
       </p>
     </form>
   );

@@ -12,7 +12,11 @@ const FOOTER_YEAR = new Date().getFullYear();
 
 export function Footer() {
   const [s, setS] = useState<SiteSettings | null>(null);
-  useEffect(() => { fetchSiteSettings().then(setS); }, []);
+  useEffect(() => {
+    fetchSiteSettings()
+      .then(setS)
+      .catch((e) => console.error("[Footer] fetchSiteSettings failed:", e));
+  }, []);
 
   const contactEmail = s?.contact_email ?? "support@chanaidrecovery.com";
 

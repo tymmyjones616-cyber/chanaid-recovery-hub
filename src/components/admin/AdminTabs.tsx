@@ -14,7 +14,6 @@ import {
   adminDeleteUser,
   adminUpdateUser,
   sendAdminCustomMessage,
-  testAdminPost
 } from "@/lib/queries";
 import { toast } from "sonner";
 import { downloadFile } from "@/lib/utils";
@@ -72,7 +71,9 @@ export function OverviewTab({ setTab }: { setTab: (t: Tab) => void }) {
     };
 
     run();
-    const timer = setInterval(run, 10000);
+    // Poll every 30s (was 10s) — reduces Cloudflare Worker CPU pressure on the
+    // admin route and prevents Error 1102 spikes from concurrent admin views.
+    const timer = setInterval(run, 30000);
     return () => clearInterval(timer);
   }, []);
 

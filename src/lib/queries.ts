@@ -16,6 +16,44 @@ import {
   requireAdmin,
   clearAdminSession,
 } from "@/lib/admin-auth";
+
+// Extract the authenticated end-user from the request cookies. Mirrors the
+// token parsing in admin-auth.ts but resolves the user instead of an admin gate.
+async function getUserFromRequest(request: Request | undefined): Promise<{ id: string; email: string | null } | null> {
+  if (!request) return null;
+  const cookieHeader = request.headers.get("cookie");
+  if (!cookieHeader) return null;
+  const projectId = "taprwweemxfbrrkwajnc";
+  const want = (name: string) => {
+    for (const part of cookieHeader.split(/;\s*/)) {
+      const idx = part.indexOf("=");
+      if (idx === -1) continue;
+      if (part.slice(0, idx).trim() === name) {
+        const v = part.slice(idx + 1).trim();
+        try { return decodeURIComponent(v); } catch { return v; }
+      }
+    }
+    return undefined;
+  };
+  const token = want("sb-access-token") || want(`sb-${projectId}-auth-token`) || want("sb-auth-token");
+  if (!token) return null;
+  let jwt = token;
+  if (token.includes("%7B") || token.startsWith("{")) {
+    try {
+      const decoded = token.includes("%") ? decodeURIComponent(token) : token;
+      const parsed = JSON.parse(decoded);
+      jwt = parsed.access_token || jwt;
+    } catch { /* keep raw token */ }
+  }
+  try {
+    const sb = getSupabaseAdmin();
+    const { data: { user }, error } = await sb.auth.getUser(jwt);
+    if (error || !user) return null;
+    return { id: user.id, email: user.email ?? null };
+  } catch {
+    return null;
+  }
+}
 import { sendEmail, loanVerifiedEmail, loanStatusUpdateEmail, loanRejectionEmail, welcomeEmail, loanSubmittedEmail } from "@/lib/email";
 
 function nowIso(): string {
@@ -214,22 +252,28 @@ export const fetchLeads = createServerFn().handler(async ({ request }) => {
   const { data } = await sb
     .from("leads")
     .select("*")
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(500);
   return camelizeRows(data ?? []);
 });
 
 export const fetchUserLoans = createServerFn()
   .inputValidator((p: any) => p)
-  .handler(async ({ data: input }) => {
-    const email = typeof input === "string" ? input : (input as any)?.data;
+  .handler(async ({ data: input, request }) => {
+    // H3: prefer authenticated session email over client-supplied value
+    const session = await getUserFromRequest(request);
+    let email: string | undefined =
+      session?.email ??
+      (typeof input === "string" ? input : (input as any)?.data ?? (input as any)?.email);
     if (!email) return [];
-    
+
     const sb = getSupabaseAdmin();
     const { data } = await sb
       .from("loan_applications")
       .select("*")
       .ilike("email", email)
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(200);
     return camelizeRows(data ?? []);
   });
 
@@ -240,13 +284,14 @@ export const fetchLoanApplications = createServerFn({ method: "GET" }).handler(a
     const { data, error } = await sb
       .from("loan_applications")
       .select("*")
-      .order("created_at", { ascending: false });
-    
+      .order("created_at", { ascending: false })
+      .limit(500);
+
     if (error) {
       console.error("[ServerFn] fetchLoanApplications DB error:", error);
       throw error;
     }
-    
+
     return camelizeRows(data ?? []);
   } catch (err: any) {
     console.error("[ServerFn] fetchLoanApplications unhandled error:", err);
@@ -256,15 +301,27 @@ export const fetchLoanApplications = createServerFn({ method: "GET" }).handler(a
 
 export const checkLoanStatus = createServerFn({ method: "POST" })
   .inputValidator((d: { id: string }) => d)
-  .handler(async ({ data: { id } }) => {
+  .handler(async ({ data: { id }, request }) => {
+    // H1: must be the owner OR an admin to read loan status
+    const session = await getUserFromRequest(request);
+    const adminOk = await isAdminAuthed(request);
+    if (!session && !adminOk) return null;
+
     const sb = getSupabaseAdmin();
-    const { data, error } = await sb
+    let query = sb
       .from("loan_applications")
       .select(
-        "status, identity_verified, rejection_reason, amount_requested, currency, payout_method, created_at, submitted_at, updated_at, reviewed_at, verified_at, status_history"
+        "status, identity_verified, rejection_reason, amount_requested, currency, payout_method, created_at, submitted_at, updated_at, reviewed_at, verified_at, status_history, user_id, email"
       )
-      .eq("id", id)
-      .single();
+      .eq("id", id);
+    if (!adminOk && session) {
+      if (session.email) {
+        query = query.or(`user_id.eq.${session.id},email.ilike.${session.email}`);
+      } else {
+        query = query.eq("user_id", session.id);
+      }
+    }
+    const { data, error } = await query.single();
     if (error || !data) {
       console.error(`[checkLoanStatus] Error or not found for ID: ${id}`, error);
       return null;
@@ -292,7 +349,8 @@ export const fetchTestimonialSubmissions = createServerFn().handler(
     const { data } = await sb
       .from("testimonial_submissions")
       .select("*")
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(500);
     return camelizeRows(data ?? []);
   }
 );
@@ -347,7 +405,34 @@ export const uploadLoanAsset = createServerFn({ method: "POST" })
 
 export const getLoanAssetUrl = createServerFn()
   .inputValidator((key: string) => key)
-  .handler(async ({ data: key }) => {
+  .handler(async ({ data: key, request }) => {
+    // H2: admins bypass; otherwise require the signed-in user to own a loan
+    // whose record references this storage key.
+    const adminOk = await isAdminAuthed(request);
+    if (!adminOk) {
+      const session = await getUserFromRequest(request);
+      if (!session) return null;
+      const sb = getSupabaseAdmin();
+      const assetCols = [
+        "selfie_image",
+        "id_front_image",
+        "id_back_image",
+        "passport_front_image",
+        "passport_back_image",
+        "video_selfie_url",
+      ];
+      const orClause = assetCols.map((c) => `${c}.eq.${key}`).join(",");
+      const { data: owning } = await sb
+        .from("loan_applications")
+        .select("id, user_id, email")
+        .or(orClause)
+        .limit(5);
+      const owns = (owning ?? []).some((r: any) =>
+        r.user_id === session.id ||
+        (session.email && r.email && r.email.toLowerCase() === session.email.toLowerCase())
+      );
+      if (!owns) return null;
+    }
     const sb = getSupabaseAdmin();
     const { data } = await sb.storage
       .from("loan-uploads")
@@ -482,7 +567,7 @@ export const adminListUsers = createServerFn()
   .handler(async ({ request }) => {
     await requireAdmin(request);
     const sb = getSupabaseAdmin();
-    const { data, error } = await sb.auth.admin.listUsers({ perPage: 1000 });
+    const { data, error } = await sb.auth.admin.listUsers({ perPage: 500 });
     if (error) throw new Error(error.message);
     return (data.users || []).map((u: any) => ({
       id: u.id,

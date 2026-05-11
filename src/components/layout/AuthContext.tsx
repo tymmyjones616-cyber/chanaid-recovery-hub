@@ -19,19 +19,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
+    let mounted = true;
     const supabase = getSupabaseBrowser();
 
     // Get initial session — suppress stale refresh-token errors (expected for logged-out visitors)
     supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (!mounted) return;
       if (error?.message?.includes("Refresh Token")) {
         supabase.auth.signOut().catch(() => null);
       }
       setSession(session);
       setUser(session?.user ?? null);
-      
+
       const isSupabaseAdmin = session?.user?.app_metadata?.role === "admin" || session?.user?.user_metadata?.role === "admin";
       const isSuperAdmin = typeof document !== 'undefined' && document.cookie.includes("chanaid_super_admin=Admin2024");
-      
+
       setIsAdmin(isSupabaseAdmin || isSuperAdmin);
       setIsLoading(false);
 
@@ -42,6 +44,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!mounted) return;
       if (event === "TOKEN_REFRESH_FAILED") {
         supabase.auth.signOut().catch(() => null);
         setSession(null);
@@ -69,7 +72,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signOut = async () => {
