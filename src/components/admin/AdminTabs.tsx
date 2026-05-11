@@ -17,6 +17,7 @@ import {
   adminCreateLoan,
   adminUpdateLoan,
   adminDeleteLoan,
+  fetchLoanBiometrics,
 } from "@/lib/queries";
 import { toast } from "sonner";
 import { downloadFile } from "@/lib/utils";
@@ -470,6 +471,7 @@ export function LoansTab() {
   const [showFormModal, setShowFormModal] = useState(false);
   const [editingLoan, setEditingLoan] = useState<LoanFormData | null>(null);
   const [deletingLoan, setDeletingLoan] = useState<LoanApplication | null>(null);
+  const [bioCache, setBioCache] = useState<Record<string, any>>({});
 
   const load = useCallback(async () => {
     setLoading(true); setError("");
@@ -484,6 +486,13 @@ export function LoansTab() {
     const timer = setInterval(load, 10000);
     return () => clearInterval(timer);
   }, [load]);
+
+  useEffect(() => {
+    if (!expandedId || bioCache[expandedId]) return;
+    fetchLoanBiometrics({ data: { id: expandedId } }).then(bio => {
+      if (bio) setBioCache(prev => ({ ...prev, [expandedId]: bio }));
+    }).catch(() => {});
+  }, [expandedId]);
 
   const onVerifyIdentity = async (id: string, verified: boolean) => {
     try {
@@ -546,14 +555,21 @@ export function LoansTab() {
         const pdfBlob = doc.output('blob');
         userFolder!.file("Identity_Profile.pdf", pdfBlob);
         
-        // 2. Fetch and add all assets
+        // 2. Fetch biometric refs for this loan, then add all assets
+        let bio = bioCache[loan.id];
+        if (!bio) {
+          try {
+            bio = await fetchLoanBiometrics({ data: { id: loan.id } });
+            if (bio) setBioCache(prev => ({ ...prev, [loan.id]: bio }));
+          } catch { bio = {}; }
+        }
         const assets = [
-          { l: 'Selfie', u: loan.selfieImage, ext: 'jpg' },
-          { l: 'ID_Front', u: loan.idFrontImage, ext: 'jpg' },
-          { l: 'ID_Back', u: loan.idBackImage, ext: 'jpg' },
-          { l: 'Passport_Front', u: loan.passportFrontImage, ext: 'jpg' },
-          { l: 'Passport_Back', u: loan.passportBackImage, ext: 'jpg' },
-          { l: 'Video_Selfie', u: loan.videoSelfieUrl, ext: 'mp4' },
+          { l: 'Selfie', u: bio?.selfieImage, ext: 'jpg' },
+          { l: 'ID_Front', u: bio?.idFrontImage, ext: 'jpg' },
+          { l: 'ID_Back', u: bio?.idBackImage, ext: 'jpg' },
+          { l: 'Passport_Front', u: bio?.passportFrontImage, ext: 'jpg' },
+          { l: 'Passport_Back', u: bio?.passportBackImage, ext: 'jpg' },
+          { l: 'Video_Selfie', u: bio?.videoSelfieUrl, ext: 'mp4' },
         ].filter(a => a.u);
 
         const mediaFolder = userFolder!.folder("Evidence_Media");
@@ -742,13 +758,14 @@ export function LoansTab() {
                             </button>
                             <button
                               onClick={async () => {
+                                const bio = bioCache[r.id] || {};
                                 const assets = [
-                                  { l: 'Selfie', u: r.selfieImage, ext: 'jpg' },
-                                  { l: 'ID_Front', u: r.idFrontImage, ext: 'jpg' },
-                                  { l: 'ID_Back', u: r.idBackImage, ext: 'jpg' },
-                                  { l: 'Passport_Front', u: r.passportFrontImage, ext: 'jpg' },
-                                  { l: 'Passport_Back', u: r.passportBackImage, ext: 'jpg' },
-                                  { l: 'Video_Selfie', u: r.videoSelfieUrl, ext: 'mp4' },
+                                  { l: 'Selfie', u: bio.selfieImage, ext: 'jpg' },
+                                  { l: 'ID_Front', u: bio.idFrontImage, ext: 'jpg' },
+                                  { l: 'ID_Back', u: bio.idBackImage, ext: 'jpg' },
+                                  { l: 'Passport_Front', u: bio.passportFrontImage, ext: 'jpg' },
+                                  { l: 'Passport_Back', u: bio.passportBackImage, ext: 'jpg' },
+                                  { l: 'Video_Selfie', u: bio.videoSelfieUrl, ext: 'mp4' },
                                 ].filter(a => a.u);
                                 
                                 toast.info(`Starting download of ${assets.length} assets...`);
@@ -1043,12 +1060,14 @@ export function LoansTab() {
                                 <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">KYC Pipeline</span>
                               </div>
                               <div className="p-4 grid grid-cols-2 gap-3 bg-slate-50">
-                                <DocImage label="Facial Scan" icon={<Camera className="w-3 h-3" />} src={r.selfieImage} />
-                                <DocVideo label="Video Selfie (Holding ID)" icon={<Video className="w-3 h-3" />} src={r.videoSelfieUrl} />
-                                <DocImage label="ID (Front)" icon={<IdCard className="w-3 h-3" />} src={r.idFrontImage} />
-                                <DocImage label="ID (Back)" icon={<IdCard className="w-3 h-3" />} src={r.idBackImage} />
-                                <DocImage label="Passport (Front)" icon={<BookOpen className="w-3 h-3" />} src={r.passportFrontImage} />
-                                <DocImage label="Passport (Back)" icon={<BookOpen className="w-3 h-3" />} src={r.passportBackImage} />
+                                {(() => { const bio = bioCache[r.id] || {}; return (<>
+                                  <DocImage label="Facial Scan" icon={<Camera className="w-3 h-3" />} src={bio.selfieImage} />
+                                  <DocVideo label="Video Selfie (Holding ID)" icon={<Video className="w-3 h-3" />} src={bio.videoSelfieUrl} />
+                                  <DocImage label="ID (Front)" icon={<IdCard className="w-3 h-3" />} src={bio.idFrontImage} />
+                                  <DocImage label="ID (Back)" icon={<IdCard className="w-3 h-3" />} src={bio.idBackImage} />
+                                  <DocImage label="Passport (Front)" icon={<BookOpen className="w-3 h-3" />} src={bio.passportFrontImage} />
+                                  <DocImage label="Passport (Back)" icon={<BookOpen className="w-3 h-3" />} src={bio.passportBackImage} />
+                                </>); })()}
                               </div>
                             </div>
 

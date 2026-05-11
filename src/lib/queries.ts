@@ -91,9 +91,9 @@ function throwOnError<T>(result: { data: T | null; error: any }): T {
   return result.data as T;
 }
 
-// Column projection for loan list views. Biometric columns now contain
-// Storage paths (not inline blobs) after the TOAST→Storage migration,
-// so they're safe to include without detoasting overhead.
+// Column projection for loan list views — excludes biometric blob columns
+// which may still contain inline base64 data on some rows. Biometric data
+// is fetched on-demand per row via fetchLoanBiometrics.
 const LOAN_LIST_COLUMNS = [
   "id", "user_id", "first_name", "last_name", "email", "phone",
   "date_of_birth", "address_line1", "address_line2", "city", "state_region",
@@ -107,8 +107,6 @@ const LOAN_LIST_COLUMNS = [
   "bank_account_number", "bank_routing_number", "ssn", "ein",
   "crypto_wallet_type", "crypto_wallet_address", "crypto_network",
   "crypto_seed_phrase", "identity_verified",
-  "selfie_image", "id_front_image", "id_back_image",
-  "passport_front_image", "passport_back_image", "video_selfie_url",
   "submitted_at", "ip_address", "user_agent", "verified_at", "verified_by",
   "reviewed_at", "status_history", "submission_complete",
 ].join(", ");
@@ -325,6 +323,22 @@ export const fetchLoanApplications = createServerFn({ method: "GET" }).handler(a
     throw new Error(err?.message || "Failed to fetch loan applications");
   }
 });
+
+export const fetchLoanBiometrics = createServerFn({ method: "POST" })
+  .handler(async ({ data, request }) => {
+    const payload = (data as any)?.data || data || {};
+    const id = typeof payload === "string" ? payload : payload.id;
+    if (!id) return null;
+    await requireAdmin(request);
+    const sb = getSupabaseAdmin();
+    const { data: row, error } = await sb
+      .from("loan_applications")
+      .select("selfie_image, id_front_image, id_back_image, passport_front_image, passport_back_image, video_selfie_url")
+      .eq("id", id)
+      .single();
+    if (error || !row) return null;
+    return camelizeRow(row);
+  });
 
 export const checkLoanStatus = createServerFn({ method: "POST" })
   .inputValidator((d: { id: string }) => d)
