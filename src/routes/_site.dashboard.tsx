@@ -458,7 +458,7 @@ function LoanCard({ loan }: { loan: any }) {
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t border-slate-50">
-        <DetailItem label="Payout Method" value={loan.payoutMethod.replace('_', ' ')} />
+        <DetailItem label="Payout Method" value={(loan.payoutMethod ?? "—").replace('_', ' ')} />
         <DetailItem label="Identity" value={loan.identityVerified ? "Verified" : "Pending"} />
         <DetailItem label="Submission" value="Complete" />
         <DetailItem label="Next Step" value={loan.status === 'verified' ? "Fund Release" : "Officer Review"} />
@@ -642,7 +642,7 @@ function BiometricThumb({ label, src }: { label: string; src: string }) {
         </span>
       </div>
       {resolved ? (
-        /\.(mp4|webm|mov)(\?|$)/i.test(resolved) ? (
+        /\.(mp4|webm|mov)(\?|$)/i.test(resolved.split('?')[0]) ? (
           <video src={resolved} controls className="w-full h-32 object-cover rounded-lg bg-black" />
         ) : (
           <img src={resolved} alt={label} className="w-full h-32 object-cover rounded-lg" />

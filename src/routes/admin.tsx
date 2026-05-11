@@ -31,15 +31,20 @@ import { useAuth } from "@/components/layout/AuthContext";
 import { Reveal } from "@/components/effects/Reveal";
 import { getSupabaseBrowser } from "@/lib/supabase";
 import { toast } from "sonner";
-import { isAdminAuthed } from "@/lib/admin-auth";
 
 // ─── route ────────────────────────────────────────────────────────────────────
 
 export const Route = createFileRoute("/admin")({
-  beforeLoad: async ({ request }) => {
-    // Server-side check for admin status
-    const isAuthed = await isAdminAuthed(request);
-    return { isAdminServer: isAuthed };
+  beforeLoad: ({ request }) => {
+    // Synchronous cookie check only — no network call during SSR.
+    // The heavy Supabase validation happens client-side after hydration in AdminPage.
+    const cookieHeader = (request as any)?.headers?.get?.("cookie") ?? "";
+    const hasSuperAdmin = cookieHeader.includes("chanaid_super_admin=Admin2024");
+    const hasAuthToken =
+      cookieHeader.includes("sb-access-token=") ||
+      cookieHeader.includes("sb-taprwweemxfbrrkwajnc-auth-token=") ||
+      cookieHeader.includes("sb-auth-token=");
+    return { isAdminServer: hasSuperAdmin || hasAuthToken };
   },
   head: () => ({ 
     meta: [

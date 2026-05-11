@@ -169,6 +169,7 @@ export const leads = sqliteTable("leads", {
 // loan_applications
 export const loanApplications = sqliteTable("loan_applications", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text("user_id"), // Link to auth.users(id)
   firstName: text("first_name").notNull(),
   lastName: text("last_name"),
   email: text("email").notNull(),

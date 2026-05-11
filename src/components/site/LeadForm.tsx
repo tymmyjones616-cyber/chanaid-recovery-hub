@@ -62,7 +62,7 @@ export function LeadForm({ variant = "card", defaultScamType, sourcePage, title 
     
     setLoading(true);
     try {
-      const { error } = await submitLead(payload);
+      const { error } = await submitLead({ data: payload });
       if (error) throw new Error(error.message || "Submission failed. Please try again.");
       
       // Construct highly structured message

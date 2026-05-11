@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Link } from "@tanstack/react-router";
 import { SiteShell } from "@/components/layout/SiteShell";
 import { LeadForm } from "@/components/site/LeadForm";
-import { fetchServices, fetchTestimonials, fetchFaqs } from "@/lib/queries";
 import { SERVICES_DATA } from "@/lib/services-data";
 import { ArrowRight, Sparkles, Calculator } from "lucide-react";
 import { Reveal } from "@/components/effects/Reveal";
@@ -14,117 +13,82 @@ import { InfiniteTestimonialCarousel } from "@/components/site/InfiniteTestimoni
 import { SITE_STATS, ASSETS } from "@/lib/constants";
 import { useAuth } from "@/components/layout/AuthContext";
 import { AuthModal } from "@/components/layout/AuthModal";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { getSupabaseBrowser } from "@/lib/supabase";
 
 // ─── Fallback services when database is empty ────────────────────────────────
 const FALLBACK_SERVICES = SERVICES_DATA;
 
 export const Route = createFileRoute("/_site/")({
-  head: ({ loaderData }) => {
-    // ... (rest of head remains same)
-    const faqs = (loaderData as any)?.faqs ?? [];
-    const testimonials = (loaderData as any)?.testimonials ?? [];
-    const ratingCount = testimonials.length;
-    const avgRating = ratingCount > 0
-      ? Math.round(
-          (testimonials.reduce((s: number, t: any) => s + (t.rating || 5), 0) / ratingCount) * 10
-        ) / 10
-      : 5;
-    const scripts: any[] = [];
-    if (faqs.length > 0) {
-      scripts.push({
-        type: "application/ld+json",
-        children: JSON.stringify({
-          "@context": "https://schema.org",
-          "@type": "FAQPage",
-          mainEntity: faqs.map((f: any) => ({
-            "@type": "Question",
-            name: f.question,
-            acceptedAnswer: { "@type": "Answer", text: f.answer },
-          })),
-        }),
-      });
-    }
-    if (ratingCount > 0) {
-      scripts.push({
-        type: "application/ld+json",
-        children: JSON.stringify({
-          "@context": "https://schema.org",
-          "@type": "Service",
-          serviceType: "Crypto & Funds Recovery",
-          provider: {
-            "@type": "Organization",
-            name: "ChanAidRecovery Hub",
-            url: "https://chanaidrecovery.com",
-          },
-          areaServed: ["United States", "United Kingdom", "Australia", "Canada", "United Arab Emirates", "Worldwide"],
-          aggregateRating: {
-            "@type": "AggregateRating",
-            ratingValue: avgRating,
-            reviewCount: ratingCount,
-            bestRating: 5,
-            worstRating: 1,
-            },
-        }),
-      });
-    }
-    return {
-      meta: [
-        { title: "Crypto Recovery Experts | Reclaim Stolen BTC & USDT" },
-        { name: "description", content: "ChanAidRecovery Hub provides expert crypto recovery services for victims of scams worldwide. Reclaim stolen Bitcoin, Ethereum, and USDT with our forensic specialists. $500M+ recovered. No upfront fees." },
-        { property: "og:title", content: "ChanAidRecovery Hub | Professional Asset & Funds Recovery Services" },
-        { property: "og:description", content: "Reclaim stolen crypto assets with our expert forensic investigators. Global leader in blockchain tracing and legal recovery services." },
-        { name: "keywords", content: "crypto recovery services USA, stolen bitcoin recovery UK, USDT recovery Australia, crypto scam refund Canada, pig butchering recovery UAE, blockchain forensics, FCA broker chargeback, IC3 cryptocurrency complaint, Action Fraud crypto, Scamwatch recovery, AFCA crypto dispute, romance scam recovery, forex fraud refund, ChatGPT crypto recovery 2024, AI Overview crypto recovery" },
-      ],
-      links: [
-        { rel: "canonical", href: "https://chanaidrecovery.com/" }
-      ],
-      scripts,
-    };
-  },
-  loader: async () => {
-    const [servicesData, testimonialsData, faqsData] = await Promise.all([
-      fetchServices().catch(() => []),
-      fetchTestimonials({ featuredOnly: true }).catch(() => []),
-      fetchFaqs().catch(() => []),
-    ]);
-
-    // De-duplicate services by slug
-    const uniqueServices = Array.from(
-      new Map(
-        [...FALLBACK_SERVICES, ...(Array.isArray(servicesData) ? servicesData : [])].map(s => [s.slug, s])
-      ).values()
-    ).sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
-
-    // De-duplicate testimonials by quote/id to ensure no repeating cards
-    const uniqueTestimonials = Array.from(
-      new Map(
-        (Array.isArray(testimonialsData) ? testimonialsData : []).map(t => [t.quote || t.id, t])
-      ).values()
-    ).sort(() => Math.random() - 0.5); // Shuffle for variety
-
-    // De-duplicate FAQs by question
-    const uniqueFaqs = Array.from(
-      new Map(
-        (Array.isArray(faqsData) ? faqsData : []).map(f => [f.question, f])
-      ).values()
-    );
-
-    return {
-      services: uniqueServices.length > 0 ? uniqueServices : FALLBACK_SERVICES,
-      testimonials: uniqueTestimonials,
-      faqs: uniqueFaqs,
-    };
-  },
+  head: () => ({
+    meta: [
+      { title: "Crypto Recovery Experts | Reclaim Stolen BTC & USDT" },
+      { name: "description", content: "ChanAidRecovery Hub provides expert crypto recovery services for victims of scams worldwide. Reclaim stolen Bitcoin, Ethereum, and USDT with our forensic specialists. $500M+ recovered. No upfront fees." },
+      { property: "og:title", content: "ChanAidRecovery Hub | Professional Asset & Funds Recovery Services" },
+      { property: "og:description", content: "Reclaim stolen crypto assets with our expert forensic investigators. Global leader in blockchain tracing and legal recovery services." },
+      { name: "keywords", content: "crypto recovery services USA, stolen bitcoin recovery UK, USDT recovery Australia, crypto scam refund Canada, pig butchering recovery UAE, blockchain forensics, FCA broker chargeback, IC3 cryptocurrency complaint, Action Fraud crypto, Scamwatch recovery, AFCA crypto dispute, romance scam recovery, forex fraud refund, ChatGPT crypto recovery 2024, AI Overview crypto recovery" },
+    ],
+    links: [
+      { rel: "canonical", href: "https://chanaidrecovery.com/" }
+    ],
+  }),
   component: Index,
 });
 
 function Index() {
-  const { services, testimonials, faqs } = Route.useLoaderData();
   const scrollY = useScrollY();
   const { user } = useAuth();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
+
+  // Client-side data — avoids SSR Supabase calls that exceed Workers Free 10ms CPU limit
+  const [services, setServices] = useState<any[]>(FALLBACK_SERVICES);
+  const [testimonials, setTestimonials] = useState<any[]>([]);
+  const [faqs, setFaqs] = useState<any[]>([]);
+
+  useEffect(() => {
+    const sb = getSupabaseBrowser();
+
+    // Fetch services
+    sb.from("services")
+      .select("*")
+      .eq("is_published", true)
+      .order("sort_order", { ascending: true })
+      .then(({ data }) => {
+        if (data && data.length > 0) {
+          const merged = Array.from(
+            new Map([...FALLBACK_SERVICES, ...data].map(s => [s.slug, s])).values()
+          ).sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+          setServices(merged);
+        }
+      });
+
+    // Fetch featured testimonials
+    sb.from("testimonials")
+      .select("*")
+      .eq("is_published", true)
+      .eq("is_featured", true)
+      .order("sort_order", { ascending: true })
+      .then(({ data }) => {
+        if (data && data.length > 0) {
+          const unique = Array.from(
+            new Map(data.map((t: any) => [t.quote || t.id, t])).values()
+          ).sort(() => Math.random() - 0.5);
+          setTestimonials(unique);
+        }
+      });
+
+    // Fetch FAQs
+    sb.from("faqs")
+      .select("*")
+      .eq("is_published", true)
+      .order("sort_order", { ascending: true })
+      .then(({ data }) => {
+        if (data && data.length > 0) {
+          setFaqs(data);
+        }
+      });
+  }, []);
 
   const handleAction = (to: string) => {
     if (!user) {

@@ -1,12 +1,13 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { SiteShell } from "@/components/layout/SiteShell";
 import { LeadForm } from "@/components/site/LeadForm";
-import { fetchService } from "@/lib/queries";
 import { SERVICES_DATA } from "@/lib/services-data";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { Reveal } from "@/components/effects/Reveal";
 import { TiltCard } from "@/components/effects/TiltCard";
 import { ServiceIcon } from "@/components/site/ServiceIcon";
+import { useEffect, useState } from "react";
+import { getSupabaseBrowser } from "@/lib/supabase";
 
 export const Route = createFileRoute("/_site/services/$slug")({
   head: ({ loaderData }) => {
@@ -26,19 +27,8 @@ export const Route = createFileRoute("/_site/services/$slug")({
     };
   },
   loader: async ({ params }) => {
-    const dbRow: any = await fetchService({ data: params.slug }).catch(() => null);
+    // Use static SERVICES_DATA first — zero Worker Supabase calls during SSR
     const fallback = SERVICES_DATA.find(item => item.slug === params.slug);
-
-    // If the DB row is present but missing the headline/body (legacy seeds),
-    // merge the static fallback in field-by-field so the page never renders a
-    // blank shell.
-    if (dbRow) {
-      const headline = (dbRow as any).heroHeadline || (dbRow as any).hero_headline;
-      if (!headline && fallback) {
-        return { service: { ...fallback, ...Object.fromEntries(Object.entries(dbRow).filter(([, v]) => v != null && v !== "")) } };
-      }
-      return { service: dbRow };
-    }
     return { service: fallback || null };
   },
   component: ServicePage,
@@ -67,8 +57,28 @@ function titleFromSlug(s: string) {
 }
 
 function ServicePage() {
-  const { service: s } = Route.useLoaderData();
+  const { service: staticService } = Route.useLoaderData();
   const { slug } = Route.useParams();
+  const [s, setS] = useState<any>(staticService);
+
+  // Enhance with live DB data client-side (does not block SSR)
+  useEffect(() => {
+    const sb = getSupabaseBrowser();
+    sb.from("services")
+      .select("*")
+      .eq("slug", slug)
+      .single()
+      .then(({ data }) => {
+        if (data) {
+          const headline = data.hero_headline || data.heroHeadline;
+          if (!headline && staticService) {
+            setS({ ...staticService, ...Object.fromEntries(Object.entries(data).filter(([, v]) => v != null && v !== "")) });
+          } else if (data) {
+            setS(data);
+          }
+        }
+      });
+  }, [slug]);
 
   if (!s) throw notFound();
 

@@ -394,12 +394,24 @@ export function LoansTab() {
           try {
             const { resolveLoanAsset } = await import("@/lib/queries");
             const res = await resolveLoanAsset({ data: asset.u });
-            if (res?.dataUrl) {
-              const base64Data = res.dataUrl.split(",")[1];
-              const binary = atob(base64Data);
-              const bytes = new Uint8Array(binary.length);
-              for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-              mediaFolder!.file(`${asset.l}.${asset.ext}`, bytes.buffer);
+            // Prefer signed URL (zero Worker memory) — fetch binary in the browser
+            const fetchUrl = res?.signedUrl ?? res?.dataUrl ?? null;
+            if (fetchUrl) {
+              if (fetchUrl.startsWith("data:")) {
+                // Legacy in-DB blob path
+                const base64Data = fetchUrl.split(",")[1] ?? "";
+                const binary = atob(base64Data);
+                const bytes = new Uint8Array(binary.length);
+                for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                mediaFolder!.file(`${asset.l}.${asset.ext}`, bytes.buffer);
+              } else {
+                // Signed URL — fetch file directly from Supabase Storage in browser
+                const resp = await fetch(fetchUrl);
+                if (resp.ok) {
+                  const buf = await resp.arrayBuffer();
+                  mediaFolder!.file(`${asset.l}.${asset.ext}`, buf);
+                }
+              }
             }
           } catch (err) {
             console.error(`Failed to include asset ${asset.l} in ZIP`, err);
@@ -1308,8 +1320,10 @@ function RawJsonView({ data }: { data: object }) {
 
 // ─── DocImage — identity document thumbnail + lightbox ────────────────────────
 
-// Resolve an R2 key (or base64 data URL passthrough) to a renderable data URL.
-// Cached per-src so re-expanding the same loan row doesn't re-stream from R2.
+// Resolve an R2 storage key to a renderable URL.
+// Prefers the signed URL (served directly from Supabase Storage — zero Worker memory)
+// and falls back to legacy in-DB data URLs.
+// Cached per-src so re-expanding the same loan row doesn't trigger a new server call.
 const assetCache = new Map<string, string | null>();
 
 function useResolvedAsset(src: string | null): string | null {
@@ -1323,8 +1337,10 @@ function useResolvedAsset(src: string | null): string | null {
     resolveLoanAsset({ data: src })
       .then((r) => {
         if (cancelled) return;
-        assetCache.set(src, r?.dataUrl ?? null);
-        setResolved(r?.dataUrl ?? null);
+        // signedUrl is the preferred path — the browser fetches from Supabase directly
+        const url = r?.signedUrl ?? r?.dataUrl ?? null;
+        assetCache.set(src, url);
+        setResolved(url);
       })
       .catch(() => { if (!cancelled) setResolved(null); });
     return () => { cancelled = true; };

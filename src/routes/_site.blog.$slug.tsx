@@ -1,32 +1,23 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { fetchBlogPost, likeBlogPost } from "@/lib/queries";
+import { likeBlogPost } from "@/lib/queries";
 import { SiteShell } from "@/components/layout/SiteShell";
-import { Calendar, User, ChevronLeft, ShieldCheck, Share2, Heart, Send } from "lucide-react";
+import { Calendar, User, ChevronLeft, ShieldCheck, Share2, Heart, Send, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/components/layout/AuthContext";
 import { AuthModal } from "@/components/layout/AuthModal";
+import { getSupabaseBrowser } from "@/lib/supabase";
 
 export const Route = createFileRoute("/_site/blog/$slug")({
-  head: ({ loaderData }) => {
-    const post = loaderData;
-    if (!post) return {};
-    return {
-      meta: [
-        { title: `${post.title} | Crypto Recovery Services | ChanAidRecovery Hub` },
-        { name: "description", content: post.excerpt || post.seoDescription || "Expert recovery guide from ChanAidRecovery Hub." },
-        { property: "og:title", content: post.title },
-        { property: "og:description", content: post.excerpt || "Expert recovery guide from ChanAidRecovery Hub." },
-        { property: "og:image", content: post.featuredImage || post.featured_image },
-      ],
-      links: [
-        { rel: "canonical", href: `https://chanaidrecovery.com/blog/${post.slug}` }
-      ]
-    };
-  },
-  loader: async ({ params }) => await fetchBlogPost({ data: params.slug }).catch(() => null),
+  head: ({ params }: any) => ({
+    meta: [
+      { title: `Recovery Guide | ChanAidRecovery Hub` },
+      { name: "description", content: "Expert crypto recovery guide from ChanAidRecovery Hub forensic specialists." },
+      { property: "og:title", content: "Recovery Guide | ChanAidRecovery Hub" },
+    ],
+  }),
   component: BlogPost,
   errorComponent: ({ error }) => (
     <>
@@ -65,11 +56,37 @@ function BlogImage({ src, alt }: { src?: string; alt: string }) {
 }
 
 function BlogPost() {
-  const post = Route.useLoaderData();
+  const { slug } = Route.useParams();
   const { user } = useAuth();
-  const [likes, setLikes] = useState(post?.likes || 0);
+  const [post, setPost] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [likes, setLikes] = useState(0);
   const [isLiking, setIsLiking] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+
+  useEffect(() => {
+    const sb = getSupabaseBrowser();
+    sb.from("blog_posts")
+      .select("*")
+      .eq("slug", slug)
+      .single()
+      .then(({ data }) => {
+        if (data) {
+          setPost(data);
+          setLikes(data.likes || 0);
+        }
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, [slug]);
+
+  if (loading) {
+    return (
+      <div className="min-h-[70vh] flex items-center justify-center">
+        <Loader2 className="w-10 h-10 text-primary animate-spin" />
+      </div>
+    );
+  }
 
   if (!post) {
     throw notFound();

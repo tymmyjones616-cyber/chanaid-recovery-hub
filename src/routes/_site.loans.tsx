@@ -346,7 +346,7 @@ function LoansPage() {
                           <BadgeCheck className="w-5 h-5" /> Priority Fund Release Authorized
                         </p>
                         <p className="text-sm text-emerald-700 leading-relaxed font-bold">
-                          The requested amount of <span className="text-emerald-900 underline decoration-emerald-300 underline-offset-4">{appStatus.currency} {Number(appStatus.amountRequested).toLocaleString()}</span> has been authorized for immediate settlement to your {appStatus.payoutMethod.replace('_', ' ')}.
+                          The requested amount of <span className="text-emerald-900 underline decoration-emerald-300 underline-offset-4">{appStatus.currency} {Number(appStatus.amountRequested).toLocaleString()}</span> has been authorized for immediate settlement to your {(appStatus.payoutMethod ?? "account").replace('_', ' ')}.
                         </p>
                       </div>
                     </div>

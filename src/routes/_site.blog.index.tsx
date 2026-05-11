@@ -1,9 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { fetchBlogPosts } from "@/lib/queries";
 import { SiteShell } from "@/components/layout/SiteShell";
-import { Calendar, User, ArrowRight } from "lucide-react";
+import { Calendar, User, ArrowRight, Loader2 } from "lucide-react";
 import { format } from "date-fns";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { getSupabaseBrowser } from "@/lib/supabase";
 
 export const Route = createFileRoute("/_site/blog/")({
   head: () => ({
@@ -14,7 +14,6 @@ export const Route = createFileRoute("/_site/blog/")({
       { property: "og:description", content: "Expert advice on blockchain forensics, legal recovery paths, and scam prevention across the globe." },
     ],
   }),
-  loader: async () => (await fetchBlogPosts().catch(() => [])) ?? [],
   component: BlogIndex,
 });
 
@@ -36,13 +35,27 @@ function BlogImage({ src, alt }: { src?: string; alt: string }) {
 }
 
 function BlogIndex() {
-  const posts = Route.useLoaderData();
+  const [posts, setPosts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
-  const filteredPosts = posts?.filter((p: any) => 
-    p.title.toLowerCase().includes(search.toLowerCase()) || 
-    p.excerpt?.toLowerCase().includes(search.toLowerCase())
-  ) || [];
+  useEffect(() => {
+    const sb = getSupabaseBrowser();
+    sb.from("blog_posts")
+      .select("*")
+      .eq("is_published", true)
+      .order("created_at", { ascending: false })
+      .then(({ data }) => {
+        setPosts(data ?? []);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
+
+  const filteredPosts = posts.filter((p: any) =>
+    (p.title ?? "").toLowerCase().includes(search.toLowerCase()) ||
+    (p.excerpt ?? "").toLowerCase().includes(search.toLowerCase())
+  );
 
   const highlight = (text: string | null | undefined, query: string) => {
     if (!query || !text) return text || "";
@@ -89,7 +102,11 @@ function BlogIndex() {
 
       <div className="bg-slate-50/50 py-24 min-h-[600px]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {!posts || posts.length === 0 ? (
+          {loading ? (
+            <div className="flex justify-center items-center py-32">
+              <Loader2 className="w-10 h-10 animate-spin text-blue-500" />
+            </div>
+          ) : !posts || posts.length === 0 ? (
             <div className="text-center py-32">
               <div className="bg-white rounded-3xl p-12 shadow-soft border border-slate-100 max-w-sm mx-auto">
                 <p className="text-slate-500 font-medium">No articles found. Check back soon!</p>
@@ -139,7 +156,10 @@ function BlogIndex() {
                         <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                       </span>
                       <div className="h-8 w-8 rounded-full bg-slate-50 flex items-center justify-center text-[10px] font-black text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
-                        {post.likes > 999 ? (post.likes / 1000).toFixed(1) + 'k' : post.likes}
+                        {(() => {
+                          const likes = post.likes ?? 0;
+                          return likes > 999 ? (likes / 1000).toFixed(1) + 'k' : likes;
+                        })()}
                       </div>
                     </div>
                   </div>

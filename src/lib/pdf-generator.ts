@@ -15,7 +15,12 @@ async function getBase64Image(url: string): Promise<string | null> {
     if (!url.startsWith("http")) {
       const { resolveLoanAsset } = await import("@/lib/queries");
       const res = await resolveLoanAsset({ data: url });
-      return res?.dataUrl || null;
+      // Prefer the zero-memory signed URL path; fall back to legacy data URL
+      const fetchUrl = res?.signedUrl ?? res?.dataUrl ?? null;
+      if (!fetchUrl) return null;
+      if (fetchUrl.startsWith("data:")) return fetchUrl;
+      // signedUrl — fetch via browser and convert to base64 for jsPDF
+      url = fetchUrl;
     }
 
     const response = await fetch(url);
