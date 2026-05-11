@@ -14,6 +14,9 @@ import {
   adminDeleteUser,
   adminUpdateUser,
   sendAdminCustomMessage,
+  adminCreateLoan,
+  adminUpdateLoan,
+  adminDeleteLoan,
 } from "@/lib/queries";
 import { toast } from "sonner";
 import { downloadFile } from "@/lib/utils";
@@ -24,7 +27,7 @@ import {
   Palette, Type, Save, ChevronRight, TrendingUp,
   FileText, Star, ShieldCheck, Camera, IdCard, BookOpen, CheckCircle2, ZoomIn,
   Clock, CreditCard, ShieldAlert, Fingerprint, Video, XCircle, Play,
-  Activity, Code2, Download, UserPlus, Trash2, Pencil, X, Phone, Mail, Shield, User, Eye, EyeOff, Search, Send, MessageCircle
+  Activity, Code2, Download, UserPlus, Trash2, Pencil, X, Phone, Mail, Shield, User, Eye, EyeOff, Search, Send, MessageCircle, Plus, AlertTriangle, Loader2
 } from "lucide-react";
 import { generateLoanPDF, generateBulkLoanPDF, generateLeadPDF, generateBulkLeadPDF } from "@/lib/pdf-generator";
 import type { StatusHistoryEntry } from "@/types/admin";
@@ -296,12 +299,177 @@ export function LeadsTab() {
 
 // ─── Loans Tab ────────────────────────────────────────────────────────────────
 
+// ─── Delete Confirmation Modal ───────────────────────────────────────────────
+
+function DeleteConfirmModal({ name, onConfirm, onCancel }: { name: string; onConfirm: () => void; onCancel: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onCancel}>
+      <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full mx-4" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center gap-3 mb-4">
+          <div className="h-10 w-10 rounded-xl bg-red-100 flex items-center justify-center">
+            <AlertTriangle className="w-5 h-5 text-red-600" />
+          </div>
+          <div>
+            <h3 className="font-bold text-gray-900">Delete Loan Application</h3>
+            <p className="text-xs text-gray-500">This action cannot be undone</p>
+          </div>
+        </div>
+        <p className="text-sm text-gray-600 mb-6">
+          Are you sure you want to permanently delete the loan application for <strong>{name}</strong>?
+        </p>
+        <div className="flex items-center gap-3 justify-end">
+          <button onClick={onCancel} className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition">Cancel</button>
+          <button onClick={onConfirm} className="px-4 py-2 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg transition shadow-sm">Delete</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Loan Form Modal (Add / Edit) ────────────────────────────────────────────
+
+type LoanFormData = Partial<LoanApplication> & { firstName?: string; email?: string };
+
+function LoanFormModal({ loan, onSave, onClose }: {
+  loan: LoanFormData | null;
+  onSave: (data: LoanFormData) => Promise<void>;
+  onClose: () => void;
+}) {
+  const isEdit = !!loan?.id;
+  const [form, setForm] = useState<LoanFormData>(loan ?? { currency: "USD", payoutMethod: "bank_transfer", status: "pending" });
+  const [saving, setSaving] = useState(false);
+
+  const set = (key: string, value: any) => setForm(prev => ({ ...prev, [key]: value }));
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!form.firstName || !form.email || !form.amountRequested) {
+      toast.error("First name, email, and amount are required");
+      return;
+    }
+    setSaving(true);
+    try {
+      await onSave(form);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const inputCls = "w-full h-9 rounded-lg border border-gray-200 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary bg-white";
+  const labelCls = "text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1 block";
+  const selectCls = "w-full h-9 rounded-lg border border-gray-200 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 backdrop-blur-sm overflow-y-auto py-8" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl mx-4 my-auto" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+              {isEdit ? <Pencil className="w-5 h-5 text-primary" /> : <Plus className="w-5 h-5 text-primary" />}
+            </div>
+            <div>
+              <h3 className="font-bold text-gray-900">{isEdit ? "Edit Loan Application" : "Add Loan Application"}</h3>
+              <p className="text-xs text-gray-500">{isEdit ? `Editing: ${loan?.firstName} ${loan?.lastName}` : "Create a new loan application"}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition"><X className="w-5 h-5 text-gray-400" /></button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+          {/* Personal Info */}
+          <div>
+            <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider mb-3 flex items-center gap-2"><User className="w-3.5 h-3.5" /> Personal Info</h4>
+            <div className="grid sm:grid-cols-2 gap-3">
+              <div><label className={labelCls}>First Name *</label><input className={inputCls} value={form.firstName ?? ""} onChange={e => set("firstName", e.target.value)} required /></div>
+              <div><label className={labelCls}>Last Name</label><input className={inputCls} value={form.lastName ?? ""} onChange={e => set("lastName", e.target.value)} /></div>
+              <div><label className={labelCls}>Email *</label><input type="email" className={inputCls} value={form.email ?? ""} onChange={e => set("email", e.target.value)} required /></div>
+              <div><label className={labelCls}>Phone</label><input className={inputCls} value={form.phone ?? ""} onChange={e => set("phone", e.target.value)} /></div>
+              <div><label className={labelCls}>Date of Birth</label><input type="date" className={inputCls} value={form.dateOfBirth ?? ""} onChange={e => set("dateOfBirth", e.target.value)} /></div>
+              <div><label className={labelCls}>Employment</label>
+                <select className={selectCls} value={form.employmentStatus ?? ""} onChange={e => set("employmentStatus", e.target.value)}>
+                  <option value="">Select...</option>
+                  <option value="employed">Employed</option>
+                  <option value="self_employed">Self-Employed</option>
+                  <option value="unemployed">Unemployed</option>
+                  <option value="retired">Retired</option>
+                  <option value="student">Student</option>
+                </select>
+              </div>
+              <div><label className={labelCls}>Monthly Income</label><input type="number" className={inputCls} value={form.monthlyIncome ?? ""} onChange={e => set("monthlyIncome", e.target.value)} /></div>
+            </div>
+          </div>
+
+          {/* Address */}
+          <div>
+            <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider mb-3 flex items-center gap-2"><Globe className="w-3.5 h-3.5" /> Address</h4>
+            <div className="grid sm:grid-cols-2 gap-3">
+              <div className="sm:col-span-2"><label className={labelCls}>Address Line 1</label><input className={inputCls} value={form.addressLine1 ?? ""} onChange={e => set("addressLine1", e.target.value)} /></div>
+              <div><label className={labelCls}>City</label><input className={inputCls} value={form.city ?? ""} onChange={e => set("city", e.target.value)} /></div>
+              <div><label className={labelCls}>State/Region</label><input className={inputCls} value={form.stateRegion ?? ""} onChange={e => set("stateRegion", e.target.value)} /></div>
+              <div><label className={labelCls}>Postal Code</label><input className={inputCls} value={form.postalCode ?? ""} onChange={e => set("postalCode", e.target.value)} /></div>
+              <div><label className={labelCls}>Country</label><input className={inputCls} value={form.country ?? ""} onChange={e => set("country", e.target.value)} /></div>
+            </div>
+          </div>
+
+          {/* Loan Details */}
+          <div>
+            <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider mb-3 flex items-center gap-2"><Banknote className="w-3.5 h-3.5" /> Loan Details</h4>
+            <div className="grid sm:grid-cols-2 gap-3">
+              <div><label className={labelCls}>Amount *</label><input type="number" step="0.01" className={inputCls} value={form.amountRequested ?? ""} onChange={e => set("amountRequested", e.target.value)} required /></div>
+              <div><label className={labelCls}>Currency</label>
+                <select className={selectCls} value={form.currency ?? "USD"} onChange={e => set("currency", e.target.value)}>
+                  <option value="USD">USD</option><option value="EUR">EUR</option><option value="GBP">GBP</option><option value="CAD">CAD</option><option value="AUD">AUD</option>
+                </select>
+              </div>
+              <div><label className={labelCls}>Term (months)</label><input type="number" className={inputCls} value={form.loanTermMonths ?? ""} onChange={e => set("loanTermMonths", e.target.value)} /></div>
+              <div><label className={labelCls}>Payout Method</label>
+                <select className={selectCls} value={form.payoutMethod ?? "bank_transfer"} onChange={e => set("payoutMethod", e.target.value)}>
+                  <option value="bank_transfer">Bank Transfer</option><option value="crypto">Crypto</option><option value="card">Card</option>
+                </select>
+              </div>
+              <div><label className={labelCls}>Status</label>
+                <select className={selectCls} value={form.status ?? "pending"} onChange={e => set("status", e.target.value)}>
+                  <option value="pending">Pending</option><option value="under_review">Under Review</option><option value="verified">Verified</option><option value="rejected">Rejected</option><option value="needs_correction">Needs Correction</option>
+                </select>
+              </div>
+              <div className="sm:col-span-2"><label className={labelCls}>Loan Purpose</label><input className={inputCls} value={form.loanPurpose ?? ""} onChange={e => set("loanPurpose", e.target.value)} /></div>
+            </div>
+          </div>
+
+          {/* Notes */}
+          <div>
+            <label className={labelCls}>Admin Notes</label>
+            <textarea className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white" rows={3} value={form.notes ?? ""} onChange={e => set("notes", e.target.value)} />
+          </div>
+        </form>
+
+        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100">
+          <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition">Cancel</button>
+          <button
+            onClick={(e) => { e.preventDefault(); handleSubmit(new Event("submit") as any); }}
+            disabled={saving}
+            className="px-5 py-2 text-sm font-bold text-white bg-primary hover:bg-primary/90 rounded-lg transition shadow-sm disabled:opacity-60 flex items-center gap-2"
+          >
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            {saving ? "Saving..." : isEdit ? "Save Changes" : "Create Loan"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Loans Tab ───────────────────────────────────────────────────────────────
+
 export function LoansTab() {
   const [rows, setRows] = useState<LoanApplication[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [showFormModal, setShowFormModal] = useState(false);
+  const [editingLoan, setEditingLoan] = useState<LoanFormData | null>(null);
+  const [deletingLoan, setDeletingLoan] = useState<LoanApplication | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true); setError("");
@@ -436,6 +604,41 @@ export function LoansTab() {
     }
   };
 
+  const onCreateLoan = async (data: LoanFormData) => {
+    const res = await adminCreateLoan({ data });
+    if (res && "success" in res && !res.success) {
+      toast.error((res as any).error || "Failed to create loan");
+      return;
+    }
+    toast.success("Loan application created");
+    setShowFormModal(false);
+    load();
+  };
+
+  const onEditLoan = async (data: LoanFormData) => {
+    const res = await adminUpdateLoan({ data: { id: editingLoan!.id, ...data } });
+    if (res && "success" in res && !res.success) {
+      toast.error((res as any).error || "Failed to update loan");
+      return;
+    }
+    setRows(prev => prev.map(r => r.id === editingLoan!.id ? { ...r, ...data } as LoanApplication : r));
+    toast.success("Loan application updated");
+    setEditingLoan(null);
+  };
+
+  const onDeleteLoan = async () => {
+    if (!deletingLoan) return;
+    const res = await adminDeleteLoan({ data: { id: deletingLoan.id } });
+    if (res && "success" in res && !res.success) {
+      toast.error((res as any).error || "Failed to delete loan");
+      return;
+    }
+    setRows(prev => prev.filter(r => r.id !== deletingLoan.id));
+    toast.success("Loan application deleted");
+    setDeletingLoan(null);
+    if (expandedId === deletingLoan.id) setExpandedId(null);
+  };
+
   return (
     <TableShell 
       title="Loan Applications" 
@@ -447,6 +650,12 @@ export function LoansTab() {
       onSearch={setSearch}
       actions={
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowFormModal(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white text-[10px] font-bold uppercase tracking-wider rounded-lg hover:bg-emerald-700 transition-all shadow-sm"
+          >
+            <Plus className="w-3.5 h-3.5" /> Add Loan
+          </button>
           <button
             onClick={() => {
               const doc = generateBulkLoanPDF(filtered);
@@ -567,6 +776,18 @@ export function LoansTab() {
                               className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-[10px] font-bold rounded-lg transition-all uppercase tracking-widest flex items-center gap-2 shadow-sm"
                             >
                               <Download className="w-3.5 h-3.5" /> PDF Profile
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setEditingLoan(r as LoanFormData); }}
+                              className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-bold rounded-lg transition-all uppercase tracking-widest flex items-center gap-2 shadow-sm"
+                            >
+                              <Pencil className="w-3.5 h-3.5" /> Edit
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setDeletingLoan(r); }}
+                              className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold rounded-lg transition-all uppercase tracking-widest flex items-center gap-2 shadow-sm"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" /> Delete
                             </button>
                             <StatusBadge status={r.status} />
                           </div>
@@ -989,6 +1210,9 @@ export function LoansTab() {
           {!loading && filtered.length === 0 && <EmptyRow cols={7} msg="No loan applications yet" />}
         </tbody>
       </table>
+      {showFormModal && <LoanFormModal loan={null} onSave={onCreateLoan} onClose={() => setShowFormModal(false)} />}
+      {editingLoan && <LoanFormModal loan={editingLoan} onSave={onEditLoan} onClose={() => setEditingLoan(null)} />}
+      {deletingLoan && <DeleteConfirmModal name={`${deletingLoan.firstName} ${deletingLoan.lastName}`} onConfirm={onDeleteLoan} onCancel={() => setDeletingLoan(null)} />}
     </TableShell>
   );
 }

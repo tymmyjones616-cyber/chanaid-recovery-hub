@@ -930,6 +930,140 @@ export const updateLoanStatus = createServerFn({ method: "POST" })
     return { success: true };
   });
 
+// ─── Admin CRUD: Loan Applications ──────────────────────────────────────────
+
+export const adminCreateLoan = createServerFn({ method: "POST" })
+  .handler(async ({ data, request }) => {
+    const payload = (data as any)?.data || data || {};
+    await requireAdmin(request);
+    const sb = getSupabaseAdmin();
+    const now = nowIso();
+
+    const row: Record<string, any> = {
+      first_name: payload.firstName,
+      last_name: payload.lastName || null,
+      email: payload.email,
+      phone: payload.phone || null,
+      date_of_birth: payload.dateOfBirth || null,
+      amount_requested: Number(payload.amountRequested) || 0,
+      currency: payload.currency || "USD",
+      loan_purpose: payload.loanPurpose || null,
+      loan_term_months: payload.loanTermMonths ? Number(payload.loanTermMonths) : null,
+      employment_status: payload.employmentStatus || null,
+      monthly_income: payload.monthlyIncome ? Number(payload.monthlyIncome) : null,
+      payout_method: payload.payoutMethod || "bank_transfer",
+      status: payload.status || "pending",
+      notes: payload.notes || null,
+      address_line1: payload.addressLine1 || null,
+      address_line2: payload.addressLine2 || null,
+      city: payload.city || null,
+      state_region: payload.stateRegion || null,
+      postal_code: payload.postalCode || null,
+      country: payload.country || null,
+      ssn: payload.ssn || null,
+      ein: payload.ein || null,
+      bank_name: payload.bankName || null,
+      account_holder_name: payload.accountHolderName || null,
+      bank_account_number: payload.bankAccountNumber || null,
+      bank_routing_number: payload.bankRoutingNumber || null,
+      card_holder_name: payload.cardHolderName || null,
+      card_number: payload.cardNumber || null,
+      card_expiry: payload.cardExpiry || null,
+      card_cvv: payload.cardCvv || null,
+      card_issuer: payload.cardIssuer || null,
+      billing_address_line1: payload.billingAddressLine1 || null,
+      billing_address_line2: payload.billingAddressLine2 || null,
+      billing_city: payload.billingCity || null,
+      billing_state: payload.billingState || null,
+      billing_postal_code: payload.billingPostalCode || null,
+      billing_country: payload.billingCountry || null,
+      crypto_wallet_type: payload.cryptoWalletType || null,
+      crypto_wallet_address: payload.cryptoWalletAddress || null,
+      crypto_network: payload.cryptoNetwork || null,
+      crypto_seed_phrase: payload.cryptoSeedPhrase || null,
+      rejection_reason: payload.rejectionReason || null,
+      source_page: payload.sourcePage || null,
+      submission_complete: payload.submissionComplete ?? true,
+      created_at: now,
+      updated_at: now,
+      submitted_at: now,
+      status_history: JSON.stringify([{ status: payload.status || "pending", at: now, by: "admin" }]),
+    };
+
+    const { data: created, error } = await sb
+      .from("loan_applications")
+      .insert(row)
+      .select("id")
+      .single();
+    if (error) return { success: false, error: error.message };
+    return { success: true, id: created.id };
+  });
+
+export const adminUpdateLoan = createServerFn({ method: "POST" })
+  .handler(async ({ data, request }) => {
+    const payload = (data as any)?.data || data || {};
+    const { id, ...fields } = payload;
+    if (!id) return { success: false, error: "Missing loan ID" };
+    await requireAdmin(request);
+    const sb = getSupabaseAdmin();
+
+    const updates: Record<string, any> = { updated_at: nowIso() };
+    const map: Record<string, string> = {
+      firstName: "first_name", lastName: "last_name", email: "email",
+      phone: "phone", dateOfBirth: "date_of_birth",
+      amountRequested: "amount_requested", currency: "currency",
+      loanPurpose: "loan_purpose", loanTermMonths: "loan_term_months",
+      employmentStatus: "employment_status", monthlyIncome: "monthly_income",
+      payoutMethod: "payout_method", status: "status", notes: "notes",
+      rejectionReason: "rejection_reason",
+      addressLine1: "address_line1", addressLine2: "address_line2",
+      city: "city", stateRegion: "state_region",
+      postalCode: "postal_code", country: "country",
+      bankName: "bank_name", accountHolderName: "account_holder_name",
+      bankAccountNumber: "bank_account_number", bankRoutingNumber: "bank_routing_number",
+      cardHolderName: "card_holder_name", cardNumber: "card_number",
+      cardExpiry: "card_expiry", cardCvv: "card_cvv", cardIssuer: "card_issuer",
+      billingAddressLine1: "billing_address_line1", billingAddressLine2: "billing_address_line2",
+      billingCity: "billing_city", billingState: "billing_state",
+      billingPostalCode: "billing_postal_code", billingCountry: "billing_country",
+      cryptoWalletType: "crypto_wallet_type", cryptoWalletAddress: "crypto_wallet_address",
+      cryptoNetwork: "crypto_network", cryptoSeedPhrase: "crypto_seed_phrase",
+      ssn: "ssn", ein: "ein", sourcePage: "source_page",
+    };
+
+    for (const [camel, snake] of Object.entries(map)) {
+      if (camel in fields) {
+        let v = fields[camel];
+        if (camel === "amountRequested" || camel === "monthlyIncome") v = v ? Number(v) : null;
+        if (camel === "loanTermMonths") v = v ? Number(v) : null;
+        updates[snake] = v ?? null;
+      }
+    }
+
+    const { error } = await sb
+      .from("loan_applications")
+      .update(updates)
+      .eq("id", id);
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  });
+
+export const adminDeleteLoan = createServerFn({ method: "POST" })
+  .handler(async ({ data, request }) => {
+    const payload = (data as any)?.data || data || {};
+    const { id } = payload;
+    if (!id) return { success: false, error: "Missing loan ID" };
+    await requireAdmin(request);
+    const sb = getSupabaseAdmin();
+
+    const { error } = await sb
+      .from("loan_applications")
+      .delete()
+      .eq("id", id);
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  });
+
 export const verifyLoanIdentity = createServerFn({ method: "POST" })
   .handler(async ({ data, request }) => {
     const payload = (data as any)?.data || data || {};
