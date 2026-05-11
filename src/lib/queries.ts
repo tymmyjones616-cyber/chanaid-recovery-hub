@@ -545,7 +545,7 @@ export const adminUpdateUser = createServerFn({ method: "POST" })
 export const submitLead = createServerFn({ method: "POST" })
   .inputValidator((payload: any) => payload)
   .handler(async ({ data: payload }) => {
-    const sb = getSupabaseAdmin();
+    const sb = getSupabasePublic();
 
     // Map camelCase -> snake_case
     const row = {
